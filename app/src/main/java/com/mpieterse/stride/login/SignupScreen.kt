@@ -3,15 +3,19 @@ package com.mpieterse.stride.login
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -50,13 +54,17 @@ fun SignupScreen(onCreateAccount: () -> Unit, onLoginLink: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp)
+                .height(136.dp)
                 .background(Color(0xFF0F0F13))
         ) {}
 
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Column(
-                modifier = Modifier.padding(top = 24.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .offset(y = (-24).dp)
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -69,23 +77,25 @@ fun SignupScreen(onCreateAccount: () -> Unit, onLoginLink: () -> Unit) {
                 // Account section
                 Text(text = stringResource(R.string.signup_section_account), style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(stringResource(R.string.signup_name_placeholder)) },
-                    colors = TextFieldDefaults.colors()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = surname,
-                    onValueChange = { surname = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(stringResource(R.string.signup_surname_placeholder)) },
-                    colors = TextFieldDefaults.colors()
-                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text(stringResource(R.string.signup_name_placeholder)) },
+                        colors = TextFieldDefaults.colors()
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    OutlinedTextField(
+                        value = surname,
+                        onValueChange = { surname = it },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text(stringResource(R.string.signup_surname_placeholder)) },
+                        colors = TextFieldDefaults.colors()
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = email,
@@ -112,8 +122,11 @@ fun SignupScreen(onCreateAccount: () -> Unit, onLoginLink: () -> Unit) {
                     placeholder = { Text(stringResource(R.string.signup_password_placeholder)) },
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        TextButton(onClick = { showPassword = !showPassword }) {
-                            Text(text = if (showPassword) "Hide" else "Show")
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Image(
+                                painter = painterResource(id = if (showPassword) R.drawable.xic_uic_outline_eye_slash else R.drawable.xic_uic_outline_eye),
+                                contentDescription = null
+                            )
                         }
                     }
                 )
@@ -127,8 +140,11 @@ fun SignupScreen(onCreateAccount: () -> Unit, onLoginLink: () -> Unit) {
                     isError = confirmPassword.isNotEmpty() && confirmPassword != password,
                     visualTransformation = if (showConfirm) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        TextButton(onClick = { showConfirm = !showConfirm }) {
-                            Text(text = if (showConfirm) "Hide" else "Show")
+                        IconButton(onClick = { showConfirm = !showConfirm }) {
+                            Image(
+                                painter = painterResource(id = if (showConfirm) R.drawable.xic_uic_outline_eye_slash else R.drawable.xic_uic_outline_eye),
+                                contentDescription = null
+                            )
                         }
                     }
                 )
@@ -139,7 +155,7 @@ fun SignupScreen(onCreateAccount: () -> Unit, onLoginLink: () -> Unit) {
                     onClick = onCreateAccount,
                     enabled = isValid,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
                 ) {
                     Text(text = stringResource(R.string.signup_cta))
@@ -154,7 +170,12 @@ fun SignupScreen(onCreateAccount: () -> Unit, onLoginLink: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Google icon-only button (per sketch)
-                Image(painter = painterResource(id = R.drawable.ic_google_logo), contentDescription = stringResource(id = R.string.signup_google_sso))
+                Image(painter = painterResource(id = R.drawable.xic_uic_outline_google), contentDescription = stringResource(R.string.signup_google_sso))
+
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = { /* TODO(ui): open help */ }) {
+                    Text(text = stringResource(id = R.string.settings_help))
+                }
 
                 // TODO(auth): Register via credentials with backend and Google SSO
             }

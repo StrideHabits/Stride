@@ -3,6 +3,8 @@ package com.mpieterse.stride.login
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -11,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -62,12 +66,14 @@ fun LoginScreen(onContinue: () -> Unit, onRequestSignup: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Transparent)
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 16.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(top = 24.dp)
-                    .fillMaxWidth(),
+                    .offset(y = (-24).dp)
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -99,8 +105,11 @@ fun LoginScreen(onContinue: () -> Unit, onRequestSignup: () -> Unit) {
                     placeholder = { Text(text = stringResource(id = R.string.login_password_placeholder)) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        TextButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Text(text = if (passwordVisible) "Hide" else "Show")
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Image(
+                                painter = painterResource(id = if (passwordVisible) R.drawable.xic_uic_outline_eye_slash else R.drawable.xic_uic_outline_eye),
+                                contentDescription = null
+                            )
                         }
                     }
                 )
@@ -125,13 +134,16 @@ fun LoginScreen(onContinue: () -> Unit, onRequestSignup: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(text = stringResource(id = R.string.login_or))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Divider(modifier = Modifier.weight(1f), color = Color(0xFFE6E6E6))
+                    Text(text = stringResource(id = R.string.login_or), color = Color(0xFFB0B0B0))
+                    Divider(modifier = Modifier.weight(1f), color = Color(0xFFE6E6E6))
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Google button icon only per sketch
                 Image(
-                    painter = painterResource(id = R.drawable.ic_google_logo),
+                    painter = painterResource(id = R.drawable.xic_uic_outline_google),
                     contentDescription = stringResource(id = R.string.login_google_sso)
                 )
                 // TODO(auth): Hook Google SSO tap to Google Sign-In and JWT backend exchange
