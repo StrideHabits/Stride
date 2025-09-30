@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">StrideHabits</string>
+    <string name="content_description_show_password">Show password text</string>
+    <string name="content_description_hide_password">Hide password text</string>
+    <string name="content_description_show_biometric_dialog">Activate biometrics</string>
+    <string name="screen_auth_launch_navigate_to_sign_in">Sign In</string>
+    <string name="screen_auth_launch_navigate_to_sign_up">Sign Up</string>
+    <string name="screen_auth_locked_page_heading">Secured</string>
+    <string name="screen_auth_locked_page_content">"We've locked away your habits to keep them safe from prying eyes. Unlock the app with your biometrics to continue</string>
 </resources>
