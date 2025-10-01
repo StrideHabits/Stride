@@ -1,5 +1,0 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <!-- Placeholder Google G; replace with unicorn asset E equivalent -->
-    <path android:fillColor="#4285F4" android:pathData="M21.35,11.1H12v2.9h5.35c-0.23,1.48-1.62,4.34-5.35,4.34 -3.22,0 -5.85,-2.67 -5.85,-5.94s2.63,-5.94 5.85,-5.94c1.84,0 3.07,0.78 3.77,1.45l2.57,-2.49C17.18,3.58 14.79,2.5 12,2.5 6.98,2.5 2.9,6.58 2.9,11.7s4.08,9.2 9.1,9.2c5.26,0 8.72,-3.69 8.72,-8.9 0,-0.6 -0.05,-1.01 -0.37,-1.9z"/>
-</vector>
-
