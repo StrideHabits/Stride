@@ -35,6 +35,7 @@ fun HomeScaffold() {
     var destinationCurrent by rememberSaveable {
         mutableStateOf(destinationDefault.route)
     }
+    var showCreateHabitDialog by rememberSaveable { mutableStateOf(false) }
 
     val destinations = listOf(
         BottomNavItem(
@@ -56,7 +57,7 @@ fun HomeScaffold() {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {  },
+                onClick = { showCreateHabitDialog = true },
                 shape = RoundedCornerShape(16.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -104,6 +105,17 @@ fun HomeScaffold() {
             )
         }
     }
+
+    // Create Habit Dialog
+    UpsertDialog(
+        isVisible = showCreateHabitDialog,
+        onDismiss = { showCreateHabitDialog = false },
+        onConfirm = { habitData ->
+            // TODO: Handle habit creation
+            // For now, just log the data
+            println("Created habit: ${habitData.name}, frequency: ${habitData.frequency}, tag: ${habitData.tag}")
+        }
+    )
 }
 
 
