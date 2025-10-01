@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.roots.HomeNavGraph
@@ -36,6 +37,9 @@ fun HomeScaffold() {
         mutableStateOf(destinationDefault.route)
     }
     var showCreateHabitDialog by rememberSaveable { mutableStateOf(false) }
+    
+    // Get the current destination from the navigation controller
+    val currentRoute = controller.currentBackStackEntryAsState().value?.destination?.route
 
     val destinations = listOf(
         BottomNavItem(
@@ -56,16 +60,19 @@ fun HomeScaffold() {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateHabitDialog = true },
-                shape = RoundedCornerShape(16.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.xic_uic_outline_plus),
-                    contentDescription = "Add Habit"
-                )
+            // Only show FAB on Database screen, not on HabitViewer
+            if (currentRoute == HomeScreen.Database.route) {
+                FloatingActionButton(
+                    onClick = { showCreateHabitDialog = true },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.xic_uic_outline_plus),
+                        contentDescription = "Add Habit"
+                    )
+                }
             }
         },
         bottomBar = {

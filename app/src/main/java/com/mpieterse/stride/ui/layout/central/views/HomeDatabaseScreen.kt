@@ -29,7 +29,8 @@ import com.mpieterse.stride.ui.layout.central.components.HabitItem
 @Preview(name = "Orientation V (21:9)", showBackground = true, widthDp = 600, heightDp = 1400)
 @Composable
 fun HomeDatabaseScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToHabitViewer: () -> Unit = {}
 ) {
     Surface(
         color = Color(0xFF_161620),
@@ -74,7 +75,10 @@ fun HomeDatabaseScreen(
                             chipText = "Health",
                             progress = 0.25F,
                             checklist = listOf(true, false, false),
-                            streaked = true
+                            streaked = true,
+                            onClick = {
+                                onNavigateToHabitViewer()
+                            }
                         )
                     }
                 }
