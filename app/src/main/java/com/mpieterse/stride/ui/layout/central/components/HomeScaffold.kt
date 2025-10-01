@@ -50,6 +50,13 @@ fun HomeScaffold() {
             )
         ),
         BottomNavItem(
+            label = "Notifications",
+            alias = HomeScreen.Notifications,
+            icon = painterResource(
+                R.drawable.xic_uic_outline_bell
+            )
+        ),
+        BottomNavItem(
             label = "Settings",
             alias = HomeScreen.Settings,
             icon = painterResource(
