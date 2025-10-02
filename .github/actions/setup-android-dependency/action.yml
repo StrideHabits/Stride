@@ -1,0 +1,33 @@
+name: 'Setup the Android Environment'
+description: 'Setup Android SDK and Dependencies for GitHub Actions'
+
+
+# ------------------------------------------------------------------------------
+
+
+inputs:
+  
+  # Parameter
+  inject-firebase:
+    description: 'Generate the Google Services JSON from GitHub Secrets'
+    required: true
+    default: 'true'
+
+
+# ------------------------------------------------------------------------------
+
+
+runs:
+  using: 'composite'
+  steps:
+
+    # Step
+    - name: Inject >> Google Services JSON
+      if: ${{ inputs.inject-firebase == 'true' }}
+      shell: bash
+      run: |
+        mkdir -p app
+        echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+
+# ------------------------------------------------------------------------------

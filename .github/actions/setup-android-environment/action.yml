@@ -1,0 +1,78 @@
+name: 'Setup the Android Environment'
+description: 'Setup Android SDK and Dependencies for GitHub Actions'
+
+
+# ------------------------------------------------------------------------------
+
+
+inputs:
+  
+  # Parameter
+  java-distros:
+    description: 'Set the JDK distribution to use'
+    required: false
+    default: 'temurin'
+
+  # Parameter
+  java-version:
+    description: 'Set the JDK version to use'
+    required: false
+    default: '17'
+
+  # Parameter
+  enable-secrets:
+    description: 'Inject sensitive configuration files into the build environment'
+    required: false
+    default: 'false'
+
+  # Parameter
+  enable-caching:
+    description: 'Use gradlew cache to speed up build times'
+    required: false
+    default: 'true'
+
+
+# ------------------------------------------------------------------------------
+
+
+runs:
+  using: 'composite'
+  steps:
+
+    # Step
+    - name: Setup JDK-${{ inputs.java-version }}
+      uses: actions/setup-java@v5
+      with:
+        distribution: ${{ inputs.java-distros }}
+        java-version: ${{ inputs.java-version }}
+        cache: ${{ inputs.enable-caching == 'true' && 'gradle' || '' }}
+
+    # Step
+    - name: Setup Android-SDK
+      uses: android-actions/setup-android@v3
+
+    # Step
+    - name: Gradle >> Grant Access
+      shell: bash
+      run: |
+        # Gradle >> Grant Access
+        chmod +x ./gradlew
+
+    # Step
+    - name: Gradle >> Check Access
+      shell: bash
+      run: |
+        # Gradle >> Check Access
+        if [ ! -f "./gradlew" ]; then
+          echo "Gradlew is missing or inaccessible with the current permissions"
+          exit 1
+        fi
+    
+    # Step
+    - name: Inject Configuration
+      uses: ./.github/actions/setup-android-dependency
+      with:
+        inject-firebase: ${{ inputs.enable-secrets == 'true' }}
+
+
+# ------------------------------------------------------------------------------
