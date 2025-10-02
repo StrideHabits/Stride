@@ -7,8 +7,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.Preferences.Key
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mpieterse.stride.core.models.configuration.ConfigurationKey
 import com.mpieterse.stride.core.utils.Clogger
@@ -27,8 +25,8 @@ class ConfigurationsService
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val TAG = "ConfigurationsService"
-        private const val KEY = "ConfigurationsOptions"
+        private const val TAG = "ConfigurationService"
+        private const val KEY = "ConfigurationOptions"
         private const val TIMEOUT_MILLISECONDS = 5_000L
 
         private val Context.dataStore by preferencesDataStore(
@@ -53,7 +51,7 @@ class ConfigurationsService
 
     /**
      * @throws TimeoutCancellationException
-     * @throws IOException
+     * @throws androidx.datastore.core.IOException
      * @throws Exception
      */
     suspend fun <T> put(
@@ -92,7 +90,7 @@ class ConfigurationsService
 
     /**
      * @throws TimeoutCancellationException
-     * @throws IOException
+     * @throws androidx.datastore.core.IOException
      * @throws Exception
      */
     suspend fun <T> get(
@@ -133,7 +131,7 @@ class ConfigurationsService
      * be permanently erased. Use with caution.
      *
      * @throws TimeoutCancellationException
-     * @throws IOException
+     * @throws androidx.datastore.core.IOException
      * @throws Exception
      */
     suspend fun erase() {
@@ -171,7 +169,7 @@ class ConfigurationsService
         put(pref.key, encoded)
     }
 
-    
+
     suspend fun <T> get(pref: ConfigurationKey<T>): T {
         val raw = get(pref.key)
         return pref.decode(raw)
