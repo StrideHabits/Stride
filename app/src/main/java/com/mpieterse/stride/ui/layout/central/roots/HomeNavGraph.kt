@@ -6,7 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
-import com.mpieterse.stride.ui.layout.central.views.HomeHabitViewerScreen
+import com.mpieterse.stride.ui.layout.central.views.NotificationsScreen
+import com.mpieterse.stride.ui.layout.central.views.HabitViewerScreen
 import com.mpieterse.stride.ui.layout.central.views.HomeSettingsScreen
 
 @Composable
@@ -24,6 +25,18 @@ fun HomeNavGraph(
             route = HomeScreen.Database.route
         ) {
             HomeDatabaseScreen(
+                modifier = modifier,
+                onNavigateToHabitViewer = {
+                    controller.navigate(HomeScreen.HabitViewer.route)
+                }
+            )
+        }
+
+        // Notifications
+        composable(
+            route = HomeScreen.Notifications.route
+        ) {
+            NotificationsScreen(
                 modifier = modifier
             )
         }
@@ -41,8 +54,11 @@ fun HomeNavGraph(
         composable(
             route = HomeScreen.HabitViewer.route
         ) {
-            HomeHabitViewerScreen(
-                modifier = modifier
+            HabitViewerScreen(
+                modifier = modifier,
+                onBackClick = {
+                    controller.popBackStack()
+                }
             )
         }
     }
