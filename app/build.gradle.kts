@@ -74,9 +74,11 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-crashlytics")
-    implementation("com.google.firebase:firebase-perf")
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.perf)
+    implementation(libs.androidx.datastore.core)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
 
