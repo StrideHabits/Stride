@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.roots.HomeNavGraph
@@ -35,6 +36,10 @@ fun HomeScaffold() {
     var destinationCurrent by rememberSaveable {
         mutableStateOf(destinationDefault.route)
     }
+    var showCreateHabitDialog by rememberSaveable { mutableStateOf(false) }
+    
+    // Get the current destination from the navigation controller
+    val currentRoute = controller.currentBackStackEntryAsState().value?.destination?.route
 
     val destinations = listOf(
         BottomNavItem(
@@ -42,6 +47,13 @@ fun HomeScaffold() {
             alias = HomeScreen.Database,
             icon = painterResource(
                 R.drawable.xic_uic_outline_check_circle
+            )
+        ),
+        BottomNavItem(
+            label = "Notifications",
+            alias = HomeScreen.Notifications,
+            icon = painterResource(
+                R.drawable.xic_uic_outline_bell
             )
         ),
         BottomNavItem(
@@ -55,16 +67,19 @@ fun HomeScaffold() {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {  },
-                shape = RoundedCornerShape(16.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.xic_uic_outline_plus),
-                    contentDescription = "Add Habit"
-                )
+            // Only show FAB on Database screen, not on HabitViewer
+            if (currentRoute == HomeScreen.Database.route) {
+                FloatingActionButton(
+                    onClick = { showCreateHabitDialog = true },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.xic_uic_outline_plus),
+                        contentDescription = "Add Habit"
+                    )
+                }
             }
         },
         bottomBar = {
@@ -104,6 +119,17 @@ fun HomeScaffold() {
             )
         }
     }
+
+    // Create Habit Dialog
+    UpsertDialog(
+        isVisible = showCreateHabitDialog,
+        onDismiss = { showCreateHabitDialog = false },
+        onConfirm = { habitData ->
+            // TODO: Handle habit creation
+            // For now, just log the data
+            println("Created habit: ${habitData.name}, frequency: ${habitData.frequency}, tag: ${habitData.tag}")
+        }
+    )
 }
 
 

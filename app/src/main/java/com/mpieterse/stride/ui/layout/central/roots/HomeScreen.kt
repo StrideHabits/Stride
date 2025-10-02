@@ -7,6 +7,7 @@ sealed class HomeScreen(
     val route: String
 ) {
     object Database : HomeScreen("database")
+    object Notifications : HomeScreen("notifications")
     object Settings : HomeScreen("settings")
     object HabitViewer : HomeScreen("habitViewer")
 }
