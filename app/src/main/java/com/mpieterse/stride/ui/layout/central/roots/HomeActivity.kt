@@ -10,7 +10,10 @@ import androidx.compose.ui.graphics.toArgb
 import com.mpieterse.stride.ui.layout.central.components.HomeScaffold
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
 import com.mpieterse.stride.ui.theme.AppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+
+@AndroidEntryPoint
 class HomeActivity : ComponentActivity() {
 
     override fun onCreate(

@@ -1,1 +1,1 @@
-Welcome to StrideHabits!
+Welcome to StrideHabits! 

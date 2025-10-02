@@ -21,10 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,15 +29,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.mpieterse.stride.R
-import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdownStringOnly
+import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
+import com.mpieterse.stride.core.models.configuration.options.AppAppearance
+import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
+import com.mpieterse.stride.ui.layout.central.viewmodels.HomeSettingsViewModel
+import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
 
 @Preview(name = "Orientation H (21:9)", showBackground = true, widthDp = 1400, heightDp = 600)
 @Preview(name = "Orientation V (21:9)", showBackground = true, widthDp = 600, heightDp = 1400)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeSettingsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: HomeSettingsViewModel = hiltViewModel()
 ) {
     Surface(
         color = Color(0xFF_161620),
@@ -108,45 +110,40 @@ fun HomeSettingsScreen(
                     modifier = Modifier.height(24.dp)
                 )
 
-                var emThemeChoice by remember { mutableStateOf("") }
-                // TODO: Switch to advanced version for prod
-                LocalOutlinedDropdownStringOnly(
+                LocalOutlinedDropdown(
                     label = "Theme",
-                    value = emThemeChoice,
-                    onValueChange = { emThemeChoice = it },
-                    items = listOf("Light", "Night", "System default"),
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    value = viewModel.theme,
+                    onValueChange = { viewModel.updateTheme(it) },
+                    items = AppAppearance.entries,
+                    itemLabel = { it.name.replaceFirstChar(Char::uppercase) }
                 )
 
-                var emNotificationsChoice by remember { mutableStateOf("") }
                 Spacer(
                     modifier = Modifier.height(24.dp)
                 )
-                // TODO: Switch to advanced version for prod
-                LocalOutlinedDropdownStringOnly(
+                LocalOutlinedDropdown(
                     label = "Notifications",
-                    value = emNotificationsChoice,
-                    onValueChange = { emNotificationsChoice = it },
-                    items = listOf("Send everything", "Only high priority", "Disabled"),
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    value = viewModel.notifications,
+                    onValueChange = { viewModel.updateAlerts(it) },
+                    items = AlertFrequency.entries,
+                    itemLabel = {
+                        it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase)
+                    }
                 )
 
-                var emSyncChoice by remember { mutableStateOf("") }
                 Spacer(
                     modifier = Modifier.height(24.dp)
                 )
-                // TODO: Switch to advanced version for prod
-                LocalOutlinedDropdownStringOnly(
+                LocalOutlinedDropdown(
                     label = "Sync Online",
-                    value = emSyncChoice,
-                    onValueChange = { emSyncChoice = it },
-                    items = listOf("Always", "Never", "Hourly"),
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    value = viewModel.sync,
+                    onValueChange = { viewModel.updateSync(it) },
+                    items = SyncFrequency.entries,
+                    itemLabel = {
+                        it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase)
+                    }
                 )
-                
+
 
                 Spacer(
                     modifier = Modifier.height(56.dp)
