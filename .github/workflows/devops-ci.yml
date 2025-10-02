@@ -1,0 +1,151 @@
+name: CI Workflow
+
+
+# - About ----------------------------------------------------------------------
+# 
+# This workflow performs **Continuous Integration (CI)** for the Android app.
+# It ensures all pushed code meets standards before it can be merged.
+# 
+# Jobs:
+# 1. Enforces naming conventions on non-PR branches.
+# 2. Builds the debug APK artifact.
+# 3. Executes all unit tests.
+# 
+# ------------------------------------------------------------------------------
+
+
+on:
+  push:
+  pull_request:
+
+
+# ------------------------------------------------------------------------------
+
+
+jobs:
+
+  # Job
+  validate:
+    name: Validate Conventions
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+
+      # Step
+      - name: Branches
+        shell: bash
+        run: |
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+
+          echo "🔍 Validating branch: $BRANCH_NAME"
+          
+          if [[ "$BRANCH_NAME" =~ ^(main|staging|topic\/[a-z0-9-]+|debug\/[a-z0-9-]+|tests\/[a-z0-9-]+|rollback\/[a-z0-9-]+)$ ]]; then
+            echo "✅ Follows accepted conventions."
+            exit 0
+          else
+            echo "❌ Invalid branch name: '$BRANCH_NAME'                  "
+            echo "Allowed conventions:                                    "
+            echo "  - main                                                "
+            echo "  - staging                                             "
+            echo "  - rollback/<lowercase-name> (letters, numbers, dashes)"
+            echo "  - topic/<lowercase-name> (letters, numbers, dashes)   "
+            echo "  - debug/<lowercase-name> (letters, numbers, dashes)   "
+            echo "  - tests/<lowercase-name> (letters, numbers, dashes)   "
+            exit 1
+          fi
+
+
+  # Job
+  android-build-debug:
+    name: (CI) Assemble
+    if: |
+      needs.validate.result == 'success' || 
+      github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+
+      # Step
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      # Step
+      - name: Configure the Android Environment
+        uses: ./.github/actions/setup-android-environment
+        with:
+          java-distros: 'temurin'
+          java-version: '17'
+          enable-secrets: 'true'
+          enable-caching: 'true'
+          set-secret-for-firebase: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      # Step
+      - name: Assemble (Debug)
+        shell: bash
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.console=plain
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace --info
+
+      # Step
+      - name: Upload
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          retention-days: 21
+          path: |
+            app/build/outputs/apk/
+
+
+  # Job
+  android-tests-debug:
+    name: (CI) Unit Tests
+    if: |
+      needs.validate.result == 'success' || 
+      github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+
+      # Step
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      # Step
+      - name: Configure the Android Environment
+        uses: ./.github/actions/setup-android-environment
+        with:
+          java-distros: 'temurin'
+          java-version: '17'
+          enable-secrets: 'true'
+          enable-caching: 'true'
+          set-secret-for-firebase: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      # Step
+      - name: Unit Tests (Debug)
+        shell: bash
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.console=plain
+        run: |
+          ./gradlew testDebugUnitTest --no-daemon --stacktrace --info
+
+      # Step
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          retention-days: 21
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+
+
+# ------------------------------------------------------------------------------
