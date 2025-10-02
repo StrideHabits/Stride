@@ -80,6 +80,7 @@ jobs:
           java-version: '17'
           enable-secrets: 'true'
           enable-caching: 'true'
+          set-secret-for-firebase: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
       # Step
       - name: Assemble (Debug)
@@ -125,6 +126,7 @@ jobs:
           java-version: '17'
           enable-secrets: 'true'
           enable-caching: 'true'
+          set-secret-for-firebase: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
       # Step
       - name: Unit Tests (Debug)

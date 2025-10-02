@@ -30,6 +30,11 @@ inputs:
     description: 'Use gradlew cache to speed up build times'
     required: false
     default: 'true'
+    
+  set-secret-for-firebase:
+    description: 'The base64-encoded Google Services JSON file content.'
+    required: false
+    default: ''
 
 
 # ------------------------------------------------------------------------------
@@ -72,7 +77,8 @@ runs:
     - name: Inject Configuration
       uses: ./.github/actions/setup-android-dependency
       with:
-        inject-firebase: ${{ inputs.enable-secrets == 'true' }}
+        use-secret-for-firebase: ${{ inputs.enable-secrets == 'true' }}
+        set-secret-for-firebase: ${{ inputs.set-secret-for-firebase }}
 
 
 # ------------------------------------------------------------------------------
