@@ -5,10 +5,11 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
-import com.mpieterse.stride.ui.layout.central.views.NotificationsScreen
+import com.mpieterse.stride.ui.layout.central.views.DebugScreen
 import com.mpieterse.stride.ui.layout.central.views.HabitViewerScreen
+import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
 import com.mpieterse.stride.ui.layout.central.views.HomeSettingsScreen
+import com.mpieterse.stride.ui.layout.central.views.NotificationsScreen
 
 @Composable
 fun HomeNavGraph(
@@ -46,7 +47,10 @@ fun HomeNavGraph(
             route = HomeScreen.Settings.route
         ) {
             HomeSettingsScreen(
-                modifier = modifier
+                modifier = modifier,
+                onEnterDebug = {
+                    controller.navigate(HomeScreen.Debug.route)
+                }
             )
         }
 
@@ -59,6 +63,15 @@ fun HomeNavGraph(
                 onBackClick = {
                     controller.popBackStack()
                 }
+            )
+        }
+
+        // Debug
+        composable(
+            route = HomeScreen.Debug.route
+        ) {
+            DebugScreen(
+                modifier = modifier
             )
         }
     }

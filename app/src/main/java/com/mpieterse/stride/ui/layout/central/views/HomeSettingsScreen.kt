@@ -43,7 +43,8 @@ import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
 @Composable
 fun HomeSettingsScreen(
     modifier: Modifier = Modifier,
-    viewModel: HomeSettingsViewModel = hiltViewModel()
+    viewModel: HomeSettingsViewModel = hiltViewModel(),
+    onEnterDebug: () -> Unit = {}
 ) {
     Surface(
         color = Color(0xFF_161620),
@@ -176,7 +177,9 @@ fun HomeSettingsScreen(
                     modifier = Modifier.height(24.dp)
                 )
                 Button(
-                    onClick = {},
+                    onClick = {
+                        onEnterDebug()
+                    },
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier
                         .height(40.dp)

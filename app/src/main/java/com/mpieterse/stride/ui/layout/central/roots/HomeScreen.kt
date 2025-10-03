@@ -10,4 +10,5 @@ sealed class HomeScreen(
     object Notifications : HomeScreen("notifications")
     object Settings : HomeScreen("settings")
     object HabitViewer : HomeScreen("habitViewer")
+    object Debug : HomeScreen("debug")
 }
