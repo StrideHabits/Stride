@@ -126,13 +126,21 @@ fun AuthLockedScreen(
             ) {
                 IconButton(
                     onClick = {
-                        val promptBuilder = BiometricPrompt.PromptInfo.Builder()
-                            .setTitle("Login with biometrics")
-                            .setSubtitle("Authenticate to continue")
-                            .setNegativeButtonText("Cancel")
+                        when (biometricService.isAvailable()) {
+                            true -> {
+                                val promptBuilder = BiometricPrompt.PromptInfo.Builder()
+                                    .setTitle("Login with biometrics")
+                                    .setSubtitle("Authenticate to continue")
+                                    .setNegativeButtonText("Cancel")
 
-                        biometricService.authenticate(activity, promptBuilder) { result ->
-                            biometricResult = result
+                                biometricService.authenticate(activity, promptBuilder) { result ->
+                                    biometricResult = result
+                                }
+                            }
+                            
+                            else -> {
+                                onSuccess()
+                            }
                         }
                     },
                     modifier = Modifier
