@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.firebase.perf)
     implementation(libs.androidx.datastore.core)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.biometric)
 
     testImplementation(libs.junit)
 
