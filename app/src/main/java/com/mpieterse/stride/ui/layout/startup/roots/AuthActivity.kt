@@ -2,7 +2,6 @@ package com.mpieterse.stride.ui.layout.startup.roots
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,12 +11,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.fragment.app.FragmentActivity
 import com.mpieterse.stride.ui.layout.central.roots.HomeActivity
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
-import com.mpieterse.stride.ui.theme.AppTheme
 import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
+import com.mpieterse.stride.ui.theme.AppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
-class AuthActivity : ComponentActivity() {
+@AndroidEntryPoint
+class AuthActivity : FragmentActivity() {
 
     private lateinit var authViewModel: AuthViewModel
 
@@ -57,13 +59,13 @@ class AuthActivity : ComponentActivity() {
 
 // --- Internals
 
-    
-    private fun navigateToHomeActivity() { 
-        startActivity(Intent(this, HomeActivity::class.java)) 
+
+    private fun navigateToHomeActivity() {
+        startActivity(Intent(this, HomeActivity::class.java))
         finishAffinity()
     }
 
-    
+
     private fun terminate() = finishAndRemoveTask()
 
 
