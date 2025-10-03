@@ -1,5 +1,6 @@
 package com.mpieterse.stride.core.net
 
+// core networking result wrapper
 sealed class ApiResult<out T> {
     data class Ok<T>(val data: T): ApiResult<T>()
     data class Err(val code: Int?, val message: String): ApiResult<Nothing>()

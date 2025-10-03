@@ -8,6 +8,7 @@ import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
+// TODO: need to double check against swagger
 interface SummitApiService {
     // Auth
     @POST("api/users/register") suspend fun register(@Body body: RegisterRequest): Response<AuthResponse>
