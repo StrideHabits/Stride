@@ -13,12 +13,17 @@ android {
     namespace = "com.mpieterse.stride"
     compileSdk = 36
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.mpieterse.stride"
         minSdk = 34
         targetSdk = 36
         versionCode = 1
         versionName = "V0"
+        buildConfigField("String", "API_BASE_URL", "\"https://summitapi.onrender.com/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -90,4 +95,12 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Retrofit + Gson converter
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
+    // OkHttp + logging (use debugImplementation so release builds are clean)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 }
