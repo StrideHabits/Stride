@@ -20,7 +20,7 @@ import javax.inject.Inject
 /**
  * Service to interact with the application DataStore.
  */
-class ConfigurationsService
+class ConfigurationService
 @Inject constructor(
     @ApplicationContext private val context: Context
 ) {

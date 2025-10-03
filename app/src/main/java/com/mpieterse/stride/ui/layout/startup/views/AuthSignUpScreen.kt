@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.analytics
+import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
@@ -48,6 +53,13 @@ fun AuthSignUpScreen(
     model: AuthViewModel,
     modifier: Modifier
 ) {
+    val analytics = Firebase.analytics
+    LaunchedEffect(Unit) {
+        analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW) {
+            param(FirebaseAnalytics.Param.SCREEN_NAME, "SignUp")
+        }
+    }
+
     var identityField by remember { mutableStateOf("") }
     var passwordDefaultField by remember { mutableStateOf("") }
     var passwordConfirmField by remember { mutableStateOf("") }
@@ -137,7 +149,7 @@ fun AuthSignUpScreen(
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
                     )
                 }
-                
+
                 Spacer(
                     Modifier.height(12.dp)
                 )
@@ -151,11 +163,11 @@ fun AuthSignUpScreen(
                     fieldType = TextFieldType.Private,
                     inputAction = ImeAction.Next,
                 )
-                
+
                 Spacer(
                     Modifier.height(12.dp)
                 )
-                
+
                 LocalOutlinedTextField(
                     label = "Confirm your password",
                     value = passwordConfirmField,
@@ -181,7 +193,11 @@ fun AuthSignUpScreen(
                 ) {
                     Text(
                         text = "Sign In",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight(
+                                600
+                            )
+                        )
                     )
                 }
 

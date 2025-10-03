@@ -1,6 +1,5 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
-import androidx.compose.runtime.Updater
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,7 +9,7 @@ import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
 import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.core.models.configuration.schema.ConfigurationSchema
-import com.mpieterse.stride.core.services.ConfigurationsService
+import com.mpieterse.stride.core.services.ConfigurationService
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -18,7 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeSettingsViewModel @Inject constructor(
-    private val configService: ConfigurationsService
+    private val configService: ConfigurationService
 ) : ViewModel() {
     companion object {
         private const val TAG = "HomeSettingsViewModel"
