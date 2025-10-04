@@ -7,6 +7,7 @@ import javax.inject.Inject
 
 class HabitRepository @Inject constructor(private val api: SummitApiService) {
     suspend fun list() = safeCall { api.getHabits() }
-    suspend fun create(name: String) = safeCall { api.createHabit(CreateHabitRequest(name)) }
-    suspend fun delete(id: String) = safeCall { api.deleteHabit(id) }
+    suspend fun create(name: String) = safeCall { api.createHabit(HabitCreateDto(name)) }
+    // No DELETE in Swagger → remove delete() from VM usage
 }
+
