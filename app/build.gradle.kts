@@ -103,4 +103,7 @@ dependencies {
     // OkHttp + logging (use debugImplementation so release builds are clean)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    implementation(platform("androidx.compose:compose-bom:2024.09.02"))
+    implementation("androidx.compose.material:material-icons-extended")
 }

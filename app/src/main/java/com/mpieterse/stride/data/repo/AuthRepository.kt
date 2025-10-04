@@ -12,12 +12,12 @@ class AuthRepository @Inject constructor(
     private val api: SummitApiService,
     private val tokens: TokenStore
 ) {
-    suspend fun register(name: String, email: String, pass: String): ApiResult<AuthResponse> =
+    suspend fun register(name: String, email: String, pass: String) =
         safeCall { api.register(RegisterRequest(name, email, pass)) }.also {
             if (it is ApiResult.Ok) tokens.set(it.data.token)
         }
 
-    suspend fun login(email: String, pass: String): ApiResult<AuthResponse> =
+    suspend fun login(email: String, pass: String) =
         safeCall { api.login(LoginRequest(email, pass)) }.also {
             if (it is ApiResult.Ok) tokens.set(it.data.token)
         }
