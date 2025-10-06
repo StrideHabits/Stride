@@ -28,7 +28,8 @@ import javax.inject.Inject
  * @see AuthenticationService.getCurrentUser
  * @see AuthenticationService.logout
  */
-class AuthenticationService @Inject constructor(
+class AuthenticationService
+@Inject constructor(
     private val server: FirebaseAuth
 ) {
     companion object {
