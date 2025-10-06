@@ -3,8 +3,10 @@ package com.mpieterse.stride.ui.layout.central.roots
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.mpieterse.stride.ui.layout.central.views.DebugScreen
 import com.mpieterse.stride.ui.layout.central.views.HabitViewerScreen
 import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
@@ -22,13 +24,11 @@ fun HomeNavGraph(
         startDestination = currentDestination
     ) {
         // Database
-        composable(
-            route = HomeScreen.Database.route
-        ) {
+        composable(route = HomeScreen.Database.route) {
             HomeDatabaseScreen(
                 modifier = modifier,
-                onNavigateToHabitViewer = {
-                    controller.navigate(HomeScreen.HabitViewer.route)
+                onNavigateToHabitViewer = { id ->
+                    controller.navigate(HomeScreen.HabitViewer.buildRoute(id))
                 }
             )
         }
@@ -56,13 +56,14 @@ fun HomeNavGraph(
 
         // HabitViewer
         composable(
-            route = HomeScreen.HabitViewer.route
-        ) {
+            route = HomeScreen.HabitViewer.route,  // "habit/{habitId}"
+            arguments = listOf(navArgument("habitId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val habitId = backStackEntry.arguments?.getString("habitId") ?: return@composable
             HabitViewerScreen(
                 modifier = modifier,
-                onBackClick = {
-                    controller.popBackStack()
-                }
+                habitId = habitId,
+                onBackClick = { controller.popBackStack() }
             )
         }
 
