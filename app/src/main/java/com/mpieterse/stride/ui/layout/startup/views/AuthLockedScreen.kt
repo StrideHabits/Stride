@@ -137,7 +137,7 @@ fun AuthLockedScreen(
                                     biometricResult = result
                                 }
                             }
-                            
+
                             else -> {
                                 onSuccess()
                             }

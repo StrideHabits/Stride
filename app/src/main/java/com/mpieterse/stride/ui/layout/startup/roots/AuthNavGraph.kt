@@ -16,7 +16,6 @@ fun AuthNavGraph(
     onGoToHomeActivity: () -> Unit,
     onTerminateCompose: () -> Unit,
     modifier: Modifier  = Modifier,
-    authViewModel: AuthViewModel
 ) {
     val controller = rememberNavController()
 
@@ -30,7 +29,6 @@ fun AuthNavGraph(
         ) {
             AuthLaunchScreen(
                 modifier = modifier,
-                model = authViewModel,
                 onNavigateToSignIn = {
                     controller.navigate(AuthScreen.SignIn.route)
                 },
@@ -46,7 +44,6 @@ fun AuthNavGraph(
         ) {
             AuthLockedScreen(
                 modifier = modifier,
-                model = authViewModel,
                 onSuccess = {
                     onGoToHomeActivity()
                     controller.popBackStack()
@@ -67,7 +64,6 @@ fun AuthNavGraph(
         ) {
             AuthSignInScreen(
                 modifier = modifier,
-                model = authViewModel,
                 onAuthenticated = {
                     // ...
                     //controller.popBackStack()
@@ -83,9 +79,8 @@ fun AuthNavGraph(
         ) {
             AuthSignUpScreen(
                 modifier = modifier,
-                model = authViewModel,
                 onAuthenticated = {
-                    // ...
+                    controller.navigate(AuthScreen.Locked.route)
                     controller.popBackStack()
                 },
                 onNavigateToSignIn = {
