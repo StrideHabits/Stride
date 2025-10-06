@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
@@ -21,8 +22,12 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class AuthActivity : FragmentActivity() {
 
-    private lateinit var authViewModel: AuthViewModel
-
+    private val authViewModel: AuthViewModel by viewModels()
+    
+    
+// --- Lifecycle
+    
+    
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
@@ -31,7 +36,6 @@ class AuthActivity : FragmentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color(0xFF161620).toArgb()),
         )
 
-        authViewModel = AuthViewModel()
         useAuthenticationStateRoutes()
 
         setContent {
@@ -48,8 +52,7 @@ class AuthActivity : FragmentActivity() {
                         onTerminateCompose = ::terminate,
                         modifier = Modifier
                             .statusBarsPadding()
-                            .fillMaxSize(),
-                        authViewModel = authViewModel
+                            .fillMaxSize()
                     )
                 }
             }
