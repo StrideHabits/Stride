@@ -3,26 +3,15 @@ package com.mpieterse.stride.ui.layout.central.components
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.R
@@ -34,7 +23,6 @@ fun HomeScaffold() {
     val controller = rememberNavController()
     val destinationDefault = HomeScreen.Database
     var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }
-    var showCreateHabitDialog by rememberSaveable { mutableStateOf(false) }
 
     val currentRoute = controller.currentBackStackEntryAsState().value?.destination?.route
 
@@ -57,21 +45,6 @@ fun HomeScaffold() {
     )
 
     Scaffold(
-        floatingActionButton = {
-            if (currentRoute == HomeScreen.Database.route) {
-                FloatingActionButton(
-                    onClick = { showCreateHabitDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.xic_uic_outline_plus),
-                        contentDescription = "Add Habit"
-                    )
-                }
-            }
-        },
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.background,
@@ -89,7 +62,11 @@ fun HomeScaffold() {
                             )
                         },
                         onClick = {
-                            controller.navigate(destination.alias.route)
+                            controller.navigate(destination.alias.route) {
+                                popUpTo(HomeScreen.Database.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                             destinationCurrent = destination.alias.route
                         }
                     )
@@ -107,17 +84,6 @@ fun HomeScaffold() {
             )
         }
     }
-
-    // Create Habit Dialog (now aligned with simplified HabitData)
-    UpsertDialog(
-        isVisible = showCreateHabitDialog,
-        onDismiss = { showCreateHabitDialog = false },
-        onConfirm = { habitData ->
-            // Replace this with your VM call if you wire a shared ViewModel:
-            // homeDbViewModel.createHabit(habitData.name)
-            println("Created habit: ${habitData.name}")
-        }
-    )
 }
 
 data class BottomNavItem(

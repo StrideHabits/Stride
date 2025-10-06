@@ -9,27 +9,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.ui.layout.central.components.HabitItem
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
 import com.mpieterse.stride.ui.layout.central.viewmodels.HomeDatabaseViewModel
 
-@Preview(name = "Orientation H (21:9)", showBackground = true, widthDp = 1400, heightDp = 600)
-@Preview(name = "Orientation V (21:9)", showBackground = true, widthDp = 600, heightDp = 1400)
 @Composable
 fun HomeDatabaseScreen(
     modifier: Modifier = Modifier,
@@ -37,13 +32,13 @@ fun HomeDatabaseScreen(
     viewModel: HomeDatabaseViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var showCreate by remember { mutableStateOf(false) }
+    var showCreate by rememberSaveable { mutableStateOf(false) }
 
-    Surface(
-        color = Color(0xFF_161620),
-        modifier = modifier
-    ) {
-        Box(Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Surface(
+            color = Color(0xFF161620),
+            modifier = Modifier.fillMaxSize()
+        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top,
@@ -55,87 +50,87 @@ fun HomeDatabaseScreen(
                     .padding(16.dp)
                     .fillMaxSize()
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
+                // Status bar + refresh
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Debug-style status + refresh
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(state.status) },
-                            leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) }
-                        )
-                        TextButton(onClick = { viewModel.refresh() }) { Text("Refresh") }
-                    }
-
-                    DateHeader(
-                        modifier = Modifier.align(Alignment.End),
-                        days = state.daysHeader
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(state.status) },
+                        leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) }
                     )
+                    TextButton(onClick = { viewModel.refresh() }) {
+                        Text("Refresh")
+                    }
+                }
 
-                    when {
-                        state.loading -> {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                                Text(text = "Loading…", style = MaterialTheme.typography.bodyMedium)
-                            }
+                DateHeader(
+                    modifier = Modifier.align(Alignment.End),
+                    days = state.daysHeader
+                )
+
+                when {
+                    state.loading -> {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                            Text("Loading…", style = MaterialTheme.typography.bodyMedium)
                         }
-                        state.error != null -> {
-                            Text(
-                                text = "Error: ${state.error}",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                        else -> {
-                            LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(state.habits, key = { it.id }) { row ->
-                                    HabitItem(
-                                        cardText = row.name,
-                                        chipText = row.tag,
-                                        progress = row.progress,
-                                        checklist = row.checklist,
-                                        streaked = row.streaked,
-                                        onClick = { onNavigateToHabitViewer(row.id) }
-                                    )
-                                }
+                    }
+                    state.error != null -> {
+                        Text(
+                            text = "Error: ${state.error}",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                    else -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(state.habits, key = { it.id }) { row ->
+                                HabitItem(
+                                    cardText = row.name,
+                                    chipText = row.tag,
+                                    progress = row.progress,
+                                    checklist = row.checklist,
+                                    streaked = row.streaked,
+                                    onClick = { onNavigateToHabitViewer(row.id) }
+                                )
                             }
                         }
                     }
                 }
             }
+        }
 
-            FloatingActionButton(
-                onClick = { showCreate = true },
-                containerColor = Color(0xFFFF9500),
-                contentColor = Color.White,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create Habit"
-                )
-            }
+        // FAB (stays on top)
+        FloatingActionButton(
+            onClick = { showCreate = true },
+            containerColor = Color(0xFFFF9500),
+            contentColor = Color.White,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+                .zIndex(2f)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Create Habit"
+            )
         }
     }
 
+    // Dialog (root level = guaranteed visible)
     UpsertDialog(
         title = "Create a Habit",
         isVisible = showCreate,

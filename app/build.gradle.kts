@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.runtime.saveable)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ui.text.google.fonts)

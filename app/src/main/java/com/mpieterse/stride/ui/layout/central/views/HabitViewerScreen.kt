@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
+import com.mpieterse.stride.ui.layout.central.components.HabitData
 import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
 import java.time.LocalDate
 
@@ -141,22 +142,16 @@ fun HabitViewerScreen(
         }
     }
 
-    // Edit dialog (local-only)
+    // Simplified edit dialog — now uses only `name`
     UpsertDialog(
         title = "Edit Habit",
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
             currentHabitName = updated.name
-            currentHabitImage = updated.image
             showEditDialog = false
         },
-        initialData = com.mpieterse.stride.ui.layout.central.components.HabitData(
-            name = currentHabitName,
-            frequency = 3,
-            tag = "Health & Fitness",
-            image = currentHabitImage
-        )
+        initialData = HabitData(name = currentHabitName)
     )
 }
 
