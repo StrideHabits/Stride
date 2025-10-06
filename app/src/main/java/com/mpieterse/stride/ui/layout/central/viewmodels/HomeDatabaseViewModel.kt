@@ -18,7 +18,7 @@ class HomeDatabaseViewModel @Inject constructor(
     data class HabitRowUi(
         val id: String,
         val name: String,
-        val tag: String = "Habit",                 // <- default chip text
+        val tag: String = "Habit",
         val progress: Float = 0f,
         val checklist: List<Boolean> = emptyList(),
         val streaked: Boolean = false,
@@ -28,7 +28,10 @@ class HomeDatabaseViewModel @Inject constructor(
         val loading: Boolean = false,
         val habits: List<HabitRowUi> = emptyList(),
         val daysHeader: List<String> = listOf("SUN\n19", "SAT\n18", "FRI\n17"),
-        val error: String? = null
+        val error: String? = null,
+        // Debug-style bits:
+        val status: String = "—",
+        val logs: List<String> = emptyList()
     )
 
     private val _state = MutableStateFlow(UiState(loading = true))
@@ -38,28 +41,69 @@ class HomeDatabaseViewModel @Inject constructor(
         refresh()
     }
 
+    // --- Debug-style helpers ---
+    private fun log(msg: String) {
+        _state.value = _state.value.copy(logs = _state.value.logs + msg.take(400))
+    }
+    private fun setStatus(s: String) {
+        _state.value = _state.value.copy(status = s)
+    }
+    private inline fun withLoading(block: () -> Unit) {
+        _state.value = _state.value.copy(loading = true)
+        block()
+        _state.value = _state.value.copy(loading = false)
+    }
+
     fun refresh() = viewModelScope.launch {
-        _state.value = _state.value.copy(loading = true, error = null)
-        when (val r = habitsRepo.list()) {
-            is ApiResult.Ok<*> -> {
-                val items = (r.data as List<*>).mapNotNull { any ->
-                    val dto = any as? com.mpieterse.stride.data.dto.habits.HabitDto ?: return@mapNotNull null
-                    HabitRowUi(
-                        id = dto.id,
-                        name = dto.name,
-                        tag = "Habit",                      // <- remove dto.tag usage
-                        progress = 0f,
-                        checklist = listOf(false, false, false),
-                        streaked = false
-                    )
+        withLoading {
+            _state.value = _state.value.copy(error = null)
+            when (val r = habitsRepo.list()) {
+                is ApiResult.Ok<*> -> {
+                    val items = (r.data as List<*>).mapNotNull { any ->
+                        val dto = any as? com.mpieterse.stride.data.dto.habits.HabitDto ?: return@mapNotNull null
+                        HabitRowUi(
+                            id = dto.id,
+                            name = dto.name,
+                            tag = "Habit",
+                            progress = 0f,
+                            checklist = listOf(false, false, false),
+                            streaked = false
+                        )
+                    }
+                    _state.value = _state.value.copy(habits = items, error = null)
+                    setStatus("OK • list habits")
+                    log("habits ✅ count=${items.size}")
                 }
-                _state.value = _state.value.copy(loading = false, habits = items)
+                is ApiResult.Err -> {
+                    _state.value = _state.value.copy(
+                        error = "${r.code ?: ""} ${r.message ?: "Unknown error"}"
+                    )
+                    setStatus("ERR ${r.code ?: ""} • list habits")
+                    log("habits ❌ ${r.code} ${r.message}")
+                }
             }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = "${r.code ?: ""} ${r.message ?: "Unknown error"}"
-                )
+        }
+    }
+
+    fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        withLoading {
+            when (val r = habitsRepo.create(name)) { // mirror Debug.createHabit
+                is ApiResult.Ok<*> -> {
+                    setStatus("OK • create habit")
+                    val h = r.data as? com.mpieterse.stride.data.dto.habits.HabitDto
+                    log("create ✅ ${h?.name ?: "—"} (${h?.id ?: "?"})")
+                    // Refresh so the new habit shows up
+                    refresh()
+                    onDone(true)
+                }
+                is ApiResult.Err -> {
+                    setStatus("ERR ${r.code ?: ""} • create habit")
+                    log("create ❌ ${r.code} ${r.message}")
+                    _state.value = _state.value.copy(
+                        error = "${r.code ?: ""} ${r.message ?: "Failed to create"}"
+                    )
+                    onDone(false)
+                }
             }
         }
     }

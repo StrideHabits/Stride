@@ -33,41 +33,31 @@ import com.mpieterse.stride.ui.layout.central.roots.HomeScreen
 fun HomeScaffold() {
     val controller = rememberNavController()
     val destinationDefault = HomeScreen.Database
-    var destinationCurrent by rememberSaveable {
-        mutableStateOf(destinationDefault.route)
-    }
+    var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }
     var showCreateHabitDialog by rememberSaveable { mutableStateOf(false) }
-    
-    // Get the current destination from the navigation controller
+
     val currentRoute = controller.currentBackStackEntryAsState().value?.destination?.route
 
     val destinations = listOf(
         BottomNavItem(
             label = "Home",
             alias = HomeScreen.Database,
-            icon = painterResource(
-                R.drawable.xic_uic_outline_check_circle
-            )
+            icon = painterResource(R.drawable.xic_uic_outline_check_circle)
         ),
         BottomNavItem(
             label = "Notifications",
             alias = HomeScreen.Notifications,
-            icon = painterResource(
-                R.drawable.xic_uic_outline_bell
-            )
+            icon = painterResource(R.drawable.xic_uic_outline_bell)
         ),
         BottomNavItem(
             label = "Settings",
             alias = HomeScreen.Settings,
-            icon = painterResource(
-                R.drawable.xic_uic_outline_setting
-            )
+            icon = painterResource(R.drawable.xic_uic_outline_setting)
         ),
     )
 
     Scaffold(
         floatingActionButton = {
-            // Only show FAB on Database screen, not on HabitViewer
             if (currentRoute == HomeScreen.Database.route) {
                 FloatingActionButton(
                     onClick = { showCreateHabitDialog = true },
@@ -107,9 +97,7 @@ fun HomeScaffold() {
             }
         }
     ) { insets ->
-        Surface(
-            color = Color(0xFF161620),
-        ) {
+        Surface(color = Color(0xFF161620)) {
             HomeNavGraph(
                 controller = controller,
                 currentDestination = destinationCurrent,
@@ -120,18 +108,17 @@ fun HomeScaffold() {
         }
     }
 
-    // Create Habit Dialog
+    // Create Habit Dialog (now aligned with simplified HabitData)
     UpsertDialog(
         isVisible = showCreateHabitDialog,
         onDismiss = { showCreateHabitDialog = false },
         onConfirm = { habitData ->
-            // TODO: Handle habit creation
-            // For now, just log the data
-            println("Created habit: ${habitData.name}, frequency: ${habitData.frequency}, tag: ${habitData.tag}")
+            // Replace this with your VM call if you wire a shared ViewModel:
+            // homeDbViewModel.createHabit(habitData.name)
+            println("Created habit: ${habitData.name}")
         }
     )
 }
-
 
 data class BottomNavItem(
     val label: String,
