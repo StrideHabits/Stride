@@ -152,6 +152,7 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.activity.ktx)
 
     testImplementation(libs.junit)
 

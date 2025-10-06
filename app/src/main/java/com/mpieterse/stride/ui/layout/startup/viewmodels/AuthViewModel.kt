@@ -25,6 +25,11 @@ class AuthViewModel
     
     
 // --- Functions
+    
+    
+    fun isUserSignedIn(): Boolean {
+        return authService.isUserSignedIn()
+    }
 
 
     fun googleSignIn(): Boolean {

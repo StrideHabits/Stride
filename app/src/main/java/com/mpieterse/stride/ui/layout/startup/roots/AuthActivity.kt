@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
@@ -20,6 +21,13 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class AuthActivity : FragmentActivity() {
+
+    private val authViewModel: AuthViewModel by viewModels()
+    
+    
+// --- Lifecycle
+    
+    
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
