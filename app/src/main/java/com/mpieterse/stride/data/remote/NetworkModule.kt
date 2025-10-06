@@ -2,6 +2,7 @@ package com.mpieterse.stride.data.remote
 
 import android.content.Context
 import com.mpieterse.stride.data.local.TokenStore
+import com.mpieterse.stride.data.local.NotificationsStore
 import com.google.gson.GsonBuilder
 import com.mpieterse.stride.BuildConfig
 import dagger.Module
@@ -35,6 +36,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     @Provides @Singleton fun tokenStore(@ApplicationContext c: Context) = TokenStore(c)
+    
+    @Provides @Singleton fun notificationsStore(@ApplicationContext c: Context) = NotificationsStore(c)
 
     @Provides @Singleton
     fun authInterceptor(store: TokenStore) = Interceptor { chain ->

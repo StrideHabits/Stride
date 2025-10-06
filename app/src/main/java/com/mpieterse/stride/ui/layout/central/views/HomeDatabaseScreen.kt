@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.ui.layout.central.components.HabitItem
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
@@ -33,6 +33,11 @@ fun HomeDatabaseScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showCreate by rememberSaveable { mutableStateOf(false) }
+    
+    // Refresh when returning to this screen
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Surface(

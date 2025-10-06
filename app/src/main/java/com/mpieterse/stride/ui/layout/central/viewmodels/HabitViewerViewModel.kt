@@ -9,6 +9,7 @@ import com.mpieterse.stride.data.dto.checkins.CheckInDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.core.services.HabitNameOverrideService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import java.time.*
 @HiltViewModel
 class HabitViewerViewModel @Inject constructor(
     private val habits: HabitRepository,
-    private val checkins: CheckInRepository
+    private val checkins: CheckInRepository,
+    private val nameOverrideService: HabitNameOverrideService
 ) : ViewModel() {
 
     data class UiState(
@@ -28,7 +30,8 @@ class HabitViewerViewModel @Inject constructor(
         val habitName: String = "",
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
-        val completedDates: List<Int> = emptyList()
+        val completedDates: List<Int> = emptyList(),
+        val localNameOverride: String? = null
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -80,6 +83,34 @@ class HabitViewerViewModel @Inject constructor(
             streakDays = streak,
             completedDates = completedThisMonth
         )
+    }
+
+    fun completeToday(habitId: String) = viewModelScope.launch {
+        _state.value = _state.value.copy(loading = true, error = null)
+        val today = LocalDate.now().toString()
+        when (val r = checkins.create(habitId, today)) {
+            is ApiResult.Ok<*> -> {
+                // Re-load to refresh streak and calendar
+                // This check-in is now saved to the API and will be visible in the home screen
+                load(habitId)
+            }
+            is ApiResult.Err -> {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    error = "Complete failed: ${r.code ?: ""} ${r.message ?: ""}"
+                )
+            }
+        }
+    }
+
+    fun updateLocalName(newName: String) {
+        _state.value = _state.value.copy(localNameOverride = newName)
+        // Store in shared service so home screen can access it
+        nameOverrideService.updateHabitName(_state.value.habitName, newName)
+    }
+
+    fun getDisplayName(): String {
+        return _state.value.localNameOverride ?: _state.value.habitName
     }
 
     // Count consecutive days ending today.

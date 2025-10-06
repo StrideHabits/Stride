@@ -4,15 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.repo.CheckInRepository
+import com.mpieterse.stride.core.services.HabitNameOverrideService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @HiltViewModel
 class HomeDatabaseViewModel @Inject constructor(
     private val habitsRepo: HabitRepository,
+    private val checkinsRepo: CheckInRepository,
+    private val nameOverrideService: HabitNameOverrideService,
 ) : ViewModel() {
 
     data class HabitRowUi(
@@ -27,7 +32,7 @@ class HomeDatabaseViewModel @Inject constructor(
     data class UiState(
         val loading: Boolean = false,
         val habits: List<HabitRowUi> = emptyList(),
-        val daysHeader: List<String> = listOf("SUN\n19", "SAT\n18", "FRI\n17"),
+        val daysHeader: List<String> = emptyList(),
         val error: String? = null,
         // Debug-style bits:
         val status: String = "—",
@@ -57,32 +62,79 @@ class HomeDatabaseViewModel @Inject constructor(
     fun refresh() = viewModelScope.launch {
         withLoading {
             _state.value = _state.value.copy(error = null)
-            when (val r = habitsRepo.list()) {
-                is ApiResult.Ok<*> -> {
-                    val items = (r.data as List<*>).mapNotNull { any ->
-                        val dto = any as? com.mpieterse.stride.data.dto.habits.HabitDto ?: return@mapNotNull null
-                        HabitRowUi(
-                            id = dto.id,
-                            name = dto.name,
-                            tag = "Habit",
-                            progress = 0f,
-                            checklist = listOf(false, false, false),
-                            streaked = false
-                        )
-                    }
-                    _state.value = _state.value.copy(habits = items, error = null)
-                    setStatus("OK • list habits")
-                    log("habits ✅ count=${items.size}")
-                }
-                is ApiResult.Err -> {
-                    _state.value = _state.value.copy(
-                        error = "${r.code ?: ""} ${r.message ?: "Unknown error"}"
-                    )
-                    setStatus("ERR ${r.code ?: ""} • list habits")
-                    log("habits ❌ ${r.code} ${r.message}")
-                }
+            
+            // Load habits
+            val habitsResult = habitsRepo.list()
+            if (habitsResult is ApiResult.Err) {
+                _state.value = _state.value.copy(
+                    error = "${habitsResult.code ?: ""} ${habitsResult.message ?: "Unknown error"}"
+                )
+                setStatus("ERR ${habitsResult.code ?: ""} • list habits")
+                log("habits ❌ ${habitsResult.code} ${habitsResult.message}")
+                return@withLoading
             }
+            
+            val habits = (habitsResult as ApiResult.Ok<*>).data as List<*>
+            val habitDtos = habits.filterIsInstance<com.mpieterse.stride.data.dto.habits.HabitDto>()
+            
+            // Load check-ins to calculate progress
+            val checkinsResult = checkinsRepo.list()
+            val allCheckins = if (checkinsResult is ApiResult.Ok<*>) {
+                (checkinsResult.data as List<*>).filterIsInstance<com.mpieterse.stride.data.dto.checkins.CheckInDto>()
+            } else {
+                emptyList()
+            }
+            
+            // Create habit rows with real progress
+            val items = habitDtos.map { habit ->
+                val habitCheckins = allCheckins.filter { it.habitId == habit.id }
+                val today = LocalDate.now()
+                val lastThreeDays = getLastThreeDays()
+                val completedLastThreeDays = habitCheckins.mapNotNull { checkin ->
+                    try {
+                        java.time.Instant.parse(checkin.completedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    } catch (e: Exception) { null }
+                }.filter { date -> lastThreeDays.contains(date) }
+                
+                val progress = if (lastThreeDays.isNotEmpty()) completedLastThreeDays.size.toFloat() / lastThreeDays.size else 0f
+                val checklist = lastThreeDays.map { date -> completedLastThreeDays.contains(date) }
+                val streaked = completedLastThreeDays.contains(today)
+                
+                HabitRowUi(
+                    id = habit.id,
+                    name = nameOverrideService.getDisplayName(habit.id, habit.name),
+                    tag = "Habit",
+                    progress = progress,
+                    checklist = checklist,
+                    streaked = streaked
+                )
+            }
+            
+            // Generate 3-day header
+            val lastThreeDays = getLastThreeDays()
+            val daysHeader = lastThreeDays.map { date ->
+                val dayName = date.dayOfWeek.name.take(3) // MON, TUE, etc.
+                val dayNumber = date.dayOfMonth.toString()
+                "$dayName\n$dayNumber"
+            }
+            
+            _state.value = _state.value.copy(
+                habits = items, 
+                daysHeader = daysHeader,
+                error = null
+            )
+            setStatus("OK • list habits")
+            log("habits ✅ count=${items.size}")
         }
+    }
+    
+    private fun getLastThreeDays(): List<LocalDate> {
+        val today = LocalDate.now()
+        return listOf(
+            today.minusDays(2), // 2 days ago
+            today.minusDays(1), // 1 day ago  
+            today                // today
+        )
     }
 
     fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
@@ -108,3 +160,5 @@ class HomeDatabaseViewModel @Inject constructor(
         }
     }
 }
+
+

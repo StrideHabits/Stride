@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
@@ -45,8 +45,8 @@ fun HabitViewerScreen(
 
     var showEditDialog by remember { mutableStateOf(false) }
 
-    // mirror VM state locally for edit preview (no API write yet)
-    var currentHabitName by remember(state.habitName) { mutableStateOf(state.habitName) }
+    // Use ViewModel's display name and state
+    val displayName = vm.getDisplayName()
     var currentHabitImage by remember(state.habitImage) { mutableStateOf<Bitmap?>(state.habitImage) }
     var currentStreakDays by remember(state.streakDays) { mutableStateOf(state.streakDays) }
     var currentCompletedDates by remember(state.completedDates) { mutableStateOf(state.completedDates) }
@@ -70,7 +70,7 @@ fun HabitViewerScreen(
                         )
                     }
                     Text(
-                        text = if (state.loading) "Loading…" else currentHabitName,
+                        text = if (state.loading) "Loading…" else displayName,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -81,7 +81,16 @@ fun HabitViewerScreen(
                             .padding(horizontal = 16.dp),
                         textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.width(48.dp))
+                    IconButton(
+                        onClick = { vm.completeToday(habitId) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.xic_uic_outline_check),
+                            contentDescription = "Complete Today",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
                 }
             }
 
@@ -148,10 +157,10 @@ fun HabitViewerScreen(
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
-            currentHabitName = updated.name
+            vm.updateLocalName(updated.name)
             showEditDialog = false
         },
-        initialData = HabitData(name = currentHabitName)
+        initialData = HabitData(name = displayName)
     )
 }
 
