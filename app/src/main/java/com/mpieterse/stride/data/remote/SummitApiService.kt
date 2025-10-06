@@ -9,6 +9,20 @@ import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
+/**
+ * Service interface for communicating with the SummitAPI backend using Retrofit.
+ *
+ * This class defines the HTTP endpoints and request/response models used to interact
+ * with the remote RESTful API. Retrofit handles serialization, request execution,
+ * and network layer abstraction, enabling a clean separation between network logic
+ * and application layers.
+ *
+ * @see <a href="https://www.geeksforgeeks.org/android/introduction-retofit-2-android-set-1/">
+ *      GeeksforGeeks (2017). Introduction to Retrofit in Android.</a>
+ *      [Accessed 6 Oct. 2025].
+ */
+
+
 interface SummitApiService {
 
     // Users

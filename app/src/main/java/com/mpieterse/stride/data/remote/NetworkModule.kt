@@ -18,6 +18,19 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
+/**
+ * Dependency Injection (DI) module for providing application-level dependencies.
+ *
+ * This module uses Hilt to manage and inject dependencies such as repositories,
+ * services, and data sources throughout the app. Centralizing object creation
+ * improves testability, scalability, and adherence to clean architecture principles.
+ *
+ * @see <a href="https://developer.android.com/training/dependency-injection">
+ *      Android Developers (2025). Dependency injection in Android.</a>
+ *      [Accessed 6 Oct. 2025].
+ */
+
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
