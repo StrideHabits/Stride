@@ -154,10 +154,81 @@ fun methodName() { //This method [description] using [technology] ([Source], [Ye
 
 ---
 
+# Part 2 — App Prototype Development Summary
+
+This document outlines what has been completed for each criterion in **Part 2: App Prototype Development** of the Stride / Summit project.
+
+---
+
+## ✅ Application Functionality
+
+### App runs on a mobile device
+
+The app runs smoothly on both emulator and physical Android devices. All major features operate without crashes or performance issues.
+
+---
+
+## 🔐 Authentication & Core Features
+
+### Feature 1 — Credential Login
+
+Implements secure email and password login using Firebase Authentication and the Summit API. Handles validation correctly and integrates with the backend for secure access.
+
+### Feature 2 — Daily Logging & Streaks
+
+Allows users to log their daily progress and track streaks. Data is persisted and synced with the API, forming a core part of the app’s habit-tracking functionality.
+
+### Feature 3 — Reminders
+
+Implements daily reminder notifications for user check-ins. Notifications are scheduled locally and trigger reliably, helping users stay consistent with their habits.
+
+---
+
+## ⚙️ App Features & Integration
+
+### SSO Sign-in
+
+Google SSO login works with Firebase integration. Users can sign in using their Google account seamlessly as an alternative to email-based login.
+
+### Settings Menu
+
+The settings screen includes functional dropdowns for Theme, Sync Frequency, and Notifications. Data is stored and persisted locally through ConfigurationService. Debug Tools and Logout options both work as intended. Theme switching logic is implemented, though the UI does not yet refresh in real time.
+
+### REST API Creation
+
+SummitAPI was built using C# ASP.NET Core and includes working endpoints for authentication, user data, habits, and settings. The API is hosted on Render and fully tested using Swagger and Postman.
+
+### API Integration in App
+
+The Stride Android app integrates with the SummitAPI to manage users, authentication, and data. Endpoints are connected and functional.
+
+---
+
+## 🎨 User Interface
+
+Developed with Jetpack Compose and Material 3. The interface maintains a consistent color scheme, clear typography, and modern layout structure. It adapts across screen sizes for a smooth user experience.
+
+---
+
+## 💾 GitHub, Testing & Documentation
+
+The project is maintained on GitHub with structured commits and a complete README file. Basic testing has been added to verify functionality. Documentation includes setup instructions and API details.
+
+---
+
+## 🎥 Demonstration Video
+
+A short demonstration video will showcase the main app features, including login, daily tracking, reminders, settings, debug tools, and logout.
+
+---
+
+## 📝 References & Citations
+
+---
+
 ## 📄 License
 
 This project is for **educational purposes** under the Varsity College BCAD program. Redistribution or commercial use is not permitted without written consent.
 
----
 
 
