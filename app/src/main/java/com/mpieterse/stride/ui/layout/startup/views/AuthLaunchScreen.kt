@@ -36,7 +36,6 @@ fun AuthLaunchScreen(
     onNavigateToSignIn: () -> Unit,
     onNavigateToSignUp: () -> Unit,
     modifier: Modifier,
-    model: AuthViewModel,
 ) {
     val analytics = Firebase.analytics
     LaunchedEffect(Unit) {

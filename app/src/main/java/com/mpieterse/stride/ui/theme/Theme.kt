@@ -254,8 +254,8 @@ fun AppTheme(
 
         darkTheme -> {
             // Temporarily disabled
-            // mediumContrastDarkColorScheme
-            lightScheme
+            mediumContrastDarkColorScheme
+            //lightScheme
         }
 
         else -> {

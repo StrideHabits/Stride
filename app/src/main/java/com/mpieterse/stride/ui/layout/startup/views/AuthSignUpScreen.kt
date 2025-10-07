@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,19 +44,14 @@ import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
-import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
-
 
 @Composable
 fun AuthSignUpScreen(
-    onAuthenticated: () -> Unit,
+    onSignUp: (email: String, password: String) -> Unit,
     onNavigateToSignIn: () -> Unit,
-    modifier: Modifier,
-    model: AuthViewModel
+    modifier: Modifier
 ) {
     val analytics = Firebase.analytics
-    val authState by model.state.collectAsStateWithLifecycle()
-    
     LaunchedEffect(Unit) {
         analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW) {
             param(FirebaseAnalytics.Param.SCREEN_NAME, "SignUp")
@@ -189,34 +183,21 @@ fun AuthSignUpScreen(
             )
             Column {
                 Button(
-                    onClick = { 
-                        if (passwordDefaultField == passwordConfirmField) {
-                            model.register("User", identityField, passwordDefaultField, onAuthenticated)
-                        }
+                    onClick = {
+                        onSignUp(identityField, passwordDefaultField)
                     },
                     shape = MaterialTheme.shapes.large,
-                    enabled = !authState.loading && identityField.isNotBlank() && 
-                             passwordDefaultField.isNotBlank() && passwordDefaultField == passwordConfirmField,
                     modifier = Modifier
                         .height(52.dp)
                         .fillMaxWidth()
                 ) {
                     Text(
-                        text = if (authState.loading) "Creating Account..." else "Sign Up",
+                        text = "Sign Up",
                         style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight(600)
+                            fontWeight = FontWeight(
+                                600
+                            )
                         )
-                    )
-                }
-                
-                // Show error message
-                if (authState.error != null) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = authState.error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 

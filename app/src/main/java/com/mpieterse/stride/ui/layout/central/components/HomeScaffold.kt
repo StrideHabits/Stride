@@ -2,7 +2,6 @@ package com.mpieterse.stride.ui.layout.central.components
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -17,9 +16,10 @@ import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.roots.HomeNavGraph
 import com.mpieterse.stride.ui.layout.central.roots.HomeScreen
+import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 
 @Composable
-fun HomeScaffold() {
+fun HomeScaffold(notificationsViewModel: NotificationsViewModel) {
     val controller = rememberNavController()
     val destinationDefault = HomeScreen.Database
     var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }
@@ -80,7 +80,8 @@ fun HomeScaffold() {
                 currentDestination = destinationCurrent,
                 modifier = Modifier
                     .padding(insets)
-                    .fillMaxSize()
+                    .fillMaxSize(),
+                notificationsViewModel = notificationsViewModel
             )
         }
     }

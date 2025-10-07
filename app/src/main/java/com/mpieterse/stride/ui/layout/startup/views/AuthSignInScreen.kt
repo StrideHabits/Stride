@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,7 +38,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -47,17 +45,14 @@ import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
-import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignInScreen(
-    onAuthenticated: () -> Unit,
-    modifier: Modifier,
-    model: AuthViewModel = hiltViewModel(),
+    onSignIn: (email: String, password: String) -> Unit,
+    onGoogleSignIn: () -> Unit,
+    modifier: Modifier
 ) {
     val analytics = Firebase.analytics
-    val authState by model.state.collectAsStateWithLifecycle()
-    
     LaunchedEffect(Unit) {
         analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW) {
             param(FirebaseAnalytics.Param.SCREEN_NAME, "SignIn")
@@ -146,29 +141,17 @@ fun AuthSignInScreen(
                 Modifier.height(64.dp)
             )
             Button(
-                onClick = { 
-                    model.login(identityField, passwordField, onAuthenticated)
+                onClick = {
+                    onSignIn(identityField, passwordField)
                 },
                 shape = MaterialTheme.shapes.large,
-                enabled = !authState.loading && identityField.isNotBlank() && passwordField.isNotBlank(),
                 modifier = Modifier
                     .height(52.dp)
                     .fillMaxWidth()
             ) {
                 Text(
-                    text = if (authState.loading) "Signing In..." else "Sign In",
+                    text = "Sign In",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
-                )
-            }
-            
-            // Show error message
-            if (authState.error != null) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = authState.error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -177,10 +160,7 @@ fun AuthSignInScreen(
             )
             IconButton(
                 onClick = {
-                    val result = model.googleSignIn()
-                    if (result) {
-                        onAuthenticated()
-                    }
+                    onGoogleSignIn()
                 },
                 modifier = Modifier
                     .requiredSize(56.dp)

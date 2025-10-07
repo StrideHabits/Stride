@@ -3,118 +3,135 @@ package com.mpieterse.stride.ui.layout.startup.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
+import com.mpieterse.stride.core.services.AuthenticationService
+import com.mpieterse.stride.core.services.GoogleAuthenticationClient
 import com.mpieterse.stride.data.repo.AuthRepository
+import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import androidx.lifecycle.viewModelScope
-import com.mpieterse.stride.core.LocalApplication.Companion.TAG
-import com.mpieterse.stride.core.services.AuthenticationService
-import com.mpieterse.stride.core.services.GoogleAuthenticationClient
-import com.mpieterse.stride.core.utils.Clogger
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
 @HiltViewModel
-class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
-    private val authService: AuthenticationService
+class AuthViewModel
+@Inject constructor(
+    private val authService: AuthenticationService,
+    private val ssoClient: GoogleAuthenticationClient,
+    private val authApi: AuthRepository
 ) : ViewModel() {
 
-    data class UiState(
-        val loading: Boolean = false,
-        val error: String? = null,
-        val isAuthenticated: Boolean = false
-    )
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
+    val authState: StateFlow<AuthState> = _authState
 
-    private val _state = MutableStateFlow(UiState())
-    val state: StateFlow<UiState> = _state
-
-    fun login(email: String, password: String, onSuccess: () -> Unit) = viewModelScope.launch {
-        _state.value = _state.value.copy(loading = true, error = null)
-
-        when (val result = authRepository.login(email, password)) {
-            is ApiResult.Ok -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    isAuthenticated = true,
-                    error = null
-                )
-                onSuccess()
-            }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = result.message ?: "Login failed"
-                )
-            }
+    init {
+        if (authService.isUserSignedIn()) {
+            _authState.value = AuthState.Locked
+        } else {
+            _authState.value = AuthState.Unauthenticated
         }
     }
 
-    fun register(name: String, email: String, password: String, onSuccess: () -> Unit) = viewModelScope.launch {
-        _state.value = _state.value.copy(loading = true, error = null)
-
-        when (val result = authRepository.register(name, email, password)) {
-            is ApiResult.Ok -> {
-                // After successful registration, automatically log in
-                login(email, password, onSuccess)
-            }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = result.message ?: "Registration failed"
-                )
-            }
-        }
-    }
-
-    fun clearError() {
-        _state.value = _state.value.copy(error = null)
-    }
-
-    @Inject
-    lateinit var ssoClient: GoogleAuthenticationClient
-
-
-// --- Functions
-
-
-    fun isUserSignedIn(): Boolean {
-        return authService.isUserSignedIn()
-    }
-
-
-    fun googleSignIn(): Boolean {
-        var status = false
+    fun signUp(email: String, password: String) {
         viewModelScope.launch {
-            Clogger.i(
-                TAG, "Signing-in user with Google SSO"
-            )
+            _authState.value = runCatching {
+                authService.signUpAsync(email, password)
 
-            runCatching {
-                val milliseconds = 30_000L
-                withTimeout(milliseconds) {
-                    ssoClient.executeAuthenticationTransactionAsync()
-                }
-            }.apply {
-                onSuccess {
-                    Clogger.d(
-                        TAG, "Attempt to authenticate was a success!"
-                    )
-
-                    status = true
+                val user = authService.getCurrentUser() ?: error("No Firebase user found")
+                requireNotNull(user.email) {
+                    "User email is null"
                 }
 
-                onFailure { exception ->
-                    Clogger.d(
-                        TAG, "Attempt to authenticate was a failure!"
-                    )
+                val apiRegistrationState = authApi.register(
+                    user.email!!, user.email!!, user.uid
+                )
+
+                val apiLoginState = when (apiRegistrationState) {
+                    is ApiResult.Ok -> authApi.login(user.email!!, user.uid)
+                    is ApiResult.Err -> authApi.login(user.email!!, user.uid)
                 }
+
+                if (apiLoginState is ApiResult.Err) {
+                    authService.logout()
+                    throw Exception(apiLoginState.message)
+                }
+
+                AuthState.Locked
+            }.getOrElse {
+                AuthState.Error(it.message ?: "Sign-up failed")
             }
         }
+    }
 
-        return status
+    fun signIn(email: String, password: String) {
+        viewModelScope.launch {
+            _authState.value = runCatching {
+                authService.signInAsync(email, password)
+
+                val user = authService.getCurrentUser() ?: error("No Firebase user found")
+                requireNotNull(user.email) { 
+                    "User email is null" 
+                }
+
+                val apiLoginState = authApi.login(
+                    user.email!!, user.uid
+                )
+
+                if (apiLoginState is ApiResult.Err) {
+                    authService.logout()
+                    throw Exception(apiLoginState.message)
+                }
+
+                AuthState.Locked
+            }.getOrElse {
+                AuthState.Error(
+                    it.message ?: "Sign-in failed"
+                )
+            }
+        }
+    }
+
+    fun googleSignIn() {
+        viewModelScope.launch {
+            _authState.value = runCatching {
+                ssoClient.executeAuthenticationTransactionAsync()
+
+                val user = authService.getCurrentUser() ?: error("No Firebase user found")
+                requireNotNull(user.email) {
+                    "User email is null"
+                }
+
+                val apiRegistrationState = authApi.register(
+                    user.email!!, user.email!!, user.uid
+                )
+
+                val apiLoginState = when (apiRegistrationState) {
+                    is ApiResult.Ok -> authApi.login(user.email!!, user.uid)
+                    is ApiResult.Err -> authApi.login(user.email!!, user.uid)
+                }
+
+                if (apiLoginState is ApiResult.Err) {
+                    authService.logout()
+                    throw Exception(apiLoginState.message)
+                }
+
+                AuthState.Locked
+            }.getOrElse {
+                AuthState.Error(
+                    it.message ?: "Google sign-in failed"
+                )
+            }
+        }
+    }
+
+    fun unlockWithBiometrics(success: Boolean) {
+        if (success) {
+            _authState.value = AuthState.Authenticated
+        }
+    }
+
+    fun logout() {
+        authService.logout()
+        _authState.value = AuthState.Unauthenticated
     }
 }
