@@ -33,30 +33,30 @@ interface SummitApiService {
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
     // Habits
-    @GET("api/Habits")
+    @GET("api/habits")
     suspend fun getHabits(): Response<List<HabitDto>>
 
-    @POST("api/Habits")
+    @POST("api/habits")
     suspend fun createHabit(@Body body: HabitCreateDto): Response<HabitDto>
 
     // CheckIns
-    @GET("api/CheckIns")
+    @GET("api/checkins")
     suspend fun getCheckIns(): Response<List<CheckInDto>>
 
     // Create a new check-in
-    @POST("api/CheckIns")
+    @POST("api/checkins")
     suspend fun createCheckIn(@Body body: CheckInCreateDto): Response<CheckInDto>
 
 
     // Settings
-    @GET("api/Settings")
+    @GET("api/settings")
     suspend fun getSettings(): Response<SettingsDto>
 
-    @PUT("api/Settings")
+    @PUT("api/settings")
     suspend fun updateSettings(@Body body: SettingsDto): Response<SettingsDto>
 
     // Uploads
     @Multipart
-    @POST("api/Uploads")
+    @POST("api/uploads")
     suspend fun upload(@Part file: MultipartBody.Part): Response<UploadResponse>
 }

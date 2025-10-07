@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,11 +17,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +45,7 @@ import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationFrequency
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
+import com.mpieterse.stride.data.dto.habits.HabitDto
 import java.time.LocalTime
 
 @Composable
@@ -54,6 +59,11 @@ fun NotificationsScreen(
     var showEditNotificationDialog by remember { mutableStateOf(false) }
     var notificationToEdit by remember { mutableStateOf<NotificationData?>(null) }
 
+    // Refresh when returning to this screen
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Surface(
             color = Color.White,
@@ -65,15 +75,36 @@ fun NotificationsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
-            Text(
-                text = "Notifications",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                ),
-                color = Color.Black
-            )
+            // Header with refresh button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Notifications",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    ),
+                    color = Color.Black
+                )
+                TextButton(onClick = { viewModel.refresh() }) {
+                    Text("Refresh")
+                }
+            }
+            
+            // Habit status
+            if (state.habits.isNotEmpty()) {
+                Text(
+                    text = "You have ${state.habits.size} habit${if (state.habits.size != 1) "s" else ""}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    ),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
             
             // Global Settings Card
             NotificationSettingsCard(
@@ -81,6 +112,35 @@ fun NotificationsScreen(
                 onSettingsChange = { viewModel.updateSettings(it) }
             )
             
+            // Available Habits Section
+            if (state.habits.isNotEmpty()) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Your Habits",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        ),
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(120.dp)
+                    ) {
+                        items(state.habits) { habit ->
+                            HabitNotificationCard(
+                                habit = habit,
+                                hasNotification = state.notifications.any { it.habitName == habit.name }
+                            )
+                        }
+                    }
+                }
+            }
+
             // Notifications List
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -163,7 +223,8 @@ fun NotificationsScreen(
         onConfirm = { newNotification ->
             viewModel.addNotification(newNotification)
             showCreateNotificationDialog = false
-        }
+        },
+        availableHabits = state.habits.map { it.name }
     )
     
     // Edit Notification Dialog
@@ -178,6 +239,7 @@ fun NotificationsScreen(
             showEditNotificationDialog = false
             notificationToEdit = null
         },
+        availableHabits = state.habits.map { it.name },
         initialData = notificationToEdit
     )
 }
@@ -261,6 +323,55 @@ private fun NotificationSettingsCard(
                     onCheckedChange = { 
                         onSettingsChange(settings.copy(defaultVibrationEnabled = it))
                     }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HabitNotificationCard(
+    habit: HabitDto,
+    hasNotification: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (hasNotification) Color(0xFFFF9500).copy(alpha = 0.1f) else Color.Transparent
+        ),
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = habit.name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = Color.Black
+                )
+                if (habit.tag != null) {
+                    Text(
+                        text = habit.tag,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
+            
+            if (hasNotification) {
+                Icon(
+                    painter = painterResource(R.drawable.xic_uic_outline_bell),
+                    contentDescription = "Has notification",
+                    tint = Color(0xFFFF9500),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

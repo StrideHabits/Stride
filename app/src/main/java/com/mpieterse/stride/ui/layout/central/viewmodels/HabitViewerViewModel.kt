@@ -2,6 +2,7 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
@@ -10,6 +11,7 @@ import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.core.services.HabitNameOverrideService
+import com.mpieterse.stride.core.services.AppEventBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,13 +23,16 @@ import java.time.*
 class HabitViewerViewModel @Inject constructor(
     private val habits: HabitRepository,
     private val checkins: CheckInRepository,
-    private val nameOverrideService: HabitNameOverrideService
+    private val nameOverrideService: HabitNameOverrideService,
+    private val eventBus: AppEventBus
 ) : ViewModel() {
 
     data class UiState(
         val loading: Boolean = true,
         val error: String? = null,
+        val habitId: String = "",
         val habitName: String = "",
+        val displayName: String = "",
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
         val completedDates: List<Int> = emptyList(),
@@ -69,17 +74,28 @@ class HabitViewerViewModel @Inject constructor(
 
         val today = LocalDate.now()
         val monthStart = today.withDayOfMonth(1)
-        val completedThisMonth = mine.mapNotNull { it.completedAt.toLocalDateOrNull() }
-            .filter { it.year == monthStart.year && it.month == monthStart.month }
+        val completedThisMonth = mine.mapNotNull { checkin ->
+            try {
+                java.time.LocalDate.parse(checkin.dayKey)
+            } catch (e: Exception) { null }
+        }.filter { it.year == monthStart.year && it.month == monthStart.month }
             .map { it.dayOfMonth }
             .distinct()
             .sorted()
+        
+        
 
-        val streak = computeStreakDays(mine.mapNotNull { it.completedAt.toLocalDateOrNull() }.distinct())
+        val streak = computeStreakDays(mine.mapNotNull { checkin ->
+            try {
+                java.time.LocalDate.parse(checkin.dayKey)
+            } catch (e: Exception) { null }
+        }.distinct())
 
         _state.value = _state.value.copy(
             loading = false,
+            habitId = habitId,
             habitName = habitName,
+            displayName = nameOverrideService.getDisplayName(habitId, habitName),
             streakDays = streak,
             completedDates = completedThisMonth
         )
@@ -93,6 +109,8 @@ class HabitViewerViewModel @Inject constructor(
                 // Re-load to refresh streak and calendar
                 // This check-in is now saved to the API and will be visible in the home screen
                 load(habitId)
+                // Emit event to notify home screen
+                eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
             }
             is ApiResult.Err -> {
                 _state.value = _state.value.copy(
@@ -103,14 +121,62 @@ class HabitViewerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalName(newName: String) {
-        _state.value = _state.value.copy(localNameOverride = newName)
+    fun toggleCheckIn(habitId: String, isoDate: String) = viewModelScope.launch {
+        Log.d("HabitViewerViewModel", "toggleCheckIn called: habitId=$habitId isoDate=$isoDate")
+        _state.value = _state.value.copy(loading = true, error = null)
+        
+        try {
+            // Create new check-in directly - let the API handle duplicates
+            when (val r = checkins.create(habitId, isoDate)) {
+                is ApiResult.Ok<*> -> {
+                    // Successfully created check-in, refresh data and emit event
+                    load(habitId)
+                    eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
+                }
+                is ApiResult.Err -> {
+                    val errorMessage = when {
+                        r.code == 409 -> "Check-in already exists for this date"
+                        r.code == 401 -> "Authentication required - please log in"
+                        r.code == 403 -> "Access denied"
+                        r.code == 404 -> "Habit not found"
+                        else -> "Failed to create check-in: ${r.message ?: "Unknown error"}"
+                    }
+                    _state.value = _state.value.copy(
+                        loading = false,
+                        error = errorMessage
+                    )
+                    // Clear error after a short delay for user-friendly messages
+                    if (r.code == 409) {
+                        kotlinx.coroutines.delay(2000)
+                        _state.value = _state.value.copy(error = null)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(
+                loading = false,
+                error = "Network error: ${e.message ?: "Please check your connection"}"
+            )
+        }
+    }
+
+    fun updateLocalName(newName: String, habitId: String) {
         // Store in shared service so home screen can access it
-        nameOverrideService.updateHabitName(_state.value.habitName, newName)
+        nameOverrideService.updateHabitName(habitId, newName)
+        // Update local state to trigger UI refresh
+        _state.value = _state.value.copy(
+            localNameOverride = newName,
+            displayName = newName
+        )
+        // Emit event to notify home screen
+        viewModelScope.launch {
+            eventBus.emit(AppEventBus.AppEvent.HabitNameChanged)
+        }
     }
 
     fun getDisplayName(): String {
-        return _state.value.localNameOverride ?: _state.value.habitName
+        // Use the service to get the display name, which will be reactive to changes
+        return nameOverrideService.getDisplayName(_state.value.habitId, _state.value.habitName)
     }
 
     // Count consecutive days ending today.

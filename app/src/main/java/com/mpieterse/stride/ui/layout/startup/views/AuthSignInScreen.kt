@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +55,8 @@ fun AuthSignInScreen(
     modifier: Modifier,
 ) {
     val analytics = Firebase.analytics
+    val authState by model.state.collectAsStateWithLifecycle()
+    
     LaunchedEffect(Unit) {
         analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW) {
             param(FirebaseAnalytics.Param.SCREEN_NAME, "SignIn")
@@ -142,15 +145,29 @@ fun AuthSignInScreen(
                 Modifier.height(64.dp)
             )
             Button(
-                onClick = { onAuthenticated() },
+                onClick = { 
+                    model.login(identityField, passwordField, onAuthenticated)
+                },
                 shape = MaterialTheme.shapes.large,
+                enabled = !authState.loading && identityField.isNotBlank() && passwordField.isNotBlank(),
                 modifier = Modifier
                     .height(52.dp)
                     .fillMaxWidth()
             ) {
                 Text(
-                    text = "Sign In",
+                    text = if (authState.loading) "Signing In..." else "Sign In",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
+                )
+            }
+            
+            // Show error message
+            if (authState.error != null) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = authState.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

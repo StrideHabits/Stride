@@ -2,7 +2,10 @@ package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mpieterse.stride.core.net.ApiResult
+import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.local.NotificationsStore
+import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,12 +19,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    private val notificationsStore: NotificationsStore
+    private val notificationsStore: NotificationsStore,
+    private val habitRepository: HabitRepository
 ) : ViewModel() {
 
     data class UiState(
         val loading: Boolean = true,
         val notifications: List<NotificationData> = emptyList(),
+        val habits: List<HabitDto> = emptyList(),
         val settings: NotificationSettings = NotificationSettings(),
         val error: String? = null
     )
@@ -35,6 +40,14 @@ class NotificationsViewModel @Inject constructor(
 
     private fun loadData() = viewModelScope.launch {
         try {
+            // Load habits from API
+            val habitsResult = habitRepository.list()
+            val habits = if (habitsResult is ApiResult.Ok<*>) {
+                (habitsResult.data as List<*>).filterIsInstance<HabitDto>()
+            } else {
+                emptyList()
+            }
+            
             combine(
                 notificationsStore.notificationsFlow,
                 notificationsStore.settingsFlow
@@ -42,10 +55,11 @@ class NotificationsViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     loading = false,
                     notifications = notifications,
+                    habits = habits,
                     settings = settings,
                     error = null
                 )
-            }
+            }.collect { } // Collect the combine flow
         } catch (e: Exception) {
             _state.value = _state.value.copy(
                 loading = false,
@@ -109,5 +123,10 @@ class NotificationsViewModel @Inject constructor(
 
     fun clearError() {
         _state.value = _state.value.copy(error = null)
+    }
+
+    fun refresh() = viewModelScope.launch {
+        _state.value = _state.value.copy(loading = true)
+        loadData()
     }
 }

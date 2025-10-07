@@ -109,7 +109,10 @@ fun HomeDatabaseScreen(
                                     progress = row.progress,
                                     checklist = row.checklist,
                                     streaked = row.streaked,
-                                    onClick = { onNavigateToHabitViewer(row.id) }
+                                    onClick = { onNavigateToHabitViewer(row.id) },
+                                    onCheckInClick = { dayIndex ->
+                                        viewModel.checkInHabit(row.id, dayIndex)
+                                    }
                                 )
                             }
                         }

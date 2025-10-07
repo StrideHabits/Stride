@@ -6,6 +6,7 @@ import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.core.services.HabitNameOverrideService
+import com.mpieterse.stride.core.services.AppEventBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ class HomeDatabaseViewModel @Inject constructor(
     private val habitsRepo: HabitRepository,
     private val checkinsRepo: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
+    private val eventBus: AppEventBus,
 ) : ViewModel() {
 
     data class HabitRowUi(
@@ -44,6 +46,19 @@ class HomeDatabaseViewModel @Inject constructor(
 
     init {
         refresh()
+        // Listen for real-time events
+        viewModelScope.launch {
+            eventBus.events.collect { event ->
+                when (event) {
+                    is AppEventBus.AppEvent.HabitCreated,
+                    is AppEventBus.AppEvent.HabitUpdated,
+                    is AppEventBus.AppEvent.CheckInCompleted,
+                    is AppEventBus.AppEvent.HabitNameChanged -> {
+                        refreshInternal()
+                    }
+                }
+            }
+        }
     }
 
     // --- Debug-style helpers ---
@@ -60,6 +75,15 @@ class HomeDatabaseViewModel @Inject constructor(
     }
 
     fun refresh() = viewModelScope.launch {
+        refreshInternal()
+    }
+    
+    fun forceRefresh() = viewModelScope.launch {
+        // Force refresh to get latest data from API
+        refreshInternal()
+    }
+    
+    private fun refreshInternal() = viewModelScope.launch {
         withLoading {
             _state.value = _state.value.copy(error = null)
             
@@ -92,8 +116,11 @@ class HomeDatabaseViewModel @Inject constructor(
                 val lastThreeDays = getLastThreeDays()
                 val completedLastThreeDays = habitCheckins.mapNotNull { checkin ->
                     try {
-                        java.time.Instant.parse(checkin.completedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                    } catch (e: Exception) { null }
+                        // Parse the dayKey directly since it's in yyyy-MM-dd format
+                        java.time.LocalDate.parse(checkin.dayKey)
+                    } catch (e: Exception) { 
+                        null 
+                    }
                 }.filter { date -> lastThreeDays.contains(date) }
                 
                 val progress = if (lastThreeDays.isNotEmpty()) completedLastThreeDays.size.toFloat() / lastThreeDays.size else 0f
@@ -103,7 +130,7 @@ class HomeDatabaseViewModel @Inject constructor(
                 HabitRowUi(
                     id = habit.id,
                     name = nameOverrideService.getDisplayName(habit.id, habit.name),
-                    tag = "Habit",
+                    tag = habit.tag ?: "Habit",
                     progress = progress,
                     checklist = checklist,
                     streaked = streaked
@@ -139,11 +166,13 @@ class HomeDatabaseViewModel @Inject constructor(
 
     fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
         withLoading {
-            when (val r = habitsRepo.create(name)) { // mirror Debug.createHabit
+            when (val r = habitsRepo.create(name)) {
                 is ApiResult.Ok<*> -> {
                     setStatus("OK • create habit")
                     val h = r.data as? com.mpieterse.stride.data.dto.habits.HabitDto
                     log("create ✅ ${h?.name ?: "—"} (${h?.id ?: "?"})")
+                    // Emit event to notify other screens
+                    eventBus.emit(AppEventBus.AppEvent.HabitCreated)
                     // Refresh so the new habit shows up
                     refresh()
                     onDone(true)
@@ -155,6 +184,34 @@ class HomeDatabaseViewModel @Inject constructor(
                         error = "${r.code ?: ""} ${r.message ?: "Failed to create"}"
                     )
                     onDone(false)
+                }
+            }
+        }
+    }
+
+    fun checkInHabit(habitId: String, dayIndex: Int) = viewModelScope.launch {
+        log("checkInHabit called: habitId=$habitId dayIndex=$dayIndex")
+        val lastThreeDays = getLastThreeDays()
+        log("lastThreeDays: $lastThreeDays")
+        if (dayIndex >= 0 && dayIndex < lastThreeDays.size) {
+            val targetDate = lastThreeDays[dayIndex]
+            val isoDate = targetDate.toString() // yyyy-MM-dd format
+            
+            when (val result = checkinsRepo.create(habitId, isoDate)) {
+                is ApiResult.Ok<*> -> {
+                    setStatus("OK • check-in")
+                    log("check-in ✅ habit=$habitId date=$isoDate")
+                    // Emit event to notify other screens
+                    eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
+                    // Refresh to update UI
+                    refresh()
+                }
+                is ApiResult.Err -> {
+                    setStatus("ERR ${result.code ?: ""} • check-in")
+                    log("check-in ❌ ${result.code} ${result.message}")
+                    _state.value = _state.value.copy(
+                        error = "${result.code ?: ""} ${result.message ?: "Failed to check-in"}"
+                    )
                 }
             }
         }

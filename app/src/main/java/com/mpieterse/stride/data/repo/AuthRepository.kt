@@ -26,9 +26,7 @@ class AuthRepository @Inject constructor(
     private val tokens: TokenStore
 ) {
     suspend fun register(name: String, email: String, pass: String) =
-        safeCall { api.register(RegisterRequest(name, email, pass)) }.also {
-            if (it is ApiResult.Ok) tokens.set(it.data.token)
-        }
+        safeCall { api.register(RegisterRequest(name, email, pass)) }
 
     suspend fun login(email: String, pass: String) =
         safeCall { api.login(LoginRequest(email, pass)) }.also {

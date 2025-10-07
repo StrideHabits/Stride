@@ -2,6 +2,7 @@ package com.mpieterse.stride.ui.layout.startup.roots
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,10 +16,10 @@ import com.mpieterse.stride.ui.layout.startup.views.AuthSignUpScreen
 fun AuthNavGraph(
     onGoToHomeActivity: () -> Unit,
     onTerminateCompose: () -> Unit,
-    modifier: Modifier  = Modifier,
-    authViewModel: AuthViewModel
+    modifier: Modifier  = Modifier
 ) {
     val controller = rememberNavController()
+    val authViewModel: AuthViewModel = hiltViewModel()
 
     NavHost(
         navController = controller,

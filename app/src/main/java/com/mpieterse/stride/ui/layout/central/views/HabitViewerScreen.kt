@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,11 +46,8 @@ fun HabitViewerScreen(
 
     var showEditDialog by remember { mutableStateOf(false) }
 
-    // Use ViewModel's display name and state
-    val displayName = vm.getDisplayName()
-    var currentHabitImage by remember(state.habitImage) { mutableStateOf<Bitmap?>(state.habitImage) }
-    var currentStreakDays by remember(state.streakDays) { mutableStateOf(state.streakDays) }
-    var currentCompletedDates by remember(state.completedDates) { mutableStateOf(state.completedDates) }
+    // Use ViewModel's display name and state directly - no local state needed
+    val displayName = state.displayName
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -103,32 +101,56 @@ fun HabitViewerScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     HabitImageViewer(
-                        habitImage = currentHabitImage,
+                        habitImage = state.habitImage,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     StreakBanner(
-                        streakDays = currentStreakDays,
+                        streakDays = state.streakDays,
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    CalendarView(
-                        completedDates = currentCompletedDates,
-                        modifier = Modifier.fillMaxWidth(),
-                        onDateClick = { day ->
-                            currentCompletedDates =
-                                if (day in currentCompletedDates) currentCompletedDates - day
-                                else currentCompletedDates + day
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        CalendarView(
+                            completedDates = state.completedDates,
+                            modifier = Modifier.fillMaxWidth(),
+                            onDateClick = { day ->
+                                // Only allow clicks when not loading
+                                if (!state.loading) {
+                                    // Toggle check-in for this day
+                                    val date = LocalDate.now().withDayOfMonth(day)
+                                    vm.toggleCheckIn(habitId, date.toString())
+                                }
+                            }
+                        )
+                        
+                        // Show loading overlay on calendar when creating check-ins
+                        if (state.loading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Black.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = Color(0xFFFF9500),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
                         }
-                    )
+                    }
+
 
                     if (state.error != null) {
                         Text(
                             text = state.error!!,
                             color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
                         )
                     }
+                    
+                    
                 }
             }
         }
@@ -157,7 +179,7 @@ fun HabitViewerScreen(
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
-            vm.updateLocalName(updated.name)
+            vm.updateLocalName(updated.name, habitId)
             showEditDialog = false
         },
         initialData = HabitData(name = displayName)
@@ -266,7 +288,7 @@ private fun CalendarGrid(
     modifier: Modifier = Modifier
 ) {
     val currentMonth = LocalDate.now().withDayOfMonth(1)
-    val firstDayOfMonth = currentMonth.dayOfWeek.value % 7
+    val firstDayOfMonth = (currentMonth.dayOfWeek.value % 7)
     val daysInMonth = currentMonth.lengthOfMonth()
 
     val calendarDays = mutableListOf<List<Int?>>()

@@ -14,14 +14,11 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.fragment.app.FragmentActivity
 import com.mpieterse.stride.ui.layout.central.roots.HomeActivity
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
-import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 import com.mpieterse.stride.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class AuthActivity : FragmentActivity() {
-
-    private lateinit var authViewModel: AuthViewModel
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -31,7 +28,6 @@ class AuthActivity : FragmentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color(0xFF161620).toArgb()),
         )
 
-        authViewModel = AuthViewModel()
         useAuthenticationStateRoutes()
 
         setContent {
@@ -48,8 +44,7 @@ class AuthActivity : FragmentActivity() {
                         onTerminateCompose = ::terminate,
                         modifier = Modifier
                             .statusBarsPadding()
-                            .fillMaxSize(),
-                        authViewModel = authViewModel
+                            .fillMaxSize()
                     )
                 }
             }

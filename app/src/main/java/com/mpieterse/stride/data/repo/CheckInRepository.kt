@@ -27,6 +27,7 @@ class CheckInRepository @Inject constructor(private val api: SummitApiService) {
     suspend fun create(habitId: String, isoDate: String) = safeCall {
         val day = LocalDate.parse(isoDate.trim())                     // yyyy-MM-dd
         val completedAt = ZonedDateTime.of(day.atStartOfDay(), ZoneOffset.UTC).toInstant().toString()
-        api.createCheckIn(CheckInCreateDto(habitId.trim(), completedAt, day.toString()))
+        val dto = CheckInCreateDto(habitId.trim(), completedAt, day.toString())
+        api.createCheckIn(dto)
     }
 }
