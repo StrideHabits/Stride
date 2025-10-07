@@ -1,0 +1,39 @@
+name: 'Setup the Android Environment'
+description: 'Setup Android SDK and Dependencies for GitHub Actions'
+
+
+# ------------------------------------------------------------------------------
+
+
+inputs:
+  
+  # Parameter
+  use-secret-for-firebase:
+    description: 'Generate the Google Services JSON from GitHub Secrets'
+    required: true
+    default: 'true'
+  
+  # Parameter
+  set-secret-for-firebase:
+    description: 'The base64-encoded Google Services JSON file content.'
+    required: false
+    default: ''
+
+
+# ------------------------------------------------------------------------------
+
+
+runs:
+  using: 'composite'
+  steps:
+
+    # Step
+    - name: Inject >> Google Services JSON
+      if: ${{ inputs.use-secret-for-firebase == 'true' }}
+      shell: bash
+      run: |
+        mkdir -p app
+        echo "${{ inputs.set-secret-for-firebase }}" | base64 -d > app/google-services.json
+
+
+# ------------------------------------------------------------------------------

@@ -1,0 +1,82 @@
+package com.mpieterse.stride.ui.layout.central.roots
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
+import com.mpieterse.stride.ui.layout.central.views.DebugScreen
+import com.mpieterse.stride.ui.layout.central.views.HabitViewerScreen
+import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
+import com.mpieterse.stride.ui.layout.central.views.HomeSettingsScreen
+import com.mpieterse.stride.ui.layout.central.views.NotificationsScreen
+
+@Composable
+fun HomeNavGraph(
+    modifier: Modifier = Modifier,
+    controller: NavHostController,
+    currentDestination: String,
+    notificationsViewModel: NotificationsViewModel
+) {
+    NavHost(
+        navController = controller,
+        startDestination = currentDestination
+    ) {
+        // Database
+        composable(route = HomeScreen.Database.route) {
+            HomeDatabaseScreen(
+                modifier = modifier,
+                onNavigateToHabitViewer = { id ->
+                    controller.navigate(HomeScreen.HabitViewer.buildRoute(id))
+                }
+            )
+        }
+
+        // Notifications
+        composable(
+            route = HomeScreen.Notifications.route
+        ) {
+            NotificationsScreen(
+                modifier = modifier,
+                viewModel = notificationsViewModel
+            )
+        }
+
+        // Settings
+        composable(
+            route = HomeScreen.Settings.route
+        ) {
+            HomeSettingsScreen(
+                modifier = modifier,
+                onEnterDebug = {
+                    controller.navigate(HomeScreen.Debug.route)
+                }
+            )
+        }
+
+        // HabitViewer
+        composable(
+            route = HomeScreen.HabitViewer.route,  // "habit/{habitId}"
+            arguments = listOf(navArgument("habitId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val habitId = backStackEntry.arguments?.getString("habitId") ?: return@composable
+            HabitViewerScreen(
+                modifier = modifier,
+                habitId = habitId,
+                onBackClick = { controller.popBackStack() }
+            )
+        }
+
+        // Debug
+        composable(
+            route = HomeScreen.Debug.route
+        ) {
+            DebugScreen(
+                modifier = modifier
+            )
+        }
+    }
+}
