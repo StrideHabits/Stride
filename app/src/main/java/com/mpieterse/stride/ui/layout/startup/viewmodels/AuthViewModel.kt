@@ -77,7 +77,14 @@ class AuthViewModel
                         }
                     }
                     is ApiResult.Err -> {
-                        throw Exception()
+                        when (val loginState = authApi.login( user.email!!, user.uid)) {
+                            is ApiResult.Ok -> {
+                                // do nothing
+                            }
+                            is ApiResult.Err -> {
+                                throw Exception()
+                            }
+                        }
                     }
                 }
             }.onSuccess {
