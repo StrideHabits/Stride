@@ -6,7 +6,7 @@ import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
 import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 
-object ConfigurationSchema {
+object ConfigurationSchema { //This object defines the application configuration schema using Android DataStore preferences (Android Developers, 2024).
     val appAppearance = EnumConfigurationKey(
         key = stringPreferencesKey("app_appearance"),
         enumClass = AppAppearance::class.java,

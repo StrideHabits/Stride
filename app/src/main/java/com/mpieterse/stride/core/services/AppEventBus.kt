@@ -12,7 +12,7 @@ class AppEventBus @Inject constructor() {
     private val _events = MutableSharedFlow<AppEvent>()
     val events: SharedFlow<AppEvent> = _events.asSharedFlow()
     
-    suspend fun emit(event: AppEvent) {
+    suspend fun emit(event: AppEvent) { //This method emits application events using Kotlin coroutines SharedFlow (Kotlin Foundation, 2024).
         _events.emit(event)
     }
     

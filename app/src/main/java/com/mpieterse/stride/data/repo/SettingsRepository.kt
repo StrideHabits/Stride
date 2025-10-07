@@ -19,6 +19,6 @@ import javax.inject.Inject
 
 
 class SettingsRepository @Inject constructor(private val api: SummitApiService) {
-    suspend fun get() = safeCall { api.getSettings() }
-    suspend fun update(s: SettingsDto) = safeCall { api.updateSettings(s) }
+    suspend fun get() = safeCall { api.getSettings() } //This method retrieves user settings from the API using the Repository pattern (App Dev Insights, 2024).
+    suspend fun update(s: SettingsDto) = safeCall { api.updateSettings(s) } //This method updates user settings through the API using the Repository pattern (App Dev Insights, 2024).
 }

@@ -74,7 +74,7 @@ class HomeDatabaseViewModel @Inject constructor(
         _state.value = _state.value.copy(loading = false)
     }
 
-    fun refresh() = viewModelScope.launch {
+    fun refresh() = viewModelScope.launch { //This method refreshes the habit data from the API using ViewModel lifecycle management (Android Developers, 2024).
         refreshInternal()
     }
     
@@ -164,7 +164,7 @@ class HomeDatabaseViewModel @Inject constructor(
         )
     }
 
-    fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+    fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch { //This method creates a new habit through the API using ViewModel lifecycle management (Android Developers, 2024).
         withLoading {
             when (val r = habitsRepo.create(name)) {
                 is ApiResult.Ok<*> -> {
@@ -189,7 +189,7 @@ class HomeDatabaseViewModel @Inject constructor(
         }
     }
 
-    fun checkInHabit(habitId: String, dayIndex: Int) = viewModelScope.launch {
+    fun checkInHabit(habitId: String, dayIndex: Int) = viewModelScope.launch { //This method creates a check-in for a habit using ViewModel lifecycle management (Android Developers, 2024).
         log("checkInHabit called: habitId=$habitId dayIndex=$dayIndex")
         val lastThreeDays = getLastThreeDays()
         log("lastThreeDays: $lastThreeDays")

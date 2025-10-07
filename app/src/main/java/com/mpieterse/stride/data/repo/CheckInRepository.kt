@@ -22,9 +22,9 @@ import javax.inject.Inject
  */
 
 class CheckInRepository @Inject constructor(private val api: SummitApiService) {
-    suspend fun list() = safeCall { api.getCheckIns() }
+    suspend fun list() = safeCall { api.getCheckIns() } //This method retrieves all check-ins from the API using the Repository pattern (App Dev Insights, 2024).
 
-    suspend fun create(habitId: String, isoDate: String) = safeCall {
+    suspend fun create(habitId: String, isoDate: String) = safeCall { //This method creates a new check-in through the API using the Repository pattern (App Dev Insights, 2024).
         val day = LocalDate.parse(isoDate.trim())                     // yyyy-MM-dd
         val completedAt = ZonedDateTime.of(day.atStartOfDay(), ZoneOffset.UTC).toInstant().toString()
         val dto = CheckInCreateDto(habitId.trim(), completedAt, day.toString())

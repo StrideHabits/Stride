@@ -26,7 +26,7 @@ import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
 import com.mpieterse.stride.ui.layout.central.viewmodels.HomeDatabaseViewModel
 
 @Composable
-fun HomeDatabaseScreen(
+fun HomeDatabaseScreen( //This composable displays the main habit tracking screen using Jetpack Compose Material Design (Google Inc., 2024).
     modifier: Modifier = Modifier,
     onNavigateToHabitViewer: (String) -> Unit = {},
     viewModel: HomeDatabaseViewModel = hiltViewModel(),

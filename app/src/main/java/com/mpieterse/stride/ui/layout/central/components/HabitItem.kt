@@ -35,7 +35,7 @@ import com.mpieterse.stride.R
 
 @Preview(name = "HabitItem", showBackground = true, widthDp = 400)
 @Composable
-fun HabitItem(
+fun HabitItem( //This composable displays individual habit items with progress tracking using Jetpack Compose Material Design (Google Inc., 2024).
     cardText: String = "",
     chipText: String = "",
     progress: Float = 0F,

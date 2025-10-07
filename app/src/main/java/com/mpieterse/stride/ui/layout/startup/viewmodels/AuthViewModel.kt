@@ -32,7 +32,7 @@ class AuthViewModel
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String) { //This method handles user registration using Firebase Authentication and API integration (Android Developers, 2024).
         viewModelScope.launch {
             _authState.value = runCatching {
                 authService.signUpAsync(email, password)
@@ -63,7 +63,7 @@ class AuthViewModel
         }
     }
 
-    fun signIn(email: String, password: String) {
+    fun signIn(email: String, password: String) { //This method handles user authentication using Firebase Authentication and API integration (Android Developers, 2024).
         viewModelScope.launch {
             _authState.value = runCatching {
                 authService.signInAsync(email, password)
@@ -91,7 +91,7 @@ class AuthViewModel
         }
     }
 
-    fun googleSignIn() {
+    fun googleSignIn() { //This method handles Google Sign-In authentication using Firebase Authentication (Android Developers, 2024).
         viewModelScope.launch {
             _authState.value = runCatching {
                 ssoClient.executeAuthenticationTransactionAsync()
@@ -124,13 +124,13 @@ class AuthViewModel
         }
     }
 
-    fun unlockWithBiometrics(success: Boolean) {
+    fun unlockWithBiometrics(success: Boolean) { //This method handles biometric authentication unlock using Android biometric APIs (Android Developers, 2024).
         if (success) {
             _authState.value = AuthState.Authenticated
         }
     }
 
-    fun logout() {
+    fun logout() { //This method handles user logout using Firebase Authentication (Android Developers, 2024).
         authService.logout()
         _authState.value = AuthState.Unauthenticated
     }

@@ -56,7 +56,7 @@ class ConfigurationService
      */
     suspend fun <T> put(
         key: Key<T>, value: T
-    ) {
+    ) { //This method stores configuration values using Android DataStore with timeout handling (Android Developers, 2024).
         val scopeId = newId()
         logTrace(scopeId, "PUT", "STARTED", "key=[${key.name}], value=[$value]")
 
@@ -95,7 +95,7 @@ class ConfigurationService
      */
     suspend fun <T> get(
         key: Key<T>
-    ): T? {
+    ): T? { //This method retrieves configuration values using Android DataStore with timeout handling (Android Developers, 2024).
         val scopeId = newId()
         logTrace(scopeId, "GET", "STARTED", "key=[${key.name}]")
 
@@ -134,7 +134,7 @@ class ConfigurationService
      * @throws androidx.datastore.core.IOException
      * @throws Exception
      */
-    suspend fun erase() {
+    suspend fun erase() { //This method clears all configuration data using Android DataStore (Android Developers, 2024).
         val scopeId = newId()
         logTrace(scopeId, "ERASE", "STARTED")
 

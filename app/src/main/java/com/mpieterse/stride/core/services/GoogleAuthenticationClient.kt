@@ -33,7 +33,7 @@ class GoogleAuthenticationClient
 // --- Functions
 
 
-    suspend fun executeAuthenticationTransactionAsync() {
+    suspend fun executeAuthenticationTransactionAsync() { //This method handles Google Sign-In authentication using Firebase Authentication and Credential Manager (Google Inc., 2024).
         if (authService.isUserSignedIn()) {
             Clogger.i(
                 TAG, "User is already signed-in."
@@ -82,7 +82,7 @@ class GoogleAuthenticationClient
 // --- Internals
 
 
-    private suspend fun getCredentials(): GetCredentialResponse {
+    private suspend fun getCredentials(): GetCredentialResponse { //This method retrieves Google credentials using Android Credential Manager (Android Developers, 2024).
         val request = GetCredentialRequest.Builder().apply {
             addCredentialOption(
                 GetGoogleIdOption.Builder().apply {

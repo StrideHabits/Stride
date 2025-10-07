@@ -5,7 +5,7 @@ sealed class ApiResult<out T> {
     data class Ok<T>(val data: T): ApiResult<T>()
     data class Err(val code: Int?, val message: String): ApiResult<Nothing>()
 }
-suspend inline fun <T> safeCall(crossinline block: suspend () -> retrofit2.Response<T>): ApiResult<T> =
+suspend inline fun <T> safeCall(crossinline block: suspend () -> retrofit2.Response<T>): ApiResult<T> = //This function provides safe API call handling with error management for Retrofit responses (Square Inc., 2024).
     try {
         val res = block()
         val body = res.body()
