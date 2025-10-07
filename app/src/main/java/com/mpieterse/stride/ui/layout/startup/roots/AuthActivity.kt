@@ -17,6 +17,7 @@ import com.mpieterse.stride.ui.layout.central.roots.HomeActivity
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
 import com.mpieterse.stride.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @AndroidEntryPoint
 class AuthActivity : FragmentActivity() {
