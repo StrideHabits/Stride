@@ -1,21 +1,20 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
 import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.core.models.configuration.schema.ConfigurationSchema
+import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.services.ConfigurationService
 import com.mpieterse.stride.core.utils.Clogger
-import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.dto.settings.SettingsDto
 import com.mpieterse.stride.data.repo.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -26,25 +25,27 @@ class HomeSettingsViewModel @Inject constructor(
 
     companion object { private const val TAG = "HomeSettingsViewModel" }
 
-    // UI state
-    var theme by mutableStateOf(AppAppearance.LIGHT)
-        private set
-    var notifications by mutableStateOf(AlertFrequency.ALL)  // local-only
-        private set
-    var sync by mutableStateOf(SyncFrequency.ALWAYS)         // local-only
-        private set
+    // ---- Reactive UI state ----
+    private val _theme = MutableStateFlow(AppAppearance.LIGHT)
+    val theme: StateFlow<AppAppearance> = _theme
 
-    var loading by mutableStateOf(false)
-        private set
-    var error by mutableStateOf<String?>(null)
-        private set
+    private val _notifications = MutableStateFlow(AlertFrequency.ALL)
+    val notifications: StateFlow<AlertFrequency> = _notifications
+
+    private val _sync = MutableStateFlow(SyncFrequency.ALWAYS)
+    val sync: StateFlow<SyncFrequency> = _sync
+
+    private val _loading = MutableStateFlow(false)
+    val loading: StateFlow<Boolean> = _loading
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
 
     init {
-        // Load cached values fast, then hydrate theme from API
         viewModelScope.launch {
-            theme = configService.get(ConfigurationSchema.appAppearance)
-            notifications = configService.get(ConfigurationSchema.alertFrequency)
-            sync = configService.get(ConfigurationSchema.syncFrequency)
+            _theme.value = configService.get(ConfigurationSchema.appAppearance)
+            _notifications.value = configService.get(ConfigurationSchema.alertFrequency)
+            _sync.value = configService.get(ConfigurationSchema.syncFrequency)
             fetchFromApi()
         }
     }
@@ -52,57 +53,55 @@ class HomeSettingsViewModel @Inject constructor(
     // ---- Public updaters ----
 
     fun updateTheme(value: AppAppearance) {
-        theme = value
+        _theme.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.appAppearance, value) }
-        pushThemeToApi()
+        pushThemeToApi(value)
     }
 
     fun updateAlerts(value: AlertFrequency) {
-        notifications = value
+        _notifications.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.alertFrequency, value) }
-        // API does not support notifications field — local only.
     }
 
     fun updateSync(value: SyncFrequency) {
-        sync = value
+        _sync.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.syncFrequency, value) }
         Clogger.i(TAG, "Sync set to $value")
     }
 
     // ---- API bridge (theme only) ----
 
-    private fun pushThemeToApi() = viewModelScope.launch {
-        val apiTheme = theme.toApiTheme()
-        loading = true; error = null
+    private fun pushThemeToApi(value: AppAppearance) = viewModelScope.launch {
+        val apiTheme = value.toApiTheme()
+        _loading.value = true; _error.value = null
         when (val r = settingsRepo.update(SettingsDto(dailyReminderHour = null, theme = apiTheme))) {
             is ApiResult.Ok -> {
-                loading = false
+                _loading.value = false
                 Clogger.i(TAG, "Settings updated on server: theme=$apiTheme")
             }
             is ApiResult.Err -> {
-                loading = false
-                error = "${r.code ?: ""} ${r.message ?: "Update failed"}"
-                Clogger.e(TAG, "Update failed: $error")
+                _loading.value = false
+                _error.value = "${r.code ?: ""} ${r.message ?: "Update failed"}"
+                Clogger.e(TAG, "Update failed: ${_error.value}")
             }
         }
     }
 
     private fun fetchFromApi() = viewModelScope.launch {
-        loading = true; error = null
+        _loading.value = true; _error.value = null
         when (val r = settingsRepo.get()) {
             is ApiResult.Ok -> {
-                loading = false
+                _loading.value = false
                 val dto = r.data
-                val uiTheme = dto.theme?.toUiTheme() ?: theme
-                theme = uiTheme
-                // cache theme locally
+                val uiTheme = dto.theme?.toUiTheme() ?: _theme.value
+                _theme.value = uiTheme
                 configService.put(ConfigurationSchema.appAppearance, uiTheme)
                 Clogger.i(TAG, "Fetched settings from server: $dto")
             }
             is ApiResult.Err -> {
-                loading = false
-                error = "${r.code ?: ""} ${r.message ?: "Load failed"}"
-                Clogger.w(TAG, "Using cached settings; server fetch failed: $error")
+                _loading.value = false
+                _error.value = "${r.code ?: ""} ${r.message ?: "Load failed"}"
+                Clogger.w(TAG, "Using cached settings; server fetch failed: ${_error.value}")
             }
         }
     }
@@ -117,7 +116,7 @@ class HomeSettingsViewModel @Inject constructor(
 
     private fun String.toUiTheme(): AppAppearance = when (lowercase()) {
         "light" -> AppAppearance.LIGHT
-        "dark"  -> AppAppearance.NIGHT
-        else    -> AppAppearance.SYSTEM
+        "dark" -> AppAppearance.NIGHT
+        else -> AppAppearance.SYSTEM
     }
 }

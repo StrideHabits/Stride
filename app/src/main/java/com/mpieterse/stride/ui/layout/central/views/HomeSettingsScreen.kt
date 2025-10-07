@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
@@ -31,6 +33,11 @@ fun HomeSettingsScreen(
     viewModel: HomeSettingsViewModel = hiltViewModel(),
     onEnterDebug: () -> Unit = {}
 ) {
+    // ✅ Collect state flows as Compose states
+    val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+    val sync by viewModel.sync.collectAsStateWithLifecycle()
+
     Surface(
         color = Color(0xFF161620),
         modifier = modifier
@@ -68,7 +75,7 @@ fun HomeSettingsScreen(
 
             LocalOutlinedDropdown(
                 label = "Theme",
-                value = viewModel.theme,
+                value = theme,
                 onValueChange = { viewModel.updateTheme(it) },
                 items = AppAppearance.entries,
                 itemLabel = { it.name.replaceFirstChar(Char::uppercase) }
@@ -78,7 +85,7 @@ fun HomeSettingsScreen(
 
             LocalOutlinedDropdown(
                 label = "Notifications",
-                value = viewModel.notifications,
+                value = notifications,
                 onValueChange = { viewModel.updateAlerts(it) },
                 items = AlertFrequency.entries,
                 itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
@@ -88,7 +95,7 @@ fun HomeSettingsScreen(
 
             LocalOutlinedDropdown(
                 label = "Sync Online",
-                value = viewModel.sync,
+                value = sync,
                 onValueChange = { viewModel.updateSync(it) },
                 items = SyncFrequency.entries,
                 itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
@@ -104,7 +111,6 @@ fun HomeSettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Buttons (consistent orange theme)
             val buttonColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
 
             Button(
@@ -146,7 +152,6 @@ fun HomeSettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ✅ Debug Tools button styled to match
             Button(
                 onClick = { onEnterDebug() },
                 colors = buttonColor,
@@ -160,7 +165,6 @@ fun HomeSettingsScreen(
 
             Spacer(modifier = Modifier.height(56.dp))
 
-            // Logout button
             Button(
                 onClick = {},
                 colors = buttonColor,
