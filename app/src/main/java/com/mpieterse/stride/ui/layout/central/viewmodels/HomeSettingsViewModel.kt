@@ -1,8 +1,5 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
@@ -13,6 +10,8 @@ import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.ConfigurationService
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,62 +24,38 @@ class HomeSettingsViewModel @Inject constructor(
         private const val TAG = "HomeSettingsViewModel"
     }
 
+    private val _theme = MutableStateFlow(AppAppearance.LIGHT)
+    val theme: StateFlow<AppAppearance> = _theme
 
-// --- Functions
+    private val _notifications = MutableStateFlow(AlertFrequency.ALL)
+    val notifications: StateFlow<AlertFrequency> = _notifications
 
-
-    var theme by mutableStateOf(AppAppearance.LIGHT)
-        private set
-
-
-    var notifications by mutableStateOf(AlertFrequency.ALL)
-        private set
-
-
-    var sync by mutableStateOf(SyncFrequency.ALWAYS)
-        private set
-
+    private val _sync = MutableStateFlow(SyncFrequency.ALWAYS)
+    val sync: StateFlow<SyncFrequency> = _sync
 
     init {
         viewModelScope.launch {
-            theme = configService.get(ConfigurationSchema.appAppearance)
-            notifications = configService.get(ConfigurationSchema.alertFrequency)
-            sync = configService.get(ConfigurationSchema.syncFrequency)
+            _theme.value = configService.get(ConfigurationSchema.appAppearance)
+            _notifications.value = configService.get(ConfigurationSchema.alertFrequency)
+            _sync.value = configService.get(ConfigurationSchema.syncFrequency)
         }
     }
-
 
     fun updateTheme(value: AppAppearance) {
-        theme = value
-        viewModelScope.launch { 
-            configService.put(ConfigurationSchema.appAppearance, value)
-            Clogger.i(
-                TAG, "Theme set to $value"
-            )
-        }
+        _theme.value = value
+        viewModelScope.launch { configService.put(ConfigurationSchema.appAppearance, value) }
+        Clogger.i(TAG, "Theme updated locally: $value")
     }
-
 
     fun updateAlerts(value: AlertFrequency) {
-        notifications = value
-        viewModelScope.launch { 
-            configService.put(ConfigurationSchema.alertFrequency, value)
-            Clogger.i(
-                TAG, "Notifications set to $value"
-            )
-        }
+        _notifications.value = value
+        viewModelScope.launch { configService.put(ConfigurationSchema.alertFrequency, value) }
     }
-
 
     fun updateSync(value: SyncFrequency) {
-        sync = value
-        viewModelScope.launch { 
-            configService.put(ConfigurationSchema.syncFrequency, value)
-            Clogger.i(
-                TAG, "Sync set to $value"
-            )
-        }
+        _sync.value = value
+        viewModelScope.launch { configService.put(ConfigurationSchema.syncFrequency, value) }
     }
-    
+
     fun logout() = authService.logout()
 }
