@@ -14,7 +14,7 @@ class BiometricService
 @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    fun isAvailable(): Boolean {
+    fun isAvailable(): Boolean { //This method checks if biometric authentication is available on the device (Android Developers, 2024).
         val result = BiometricManager.from(context)
             .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
         return result == BiometricManager.BIOMETRIC_SUCCESS
@@ -25,7 +25,7 @@ class BiometricService
         activity: FragmentActivity,
         promptInfoBuilder: BiometricPrompt.PromptInfo.Builder,
         onResult: (Final<Unit, BiometricError>) -> Unit
-    ) {
+    ) { //This method performs biometric authentication using Android's BiometricPrompt (Android Developers, 2024).
         if (!isAvailable()) {
             onResult(Final.Failure(BiometricError.NoSupport))
             return

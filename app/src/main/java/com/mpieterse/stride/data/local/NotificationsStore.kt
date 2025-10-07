@@ -29,13 +29,13 @@ class NotificationsStore(private val context: Context) {
         parseSettingsJson(json)
     }
     
-    suspend fun saveNotifications(notifications: List<NotificationData>) {
+    suspend fun saveNotifications(notifications: List<NotificationData>) { //This method saves notification data using Android DataStore (Android Developers, 2024).
         context.notificationsDataStore.edit { prefs ->
             prefs[NOTIFICATIONS_KEY] = notificationsToJson(notifications)
         }
     }
     
-    suspend fun saveSettings(settings: NotificationSettings) {
+    suspend fun saveSettings(settings: NotificationSettings) { //This method saves notification settings using Android DataStore (Android Developers, 2024).
         context.notificationsDataStore.edit { prefs ->
             prefs[SETTINGS_KEY] = settingsToJson(settings)
         }

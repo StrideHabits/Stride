@@ -41,21 +41,21 @@ class HomeSettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateTheme(value: AppAppearance) {
+    fun updateTheme(value: AppAppearance) { //This method updates the app theme setting using ViewModel lifecycle management (Android Developers, 2024).
         _theme.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.appAppearance, value) }
         Clogger.i(TAG, "Theme updated locally: $value")
     }
 
-    fun updateAlerts(value: AlertFrequency) {
+    fun updateAlerts(value: AlertFrequency) { //This method updates the alert frequency setting using ViewModel lifecycle management (Android Developers, 2024).
         _notifications.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.alertFrequency, value) }
     }
 
-    fun updateSync(value: SyncFrequency) {
+    fun updateSync(value: SyncFrequency) { //This method updates the sync frequency setting using ViewModel lifecycle management (Android Developers, 2024).
         _sync.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.syncFrequency, value) }
     }
 
-    fun logout() = authService.logout()
+    fun logout() = authService.logout() //This method logs out the user using Firebase Authentication (Google Inc., 2024).
 }

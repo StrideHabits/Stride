@@ -69,7 +69,7 @@ class NotificationsViewModel @Inject constructor(
         }
     }
 
-    fun addNotification(notification: NotificationData) = viewModelScope.launch {
+    fun addNotification(notification: NotificationData) = viewModelScope.launch { //This method adds a new notification using ViewModel lifecycle management (Android Developers, 2024).
         try {
             Log.d("NotificationsViewModel", "Adding notification: ${notification.habitName} at ${notification.time}")
             val currentNotifications = _state.value.notifications.toMutableList()
@@ -85,7 +85,7 @@ class NotificationsViewModel @Inject constructor(
         }
     }
 
-    fun updateNotification(updatedNotification: NotificationData) = viewModelScope.launch {
+    fun updateNotification(updatedNotification: NotificationData) = viewModelScope.launch { //This method updates an existing notification using ViewModel lifecycle management (Android Developers, 2024).
         try {
             val currentNotifications = _state.value.notifications.toMutableList()
             val index = currentNotifications.indexOfFirst { it.id == updatedNotification.id }
@@ -99,7 +99,7 @@ class NotificationsViewModel @Inject constructor(
         }
     }
 
-    fun deleteNotification(notificationId: String) = viewModelScope.launch {
+    fun deleteNotification(notificationId: String) = viewModelScope.launch { //This method deletes a notification using ViewModel lifecycle management (Android Developers, 2024).
         try {
             val currentNotifications = _state.value.notifications.filter { it.id != notificationId }
             notificationsStore.saveNotifications(currentNotifications)

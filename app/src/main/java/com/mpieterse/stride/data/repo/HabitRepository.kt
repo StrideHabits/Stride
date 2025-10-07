@@ -19,8 +19,8 @@ import javax.inject.Inject
 
 
 class HabitRepository @Inject constructor(private val api: SummitApiService) {
-    suspend fun list() = safeCall { api.getHabits() }
-    suspend fun create(name: String, frequency: Int = 0, tag: String? = null, imageUrl: String? = null) = 
+    suspend fun list() = safeCall { api.getHabits() } //This method retrieves all habits from the API using the Repository pattern (App Dev Insights, 2024).
+    suspend fun create(name: String, frequency: Int = 0, tag: String? = null, imageUrl: String? = null) = //This method creates a new habit through the API using the Repository pattern (App Dev Insights, 2024).
         safeCall { api.createHabit(HabitCreateDto(name, frequency, tag, imageUrl)) }
     // No DELETE in Swagger → remove delete() from VM usage
 }
