@@ -147,6 +147,7 @@ fun AuthSignInScreen(
                     onSignIn(identityField, passwordField)
                 },
                 shape = MaterialTheme.shapes.large,
+                enabled = !authState.loading && identityField.isNotBlank() && passwordField.isNotBlank(),
                 modifier = Modifier
                     .height(52.dp)
                     .fillMaxWidth()

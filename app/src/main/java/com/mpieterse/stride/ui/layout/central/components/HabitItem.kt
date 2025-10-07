@@ -41,7 +41,8 @@ fun HabitItem(
     progress: Float = 0F,
     streaked: Boolean = false,
     checklist: List<Boolean> = emptyList(),
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onCheckInClick: (Int) -> Unit = {}
 ) {
     Column {
         Card(
@@ -51,9 +52,6 @@ fun HabitItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .clickable {
-                    onClick()
-                }
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -72,14 +70,13 @@ fun HabitItem(
                     chipText = chipText,
                     modifier = Modifier
                         .weight(1f)
+                        .clickable { onClick() }
                 )
 
                 if (checklist.isNotEmpty()) {
                     HabitTicks(
                         states = checklist,
-                        onClick = {
-                            // ...
-                        }
+                        onClick = onCheckInClick
                     )
                 }
             }

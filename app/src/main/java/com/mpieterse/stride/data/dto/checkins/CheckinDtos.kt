@@ -2,9 +2,9 @@
 package com.mpieterse.stride.data.dto.checkins
 
 data class CheckInCreateDto(
-    val habitId: String,
-    val completedAt: String, // ISO-8601 instant e.g. 2025-10-04T00:00:00Z
-    val dayKey: String       // yyyy-MM-dd (or whatever your API expects)
+    val habitId: String, // Will be serialized as UUID string
+    val completedAt: String?, // ISO-8601 instant e.g. 2025-10-04T00:00:00Z
+    val dayKey: String?       // yyyy-MM-dd (or whatever your API expects)
 )
 
 data class CheckInDto(

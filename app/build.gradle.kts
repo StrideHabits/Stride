@@ -26,8 +26,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "V0"
-
-        // --- Tooling Configuration
+        buildConfigField("String", "API_BASE_URL", "\"https://summitapi.onrender.com/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -107,7 +106,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
+    
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -131,6 +130,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.runtime.saveable)
     implementation(libs.googleid)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.navigation.compose)
