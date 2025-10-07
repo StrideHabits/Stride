@@ -167,7 +167,9 @@ fun HomeSettingsScreen(
             Spacer(modifier = Modifier.height(56.dp))
 
             Button(
-                onClick = {},
+                onClick = {
+                    viewModel.logout()
+                },
                 colors = buttonColor,
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier
