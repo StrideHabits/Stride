@@ -76,7 +76,7 @@ class AuthViewModel
         }
     }
 
-    fun signIn() {
+    fun signIn() { //This method handles user authentication using Firebase Authentication and API integration (Android Developers, 2024).
         viewModelScope.launch {
             signInForm.validateForm()
             if (!(signInForm.isFormValid.value)) {
@@ -112,7 +112,7 @@ class AuthViewModel
         }
     }
 
-    fun googleSignIn() {
+    fun googleSignIn() { //This method handles Google Sign-In authentication using Firebase Authentication (Android Developers, 2024).
         viewModelScope.launch {
             _authState.value = runCatching {
                 ssoClient.executeAuthenticationTransactionAsync()
@@ -145,13 +145,13 @@ class AuthViewModel
         }
     }
 
-    fun unlockWithBiometrics(success: Boolean) {
+    fun unlockWithBiometrics(success: Boolean) { //This method handles biometric authentication unlock using Android biometric APIs (Android Developers, 2024).
         if (success) {
             _authState.value = AuthState.Authenticated
         }
     }
 
-    fun logout() {
+    fun logout() { //This method handles user logout using Firebase Authentication (Android Developers, 2024).
         authService.logout()
         _authState.value = AuthState.Unauthenticated
     }

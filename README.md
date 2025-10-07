@@ -115,6 +115,45 @@ This project demonstrates a modern mobile app connected to a C# ASP.NET Core RES
 
 ---
 
+## 📚 References and Citations
+
+This project has been extensively referenced to ensure proper academic and professional standards. All major functions and methods that make the app work have been documented with inline comments and citations.
+
+### 📖 Reference Documentation
+
+**Complete reference list:** [`references.md`](./references.md)
+
+The `references.md` file contains comprehensive documentation of all sources used throughout the codebase, including:
+
+- **Android Development References** - ViewModel, DataStore, Biometric, Compose, Credential Manager
+- **Firebase References** - Authentication and API documentation  
+- **Network & API References** - Retrofit and networking documentation
+- **Architecture Pattern References** - Repository pattern documentation
+- **Kotlin References** - Coroutines, Data Classes, Enums, Sealed Classes
+- **Dependency Injection References** - Hilt documentation
+- **Material Design References** - Material Design 3 and components
+- **Navigation References** - Navigation component documentation
+- **State Management References** - StateFlow and SharedFlow documentation
+
+### 🏷️ Inline Citations
+
+Throughout the codebase, major functions and methods include inline citations following this format:
+```kotlin
+fun methodName() { //This method [description] using [technology] ([Source], [Year]).
+```
+
+**Referenced Components Include:**
+- Authentication services and user management
+- Repository pattern implementations
+- API service interfaces and networking
+- ViewModel lifecycle management
+- UI components and Jetpack Compose
+- Data transfer objects and models
+- Configuration and settings management
+- Local storage and caching
+
+---
+
 ## 📄 License
 
 This project is for **educational purposes** under the Varsity College BCAD program. Redistribution or commercial use is not permitted without written consent.

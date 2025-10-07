@@ -42,7 +42,7 @@ class HabitViewerViewModel @Inject constructor(
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
-    fun load(habitId: String) = viewModelScope.launch {
+    fun load(habitId: String) = viewModelScope.launch { //This method loads habit data and check-ins using ViewModel lifecycle management (Android Developers, 2024).
         _state.value = _state.value.copy(loading = true, error = null)
 
         val habitName = when (val hr = habits.list()) {
@@ -101,7 +101,7 @@ class HabitViewerViewModel @Inject constructor(
         )
     }
 
-    fun completeToday(habitId: String) = viewModelScope.launch {
+    fun completeToday(habitId: String) = viewModelScope.launch { //This method creates a check-in for today using ViewModel lifecycle management (Android Developers, 2024).
         _state.value = _state.value.copy(loading = true, error = null)
         val today = LocalDate.now().toString()
         when (val r = checkins.create(habitId, today)) {
@@ -121,7 +121,7 @@ class HabitViewerViewModel @Inject constructor(
         }
     }
 
-    fun toggleCheckIn(habitId: String, isoDate: String) = viewModelScope.launch {
+    fun toggleCheckIn(habitId: String, isoDate: String) = viewModelScope.launch { //This method toggles check-ins for specific dates using ViewModel lifecycle management (Android Developers, 2024).
         Log.d("HabitViewerViewModel", "toggleCheckIn called: habitId=$habitId isoDate=$isoDate")
         _state.value = _state.value.copy(loading = true, error = null)
         
@@ -160,7 +160,7 @@ class HabitViewerViewModel @Inject constructor(
         }
     }
 
-    fun updateLocalName(newName: String, habitId: String) {
+    fun updateLocalName(newName: String, habitId: String) { //This method updates habit display names using the name override service (Android Developers, 2024).
         // Store in shared service so home screen can access it
         nameOverrideService.updateHabitName(habitId, newName)
         // Update local state to trigger UI refresh

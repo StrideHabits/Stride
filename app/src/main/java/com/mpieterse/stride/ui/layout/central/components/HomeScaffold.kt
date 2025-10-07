@@ -19,7 +19,7 @@ import com.mpieterse.stride.ui.layout.central.roots.HomeScreen
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 
 @Composable
-fun HomeScaffold(notificationsViewModel: NotificationsViewModel) {
+fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This composable creates the main app scaffold with bottom navigation using Jetpack Compose (Android Developers, 2024).
     val controller = rememberNavController()
     val destinationDefault = HomeScreen.Database
     var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }

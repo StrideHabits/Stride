@@ -27,36 +27,36 @@ interface SummitApiService {
 
     // Users
     @POST("api/users/register")
-    suspend fun register(@Body body: RegisterRequest): Response<RegisterResponse>
+    suspend fun register(@Body body: RegisterRequest): Response<RegisterResponse> //This method registers a new user through the REST API using Retrofit (GeeksforGeeks, 2017).
 
     @POST("api/users/login")
-    suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
+    suspend fun login(@Body body: LoginRequest): Response<AuthResponse> //This method authenticates a user through the REST API using Retrofit (GeeksforGeeks, 2017).
 
     // Habits
     @GET("api/habits")
-    suspend fun getHabits(): Response<List<HabitDto>>
+    suspend fun getHabits(): Response<List<HabitDto>> //This method retrieves all habits from the REST API using Retrofit (GeeksforGeeks, 2017).
 
     @POST("api/habits")
-    suspend fun createHabit(@Body body: HabitCreateDto): Response<HabitDto>
+    suspend fun createHabit(@Body body: HabitCreateDto): Response<HabitDto> //This method creates a new habit through the REST API using Retrofit (GeeksforGeeks, 2017).
 
     // CheckIns
     @GET("api/checkins")
-    suspend fun getCheckIns(): Response<List<CheckInDto>>
+    suspend fun getCheckIns(): Response<List<CheckInDto>> //This method retrieves all check-ins from the REST API using Retrofit (GeeksforGeeks, 2017).
 
     // Create a new check-in
     @POST("api/checkins")
-    suspend fun createCheckIn(@Body body: CheckInCreateDto): Response<CheckInDto>
+    suspend fun createCheckIn(@Body body: CheckInCreateDto): Response<CheckInDto> //This method creates a new check-in through the REST API using Retrofit (GeeksforGeeks, 2017).
 
 
     // Settings
     @GET("api/settings")
-    suspend fun getSettings(): Response<SettingsDto>
+    suspend fun getSettings(): Response<SettingsDto> //This method retrieves user settings from the REST API using Retrofit (GeeksforGeeks, 2017).
 
     @PUT("api/settings")
-    suspend fun updateSettings(@Body body: SettingsDto): Response<SettingsDto>
+    suspend fun updateSettings(@Body body: SettingsDto): Response<SettingsDto> //This method updates user settings through the REST API using Retrofit (GeeksforGeeks, 2017).
 
     // Uploads
     @Multipart
     @POST("api/uploads")
-    suspend fun upload(@Part file: MultipartBody.Part): Response<UploadResponse>
+    suspend fun upload(@Part file: MultipartBody.Part): Response<UploadResponse> //This method uploads files to the REST API using Retrofit multipart requests (GeeksforGeeks, 2017).
 }

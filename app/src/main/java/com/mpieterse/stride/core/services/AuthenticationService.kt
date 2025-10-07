@@ -77,7 +77,7 @@ class AuthenticationService
      */
     suspend fun signUpAsync(
         email: String, password: String,
-    ): FirebaseUser {
+    ): FirebaseUser { //This method creates a new user account using Firebase Authentication with email and password (Google Inc., 2024).
         Clogger.d(
             TAG, "Attempting to sign-up a user using their credentials."
         )
@@ -136,7 +136,7 @@ class AuthenticationService
      */
     suspend fun signInAsync(
         email: String, password: String
-    ): FirebaseUser {
+    ): FirebaseUser { //This method authenticates a user using Firebase Authentication with email and password (Google Inc., 2024).
         Clogger.d(
             TAG, "Attempting to sign-in a user using their credentials."
         )
@@ -197,7 +197,7 @@ class AuthenticationService
      */
     suspend fun signUpV2Async(
         credential: Credential
-    ): Final<FirebaseUser, AuthenticationError> {
+    ): Final<FirebaseUser, AuthenticationError> { //This method creates a new user account with enhanced error handling using Firebase Authentication (Google Inc., 2024).
         Clogger.d(
             TAG, "Signing-up using credentials"
         )
@@ -258,7 +258,7 @@ class AuthenticationService
      */
     suspend fun signInV2Async(
         credential: Credential
-    ): Final<FirebaseUser, AuthenticationError> {
+    ): Final<FirebaseUser, AuthenticationError> { //This method authenticates a user with enhanced error handling using Firebase Authentication (Google Inc., 2024).
         Clogger.d(
             TAG, "Signing-in using credentials"
         )
@@ -311,7 +311,7 @@ class AuthenticationService
      *         This may commonly occur if a user is not authenticated or when
      *         Firebase requires re-authentication to verify its validity.
      */
-    suspend fun sendCredentialChangeEmailAsync(email: String) {
+    suspend fun sendCredentialChangeEmailAsync(email: String) { //This method sends a password reset email using Firebase Authentication (Google Inc., 2024).
         try {
             Clogger.d(
                 TAG, "Sending a password reset request to the server."
@@ -340,7 +340,7 @@ class AuthenticationService
      *         This may commonly occur if a user is not authenticated or when
      *         Firebase requires re-authentication to verify its validity.
      */
-    suspend fun deleteCurrentUserAsync() {
+    suspend fun deleteCurrentUserAsync() { //This method deletes the currently authenticated user account using Firebase Authentication (Google Inc., 2024).
         val user = server.currentUser
         when (user) {
             null -> throw IllegalStateException("Could not find authenticated user")
@@ -369,7 +369,7 @@ class AuthenticationService
      *
      * @return [Boolean]
      */
-    fun isUserSignedIn(): Boolean = (server.currentUser != null)
+    fun isUserSignedIn(): Boolean = (server.currentUser != null) //This method checks if a user is currently authenticated using Firebase Authentication (Google Inc., 2024).
 
 
     /**
@@ -387,7 +387,7 @@ class AuthenticationService
      *
      * @return [FirebaseUser] or null if no user is currently signed in.
      */
-    fun getCurrentUser(): FirebaseUser? = server.currentUser
+    fun getCurrentUser(): FirebaseUser? = server.currentUser //This method retrieves the currently authenticated user using Firebase Authentication (Google Inc., 2024).
 
 
     /**
@@ -410,7 +410,7 @@ class AuthenticationService
      * // 3. Secure sensitive stored user data on the device.
      * ```
      */
-    fun logout() {
+    fun logout() { //This method signs out the current user and clears their credentials using Firebase Authentication (Google Inc., 2024).
         server.signOut()
         Clogger.i(
             TAG, "Logged out the currently authorized user on this device."
