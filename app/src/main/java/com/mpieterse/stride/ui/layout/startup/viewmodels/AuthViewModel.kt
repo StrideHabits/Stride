@@ -10,17 +10,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
+import com.mpieterse.stride.core.LocalApplication.Companion.TAG
 import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.GoogleAuthenticationClient
 import com.mpieterse.stride.core.utils.Clogger
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
-import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val authService: AuthenticationService
 ) : ViewModel() {
 
     data class UiState(

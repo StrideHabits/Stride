@@ -29,12 +29,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
 import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
+import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthLaunchScreen(
     onNavigateToSignIn: () -> Unit,
     onNavigateToSignUp: () -> Unit,
     modifier: Modifier,
+    model: AuthViewModel,
 ) {
     val analytics = Firebase.analytics
     LaunchedEffect(Unit) {
