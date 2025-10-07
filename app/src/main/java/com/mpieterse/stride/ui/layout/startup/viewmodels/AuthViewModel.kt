@@ -74,7 +74,6 @@ class AuthViewModel @Inject constructor(
         _state.value = _state.value.copy(error = null)
     }
 
-
     @Inject
     lateinit var ssoClient: GoogleAuthenticationClient
 
