@@ -1,35 +1,12 @@
 package com.mpieterse.stride.ui.layout.central.views
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,45 +19,29 @@ import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.CreateNotificationDialog
 import com.mpieterse.stride.ui.layout.central.components.NotificationItem
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
-import com.mpieterse.stride.ui.layout.central.models.NotificationFrequency
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
-import com.mpieterse.stride.data.dto.habits.HabitDto
-import java.time.LocalTime
 
 @Composable
 fun NotificationsScreen(
     modifier: Modifier = Modifier,
-    viewModel: NotificationsViewModel = hiltViewModel()
+    viewModel: NotificationsViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    
+
     var showCreateNotificationDialog by remember { mutableStateOf(false) }
     var showEditNotificationDialog by remember { mutableStateOf(false) }
     var notificationToEdit by remember { mutableStateOf<NotificationData?>(null) }
 
-    // Refresh when returning to this screen
-    LaunchedEffect(Unit) {
-        viewModel.refresh()
-    }
-
     Box(modifier = modifier.fillMaxSize()) {
-        Surface(
-            color = Color.White,
-            modifier = Modifier.fillMaxSize()
-        ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header with refresh button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Surface(color = Color.White, modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Header (no refresh button)
                 Text(
                     text = "Notifications",
                     style = MaterialTheme.typography.headlineMedium.copy(
@@ -89,75 +50,68 @@ fun NotificationsScreen(
                     ),
                     color = Color.Black
                 )
-                TextButton(onClick = { viewModel.refresh() }) {
-                    Text("Refresh")
-                }
-            }
-            
-            // Global Settings Card
-            NotificationSettingsCard(
-                settings = state.settings,
-                onSettingsChange = { viewModel.updateSettings(it) }
-            )
 
-            // Notifications List
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Habit Reminders",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    ),
-                    color = Color.Black,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                // Global Settings Card
+                NotificationSettingsCard(
+                    settings = state.settings,
+                    onSettingsChange = { viewModel.updateSettings(it) }
                 )
-                
-                if (state.loading) {
-                    // Loading state
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Loading notifications...")
-                    }
-                } else if (state.notifications.isEmpty()) {
-                    // Empty state
-                    EmptyNotificationsState(
-                        modifier = Modifier.fillMaxWidth()
+
+                // Notifications List
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Habit Reminders",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        ),
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(
-                            items = state.notifications,
-                            key = { it.id }
-                        ) { notification ->
-                            NotificationItem(
-                                notification = notification,
-                                onToggleEnabled = { enabled ->
-                                    viewModel.toggleNotificationEnabled(notification.id, enabled)
-                                },
-                                onEdit = {
-                                    notificationToEdit = notification
-                                    showEditNotificationDialog = true
-                                },
-                                onDelete = {
-                                    viewModel.deleteNotification(notification.id)
-                                }
-                            )
+
+                    if (state.loading) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Loading notifications...")
+                        }
+                    } else if (state.notifications.isEmpty()) {
+                        EmptyNotificationsState(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(
+                                items = state.notifications,
+                                key = { it.id }
+                            ) { notification ->
+                                NotificationItem(
+                                    notification = notification,
+                                    onToggleEnabled = { enabled ->
+                                        viewModel.toggleNotificationEnabled(notification.id, enabled)
+                                    },
+                                    onEdit = {
+                                        notificationToEdit = notification
+                                        showEditNotificationDialog = true
+                                    },
+                                    onDelete = {
+                                        viewModel.deleteNotification(notification.id)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-        
-        }
-        
+
         // Floating Action Button
         FloatingActionButton(
             onClick = { showCreateNotificationDialog = true },
@@ -174,7 +128,7 @@ fun NotificationsScreen(
             )
         }
     }
-    
+
     // Create Notification Dialog
     CreateNotificationDialog(
         isVisible = showCreateNotificationDialog,
@@ -185,11 +139,11 @@ fun NotificationsScreen(
         },
         availableHabits = state.habits.map { it.name }
     )
-    
+
     // Edit Notification Dialog
     CreateNotificationDialog(
         isVisible = showEditNotificationDialog,
-        onDismiss = { 
+        onDismiss = {
             showEditNotificationDialog = false
             notificationToEdit = null
         },
@@ -209,10 +163,12 @@ private fun NotificationSettingsCard(
     onSettingsChange: (NotificationSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var enableNotifications by remember { mutableStateOf(settings.globalNotificationsEnabled) }
+    var soundEnabled by remember { mutableStateOf(settings.defaultSoundEnabled) }
+    var vibrationEnabled by remember { mutableStateOf(settings.defaultVibrationEnabled) }
+
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(12.dp),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -222,64 +178,68 @@ private fun NotificationSettingsCard(
         ) {
             Text(
                 text = "Global Settings",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = Color.Black
             )
-            
-            // Global notifications toggle
+
+            // Enable Notifications
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        enableNotifications = !enableNotifications
+                        onSettingsChange(settings.copy(globalNotificationsEnabled = enableNotifications))
+                    },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Enable Notifications",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
-                )
+                Text("Enable Notifications", color = Color.Black)
                 Switch(
-                    checked = settings.globalNotificationsEnabled,
-                    onCheckedChange = { 
+                    checked = enableNotifications,
+                    onCheckedChange = {
+                        enableNotifications = it
                         onSettingsChange(settings.copy(globalNotificationsEnabled = it))
                     }
                 )
             }
-            
-            // Default sound toggle
+
+            // Default Sound
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        soundEnabled = !soundEnabled
+                        onSettingsChange(settings.copy(defaultSoundEnabled = soundEnabled))
+                    },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Default Sound",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
-                )
+                Text("Default Sound", color = Color.Black)
                 Switch(
-                    checked = settings.defaultSoundEnabled,
-                    onCheckedChange = { 
+                    checked = soundEnabled,
+                    onCheckedChange = {
+                        soundEnabled = it
                         onSettingsChange(settings.copy(defaultSoundEnabled = it))
                     }
                 )
             }
-            
-            // Default vibration toggle
+
+            // Default Vibration
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        vibrationEnabled = !vibrationEnabled
+                        onSettingsChange(settings.copy(defaultVibrationEnabled = vibrationEnabled))
+                    },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Default Vibration",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
-                )
+                Text("Default Vibration", color = Color.Black)
                 Switch(
-                    checked = settings.defaultVibrationEnabled,
-                    onCheckedChange = { 
+                    checked = vibrationEnabled,
+                    onCheckedChange = {
+                        vibrationEnabled = it
                         onSettingsChange(settings.copy(defaultVibrationEnabled = it))
                     }
                 )
@@ -288,15 +248,12 @@ private fun NotificationSettingsCard(
     }
 }
 
-
 @Composable
 private fun EmptyNotificationsState(
     modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(12.dp),
         modifier = modifier
     ) {
@@ -313,15 +270,13 @@ private fun EmptyNotificationsState(
                 tint = Color.Gray,
                 modifier = Modifier.padding(8.dp)
             )
-            
+
             Text(
                 text = "No notifications yet",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Medium
-                ),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                 color = Color.Black
             )
-            
+
             Text(
                 text = "Add notifications to get reminded about your habits",
                 style = MaterialTheme.typography.bodyMedium,

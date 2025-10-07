@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 import com.mpieterse.stride.ui.layout.central.views.DebugScreen
 import com.mpieterse.stride.ui.layout.central.views.HabitViewerScreen
 import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
@@ -17,7 +18,8 @@ import com.mpieterse.stride.ui.layout.central.views.NotificationsScreen
 fun HomeNavGraph(
     modifier: Modifier = Modifier,
     controller: NavHostController,
-    currentDestination: String
+    currentDestination: String,
+    notificationsViewModel: NotificationsViewModel
 ) {
     NavHost(
         navController = controller,
@@ -38,7 +40,8 @@ fun HomeNavGraph(
             route = HomeScreen.Notifications.route
         ) {
             NotificationsScreen(
-                modifier = modifier
+                modifier = modifier,
+                viewModel = notificationsViewModel
             )
         }
 

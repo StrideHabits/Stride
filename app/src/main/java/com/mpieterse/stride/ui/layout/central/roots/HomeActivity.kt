@@ -5,20 +5,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.mpieterse.stride.ui.layout.central.components.HomeScaffold
+import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
 import com.mpieterse.stride.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
-
 @AndroidEntryPoint
 class HomeActivity : ComponentActivity() {
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    private val notificationsViewModel: NotificationsViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color(0xFF161620).toArgb()),
@@ -26,7 +27,10 @@ class HomeActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                HomeScaffold()
+                HomeScaffold(
+                    notificationsViewModel = notificationsViewModel
+                )
+
                 LocalStyledActivityStatusBar(
                     color = Color(0xFF161620)
                 )
