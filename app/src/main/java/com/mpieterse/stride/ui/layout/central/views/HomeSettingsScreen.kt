@@ -217,7 +217,9 @@ fun HomeSettingsScreen(
                     modifier = Modifier.height(24.dp)
                 )
                 Button(
-                    onClick = {},
+                    onClick = {
+                        viewModel.logout()
+                    },
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier
                         .height(40.dp)
@@ -236,7 +238,9 @@ fun HomeSettingsScreen(
                     modifier = Modifier.height(56.dp)
                 )
                 Button(
-                    onClick = {},
+                    onClick = {
+                        viewModel.logout()
+                    },
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier
                         .height(40.dp)

@@ -50,9 +50,9 @@ import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignInScreen(
-    onAuthenticated: () -> Unit,
-    modifier: Modifier,
-    model: AuthViewModel = hiltViewModel(),
+    onSignIn: (email: String, password: String) -> Unit,
+    onGoogleSignIn: () -> Unit,
+    modifier: Modifier
 ) {
     val analytics = Firebase.analytics
     LaunchedEffect(Unit) {
@@ -143,7 +143,9 @@ fun AuthSignInScreen(
                 Modifier.height(64.dp)
             )
             Button(
-                onClick = { onAuthenticated() },
+                onClick = {
+                    onSignIn(identityField, passwordField)
+                },
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier
                     .height(52.dp)
@@ -160,10 +162,7 @@ fun AuthSignInScreen(
             )
             IconButton(
                 onClick = {
-                    val result = model.googleSignIn()
-                    if (result) {
-                        onAuthenticated()
-                    }
+                    onGoogleSignIn()
                 },
                 modifier = Modifier
                     .requiredSize(56.dp)

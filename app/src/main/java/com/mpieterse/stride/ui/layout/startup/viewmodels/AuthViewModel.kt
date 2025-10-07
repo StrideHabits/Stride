@@ -4,63 +4,77 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.GoogleAuthenticationClient
-import com.mpieterse.stride.core.utils.Clogger
+import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 @HiltViewModel
-class AuthViewModel 
+class AuthViewModel
 @Inject constructor(
-    private val authService: AuthenticationService
+    private val authService: AuthenticationService,
+    private val ssoClient: GoogleAuthenticationClient
 ) : ViewModel() {
-    companion object {
-        private const val TAG = "AuthViewModel"
+
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
+    val authState: StateFlow<AuthState> = _authState
+
+    init {
+        if (authService.isUserSignedIn()) {
+            _authState.value = AuthState.Locked
+        } else {
+            _authState.value = AuthState.Unauthenticated
+        }
     }
 
-
-    @Inject
-    lateinit var ssoClient: GoogleAuthenticationClient
-    
-    
-// --- Functions
-    
-    
-    fun isUserSignedIn(): Boolean {
-        return authService.isUserSignedIn()
-    }
-
-
-    fun googleSignIn(): Boolean {
-        var status = false
+    fun signUp(email: String, password: String) {
         viewModelScope.launch {
-            Clogger.i(
-                TAG, "Signing-in user with Google SSO"
-            )
-
             runCatching {
-                val milliseconds = 30_000L
-                withTimeout(milliseconds) {
-                    ssoClient.executeAuthenticationTransactionAsync()
-                }
-            }.apply {
-                onSuccess {
-                    Clogger.d(
-                        TAG, "Attempt to authenticate was a success!"
-                    )
-
-                    status = true
-                }
-
-                onFailure { exception ->
-                    Clogger.d(
-                        TAG, "Attempt to authenticate was a failure!"
-                    )
-                }
+                authService.signUpAsync(email, password)
+            }.onSuccess {
+                _authState.value = AuthState.Locked
+            }.onFailure {
+                _authState.value = AuthState.Error(it.message ?: "Sign-up failed")
             }
         }
-        
-        return status
+    }
+
+    fun signIn(email: String, password: String) {
+        viewModelScope.launch {
+            runCatching {
+                authService.signInAsync(email, password)
+            }.onSuccess {
+                _authState.value = AuthState.Locked
+            }.onFailure {
+                _authState.value = AuthState.Error(it.message ?: "Sign-in failed")
+            }
+        }
+    }
+
+    fun googleSignIn() {
+        viewModelScope.launch {
+            runCatching {
+                ssoClient.executeAuthenticationTransactionAsync()
+            }.onSuccess {
+                _authState.value = AuthState.Locked
+            }.onFailure {
+                _authState.value = AuthState.Error(it.message ?: "Google sign-in failed")
+            }
+        }
+    }
+
+    fun unlockWithBiometrics(success: Boolean) {
+        if (success) {
+            _authState.value = AuthState.Authenticated
+        } else {
+            // ...
+        }
+    }
+
+    fun logout() {
+        authService.logout()
+        _authState.value = AuthState.Unauthenticated
     }
 }

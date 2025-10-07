@@ -9,6 +9,7 @@ import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
 import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.core.models.configuration.schema.ConfigurationSchema
+import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.ConfigurationService
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +18,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeSettingsViewModel @Inject constructor(
-    private val configService: ConfigurationService
+    private val configService: ConfigurationService,
+    private val authService: AuthenticationService
 ) : ViewModel() {
     companion object {
         private const val TAG = "HomeSettingsViewModel"
@@ -79,4 +81,6 @@ class HomeSettingsViewModel @Inject constructor(
             )
         }
     }
+    
+    fun logout() = authService.logout()
 }

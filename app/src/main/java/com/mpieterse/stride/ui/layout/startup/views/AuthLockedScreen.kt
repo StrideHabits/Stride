@@ -49,8 +49,6 @@ import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 fun AuthLockedScreen(
     modifier: Modifier = Modifier,
     onSuccess: () -> Unit,
-    onDismiss: () -> Unit,
-    onFailure: () -> Unit,
     model: AuthViewModel = hiltViewModel()
 ) {
     val analytics = Firebase.analytics

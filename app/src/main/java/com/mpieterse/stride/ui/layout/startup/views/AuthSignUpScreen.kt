@@ -47,7 +47,7 @@ import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
 
 @Composable
 fun AuthSignUpScreen(
-    onAuthenticated: () -> Unit,
+    onSignUp: (email: String, password: String) -> Unit,
     onNavigateToSignIn: () -> Unit,
     modifier: Modifier
 ) {
@@ -183,7 +183,9 @@ fun AuthSignUpScreen(
             )
             Column {
                 Button(
-                    onClick = { /* ... */ },
+                    onClick = {
+                        onSignUp(identityField, passwordDefaultField)
+                    },
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier
                         .height(52.dp)

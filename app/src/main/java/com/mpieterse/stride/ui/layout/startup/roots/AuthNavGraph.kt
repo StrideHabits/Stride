@@ -14,78 +14,30 @@ import com.mpieterse.stride.ui.layout.startup.views.AuthSignUpScreen
 @Composable
 fun AuthNavGraph(
     onGoToHomeActivity: () -> Unit,
-    onTerminateCompose: () -> Unit,
     modifier: Modifier  = Modifier,
+    authViewModel: AuthViewModel
 ) {
     val controller = rememberNavController()
-
-    NavHost(
-        navController = controller,
-        startDestination = AuthScreen.Launch.route
-    ) {
-        // Launch
-        composable(
-            route = AuthScreen.Launch.route
-        ) {
+    NavHost(navController = controller, startDestination = AuthScreen.Launch.route) {
+        composable(route = AuthScreen.Launch.route) {
             AuthLaunchScreen(
                 modifier = modifier,
-                onNavigateToSignIn = {
-                    controller.navigate(AuthScreen.SignIn.route)
-                },
-                onNavigateToSignUp = {
-                    controller.navigate(AuthScreen.SignUp.route)
-                }
+                onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
+                onNavigateToSignUp = { controller.navigate(AuthScreen.SignUp.route) }
             )
         }
-
-        // Locked
-        composable(
-            route = AuthScreen.Locked.route
-        ) {
-            AuthLockedScreen(
-                modifier = modifier,
-                onSuccess = {
-                    onGoToHomeActivity()
-                    controller.popBackStack()
-                },
-                onDismiss = {
-                    controller.navigate(AuthScreen.Launch.route)
-                    controller.popBackStack()
-                },
-                onFailure = {
-                    onTerminateCompose()
-                }
-            )
-        }
-
-        // SignIn
-        composable(
-            route = AuthScreen.SignIn.route
-        ) {
+        composable(route = AuthScreen.SignIn.route) {
             AuthSignInScreen(
                 modifier = modifier,
-                onAuthenticated = {
-                    // ...
-                    //controller.popBackStack()
-
-                    controller.navigate(AuthScreen.Locked.route)
-                },
+                onSignIn = { email, password -> authViewModel.signIn(email, password) },
+                onGoogleSignIn = { authViewModel.googleSignIn() }
             )
         }
-
-        // SignUp
-        composable(
-            route = AuthScreen.SignUp.route
-        ) {
+        composable(route = AuthScreen.SignUp.route) {
             AuthSignUpScreen(
                 modifier = modifier,
-                onAuthenticated = {
-                    controller.navigate(AuthScreen.Locked.route)
-                    controller.popBackStack()
-                },
-                onNavigateToSignIn = {
-                    controller.navigate(AuthScreen.SignIn.route)
-                }
+                onSignUp = { email, password -> authViewModel.signUp(email, password) },
+                onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) }
             )
         }
     }
