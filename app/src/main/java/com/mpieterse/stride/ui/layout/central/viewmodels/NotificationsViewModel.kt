@@ -1,5 +1,6 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
@@ -70,10 +71,16 @@ class NotificationsViewModel @Inject constructor(
 
     fun addNotification(notification: NotificationData) = viewModelScope.launch {
         try {
+            Log.d("NotificationsViewModel", "Adding notification: ${notification.habitName} at ${notification.time}")
             val currentNotifications = _state.value.notifications.toMutableList()
             currentNotifications.add(notification)
             notificationsStore.saveNotifications(currentNotifications)
+            Log.d("NotificationsViewModel", "Notification saved successfully. Total count: ${currentNotifications.size}")
+            
+            // Update the state immediately to reflect the change
+            _state.value = _state.value.copy(notifications = currentNotifications)
         } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to add notification", e)
             _state.value = _state.value.copy(error = "Failed to add notification: ${e.message}")
         }
     }
@@ -85,6 +92,7 @@ class NotificationsViewModel @Inject constructor(
             if (index != -1) {
                 currentNotifications[index] = updatedNotification
                 notificationsStore.saveNotifications(currentNotifications)
+                _state.value = _state.value.copy(notifications = currentNotifications)
             }
         } catch (e: Exception) {
             _state.value = _state.value.copy(error = "Failed to update notification: ${e.message}")
@@ -95,6 +103,7 @@ class NotificationsViewModel @Inject constructor(
         try {
             val currentNotifications = _state.value.notifications.filter { it.id != notificationId }
             notificationsStore.saveNotifications(currentNotifications)
+            _state.value = _state.value.copy(notifications = currentNotifications)
         } catch (e: Exception) {
             _state.value = _state.value.copy(error = "Failed to delete notification: ${e.message}")
         }
@@ -107,6 +116,7 @@ class NotificationsViewModel @Inject constructor(
             if (index != -1) {
                 currentNotifications[index] = currentNotifications[index].copy(isEnabled = enabled)
                 notificationsStore.saveNotifications(currentNotifications)
+                _state.value = _state.value.copy(notifications = currentNotifications)
             }
         } catch (e: Exception) {
             _state.value = _state.value.copy(error = "Failed to toggle notification: ${e.message}")

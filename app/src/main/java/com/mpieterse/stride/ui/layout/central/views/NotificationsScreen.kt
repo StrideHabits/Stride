@@ -94,52 +94,11 @@ fun NotificationsScreen(
                 }
             }
             
-            // Habit status
-            if (state.habits.isNotEmpty()) {
-                Text(
-                    text = "You have ${state.habits.size} habit${if (state.habits.size != 1) "s" else ""}",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    ),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-            
             // Global Settings Card
             NotificationSettingsCard(
                 settings = state.settings,
                 onSettingsChange = { viewModel.updateSettings(it) }
             )
-            
-            // Available Habits Section
-            if (state.habits.isNotEmpty()) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Your Habits",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        ),
-                        color = Color.Black,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                    
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.height(120.dp)
-                    ) {
-                        items(state.habits) { habit ->
-                            HabitNotificationCard(
-                                habit = habit,
-                                hasNotification = state.notifications.any { it.habitName == habit.name }
-                            )
-                        }
-                    }
-                }
-            }
 
             // Notifications List
             Column(
@@ -329,54 +288,6 @@ private fun NotificationSettingsCard(
     }
 }
 
-@Composable
-private fun HabitNotificationCard(
-    habit: HabitDto,
-    hasNotification: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (hasNotification) Color(0xFFFF9500).copy(alpha = 0.1f) else Color.Transparent
-        ),
-        shape = RoundedCornerShape(8.dp),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = habit.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = Color.Black
-                )
-                if (habit.tag != null) {
-                    Text(
-                        text = habit.tag,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-            }
-            
-            if (hasNotification) {
-                Icon(
-                    painter = painterResource(R.drawable.xic_uic_outline_bell),
-                    contentDescription = "Has notification",
-                    tint = Color(0xFFFF9500),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun EmptyNotificationsState(
