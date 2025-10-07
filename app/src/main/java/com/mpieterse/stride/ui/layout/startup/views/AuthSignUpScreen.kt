@@ -192,7 +192,7 @@ fun AuthSignUpScreen(
                         .fillMaxWidth()
                 ) {
                     Text(
-                        text = "Sign In",
+                        text = "Sign Up",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight(
                                 600

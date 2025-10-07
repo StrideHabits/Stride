@@ -5,16 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.GoogleAuthenticationClient
-import com.mpieterse.stride.core.utils.Clogger
 import com.mpieterse.stride.data.repo.AuthRepository
 import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,59 +34,92 @@ class AuthViewModel
 
     fun signUp(email: String, password: String) {
         viewModelScope.launch {
-            runCatching {
+            _authState.value = runCatching {
                 authService.signUpAsync(email, password)
-            }.onSuccess {
-                _authState.value = AuthState.Locked
-            }.onFailure {
-                _authState.value = AuthState.Error(it.message ?: "Sign-up failed")
+
+                val user = authService.getCurrentUser() ?: error("No Firebase user found")
+                requireNotNull(user.email) {
+                    "User email is null"
+                }
+
+                val apiRegistrationState = authApi.register(
+                    user.email!!, user.email!!, user.uid
+                )
+
+                val apiLoginState = when (apiRegistrationState) {
+                    is ApiResult.Ok -> authApi.login(user.email!!, user.uid)
+                    is ApiResult.Err -> authApi.login(user.email!!, user.uid)
+                }
+
+                if (apiLoginState is ApiResult.Err) {
+                    authService.logout()
+                    throw Exception(apiLoginState.message)
+                }
+
+                AuthState.Locked
+            }.getOrElse {
+                AuthState.Error(it.message ?: "Sign-up failed")
             }
         }
     }
 
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
-            runCatching {
+            _authState.value = runCatching {
                 authService.signInAsync(email, password)
-            }.onSuccess {
-                _authState.value = AuthState.Locked
-            }.onFailure {
-                _authState.value = AuthState.Error(it.message ?: "Sign-in failed")
+
+                val user = authService.getCurrentUser() ?: error("No Firebase user found")
+                requireNotNull(user.email) { 
+                    "User email is null" 
+                }
+
+                val apiLoginState = authApi.login(
+                    user.email!!, user.uid
+                )
+
+                if (apiLoginState is ApiResult.Err) {
+                    authService.logout()
+                    throw Exception(apiLoginState.message)
+                }
+
+                AuthState.Locked
+            }.getOrElse {
+                AuthState.Error(
+                    it.message ?: "Sign-in failed"
+                )
             }
         }
     }
 
     fun googleSignIn() {
         viewModelScope.launch {
-            runCatching {
+            _authState.value = runCatching {
                 ssoClient.executeAuthenticationTransactionAsync()
-                val user = authService.getCurrentUser()
-                when (val registerState = authApi.register(user!!.email!!, user.email!!, user.uid)) {
-                    is ApiResult.Ok -> {
-                        when (val loginState = authApi.login( user.email!!, user.uid)) {
-                            is ApiResult.Ok -> {
-                                // do nothing
-                            }
-                            is ApiResult.Err -> {
-                                throw Exception()
-                            }
-                        }
-                    }
-                    is ApiResult.Err -> {
-                        when (val loginState = authApi.login( user.email!!, user.uid)) {
-                            is ApiResult.Ok -> {
-                                // do nothing
-                            }
-                            is ApiResult.Err -> {
-                                throw Exception()
-                            }
-                        }
-                    }
+
+                val user = authService.getCurrentUser() ?: error("No Firebase user found")
+                requireNotNull(user.email) {
+                    "User email is null"
                 }
-            }.onSuccess {
-                _authState.value = AuthState.Locked
-            }.onFailure {
-                _authState.value = AuthState.Error(it.message ?: "Google sign-in failed")
+
+                val apiRegistrationState = authApi.register(
+                    user.email!!, user.email!!, user.uid
+                )
+
+                val apiLoginState = when (apiRegistrationState) {
+                    is ApiResult.Ok -> authApi.login(user.email!!, user.uid)
+                    is ApiResult.Err -> authApi.login(user.email!!, user.uid)
+                }
+
+                if (apiLoginState is ApiResult.Err) {
+                    authService.logout()
+                    throw Exception(apiLoginState.message)
+                }
+
+                AuthState.Locked
+            }.getOrElse {
+                AuthState.Error(
+                    it.message ?: "Google sign-in failed"
+                )
             }
         }
     }
@@ -105,22 +134,4 @@ class AuthViewModel
         authService.logout()
         _authState.value = AuthState.Unauthenticated
     }
-
-//    private suspend fun <T> retryAfterTimeout(
-//        execute: suspend () -> T
-//    ): T {
-//        return runCatching {
-//            withTimeout(2000F) {
-//                execute()
-//            }
-//        }.recoverCatching { exception ->
-//            if (exception is TimeoutCancellationException) {
-//                withTimeout(2000F) {
-//                    execute()
-//                }
-//            } else {
-//                throw exception
-//            }
-//        }.getOrThrow()
-//    }
 }
