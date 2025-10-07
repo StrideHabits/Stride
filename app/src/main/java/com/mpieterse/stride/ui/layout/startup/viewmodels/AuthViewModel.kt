@@ -21,6 +21,9 @@ class AuthViewModel
     private val authApi: AuthRepository
 ) : ViewModel() {
 
+    val signInForm = SignInFormViewModel()
+    val signUpForm = SignUpFormViewModel()
+
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState
 
@@ -32,10 +35,18 @@ class AuthViewModel
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp() {
         viewModelScope.launch {
+            signUpForm.validateForm()
+            if (!(signUpForm.isFormValid.value)) {
+                return@launch
+            }
+
             _authState.value = runCatching {
-                authService.signUpAsync(email, password)
+                authService.signUpAsync(
+                    email = signUpForm.formState.value.identity.value,
+                    password = signUpForm.formState.value.passwordDefault.value
+                )
 
                 val user = authService.getCurrentUser() ?: error("No Firebase user found")
                 requireNotNull(user.email) {
@@ -58,19 +69,29 @@ class AuthViewModel
 
                 AuthState.Locked
             }.getOrElse {
-                AuthState.Error(it.message ?: "Sign-up failed")
+                AuthState.Error(
+                    it.message ?: "Sign-up failed"
+                )
             }
         }
     }
 
-    fun signIn(email: String, password: String) {
+    fun signIn() {
         viewModelScope.launch {
+            signInForm.validateForm()
+            if (!(signInForm.isFormValid.value)) {
+                return@launch
+            }
+
             _authState.value = runCatching {
-                authService.signInAsync(email, password)
+                authService.signInAsync(
+                    email = signInForm.formState.value.identity.value,
+                    password = signInForm.formState.value.password.value
+                )
 
                 val user = authService.getCurrentUser() ?: error("No Firebase user found")
-                requireNotNull(user.email) { 
-                    "User email is null" 
+                requireNotNull(user.email) {
+                    "User email is null"
                 }
 
                 val apiLoginState = authApi.login(

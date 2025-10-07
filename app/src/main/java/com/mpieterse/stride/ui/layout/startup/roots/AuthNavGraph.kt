@@ -7,7 +7,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 import com.mpieterse.stride.ui.layout.startup.views.AuthLaunchScreen
-import com.mpieterse.stride.ui.layout.startup.views.AuthLockedScreen
 import com.mpieterse.stride.ui.layout.startup.views.AuthSignInScreen
 import com.mpieterse.stride.ui.layout.startup.views.AuthSignUpScreen
 
@@ -29,15 +28,17 @@ fun AuthNavGraph(
         composable(route = AuthScreen.SignIn.route) {
             AuthSignInScreen(
                 modifier = modifier,
-                onSignIn = { email, password -> authViewModel.signIn(email, password) },
-                onGoogleSignIn = { authViewModel.googleSignIn() }
+                onSignIn = { authViewModel.signIn() },
+                onGoogleSignIn = { authViewModel.googleSignIn() },
+                viewModel = authViewModel
             )
         }
         composable(route = AuthScreen.SignUp.route) {
             AuthSignUpScreen(
                 modifier = modifier,
-                onSignUp = { email, password -> authViewModel.signUp(email, password) },
-                onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) }
+                onSignUp = { authViewModel.signUp() },
+                onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
+                viewModel = authViewModel
             )
         }
     }
