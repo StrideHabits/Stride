@@ -38,7 +38,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -46,7 +45,6 @@ import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
-import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignInScreen(
@@ -147,7 +145,6 @@ fun AuthSignInScreen(
                     onSignIn(identityField, passwordField)
                 },
                 shape = MaterialTheme.shapes.large,
-                enabled = !authState.loading && identityField.isNotBlank() && passwordField.isNotBlank(),
                 modifier = Modifier
                     .height(52.dp)
                     .fillMaxWidth()
