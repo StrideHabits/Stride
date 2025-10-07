@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,15 +17,20 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,64 +44,24 @@ import com.mpieterse.stride.ui.layout.central.components.NotificationItem
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationFrequency
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
+import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
+import com.mpieterse.stride.data.dto.habits.HabitDto
 import java.time.LocalTime
 
 @Composable
 fun NotificationsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: NotificationsViewModel = hiltViewModel()
 ) {
-    // Local state for notifications (no database)
-    var notifications by remember { 
-        mutableStateOf(
-            listOf(
-                NotificationData(
-                    id = "1",
-                    habitName = "Go to the gym",
-                    time = LocalTime.of(7, 0),
-                    daysOfWeek = listOf(1, 3, 5), // Mon, Wed, Fri
-                    isEnabled = true,
-                    message = "Time for your workout! 💪",
-                    soundEnabled = true,
-                    vibrationEnabled = true
-                ),
-                NotificationData(
-                    id = "2",
-                    habitName = "Read for 30 minutes",
-                    time = LocalTime.of(21, 0),
-                    daysOfWeek = listOf(1, 2, 3, 4, 5, 6, 7), // Daily
-                    isEnabled = true,
-                    message = "Reading time! 📚",
-                    soundEnabled = true,
-                    vibrationEnabled = false
-                ),
-                NotificationData(
-                    id = "3",
-                    habitName = "Meditation",
-                    time = LocalTime.of(8, 30),
-                    daysOfWeek = listOf(2, 4, 6), // Tue, Thu, Sat
-                    isEnabled = false,
-                    message = "Start your day with mindfulness 🧘",
-                    soundEnabled = false,
-                    vibrationEnabled = true
-                )
-            )
-        )
-    }
+    val state by viewModel.state.collectAsStateWithLifecycle()
     
     var showCreateNotificationDialog by remember { mutableStateOf(false) }
     var showEditNotificationDialog by remember { mutableStateOf(false) }
     var notificationToEdit by remember { mutableStateOf<NotificationData?>(null) }
-    var notificationSettings by remember { 
-        mutableStateOf(
-            NotificationSettings(
-                globalNotificationsEnabled = true,
-                defaultSoundEnabled = true,
-                defaultVibrationEnabled = true,
-                quietHoursStart = LocalTime.of(22, 0),
-                quietHoursEnd = LocalTime.of(7, 0),
-                quietHoursEnabled = true
-            )
-        )
+
+    // Refresh when returning to this screen
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -109,22 +75,31 @@ fun NotificationsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
-            Text(
-                text = "Notifications",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                ),
-                color = Color.Black
-            )
+            // Header with refresh button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Notifications",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    ),
+                    color = Color.Black
+                )
+                TextButton(onClick = { viewModel.refresh() }) {
+                    Text("Refresh")
+                }
+            }
             
             // Global Settings Card
             NotificationSettingsCard(
-                settings = notificationSettings,
-                onSettingsChange = { notificationSettings = it }
+                settings = state.settings,
+                onSettingsChange = { viewModel.updateSettings(it) }
             )
-            
+
             // Notifications List
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -140,7 +115,15 @@ fun NotificationsScreen(
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 
-                if (notifications.isEmpty()) {
+                if (state.loading) {
+                    // Loading state
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Loading notifications...")
+                    }
+                } else if (state.notifications.isEmpty()) {
                     // Empty state
                     EmptyNotificationsState(
                         modifier = Modifier.fillMaxWidth()
@@ -151,24 +134,20 @@ fun NotificationsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(
-                            items = notifications,
+                            items = state.notifications,
                             key = { it.id }
                         ) { notification ->
                             NotificationItem(
                                 notification = notification,
                                 onToggleEnabled = { enabled ->
-                                    notifications = notifications.map { 
-                                        if (it.id == notification.id) {
-                                            it.copy(isEnabled = enabled)
-                                        } else it
-                                    }
+                                    viewModel.toggleNotificationEnabled(notification.id, enabled)
                                 },
                                 onEdit = {
                                     notificationToEdit = notification
                                     showEditNotificationDialog = true
                                 },
                                 onDelete = {
-                                    notifications = notifications.filter { it.id != notification.id }
+                                    viewModel.deleteNotification(notification.id)
                                 }
                             )
                         }
@@ -201,9 +180,10 @@ fun NotificationsScreen(
         isVisible = showCreateNotificationDialog,
         onDismiss = { showCreateNotificationDialog = false },
         onConfirm = { newNotification ->
-            notifications = notifications + newNotification
+            viewModel.addNotification(newNotification)
             showCreateNotificationDialog = false
-        }
+        },
+        availableHabits = state.habits.map { it.name }
     )
     
     // Edit Notification Dialog
@@ -214,12 +194,11 @@ fun NotificationsScreen(
             notificationToEdit = null
         },
         onConfirm = { updatedNotification ->
-            notifications = notifications.map { 
-                if (it.id == updatedNotification.id) updatedNotification else it 
-            }
+            viewModel.updateNotification(updatedNotification)
             showEditNotificationDialog = false
             notificationToEdit = null
         },
+        availableHabits = state.habits.map { it.name },
         initialData = notificationToEdit
     )
 }
@@ -308,6 +287,7 @@ private fun NotificationSettingsCard(
         }
     }
 }
+
 
 @Composable
 private fun EmptyNotificationsState(

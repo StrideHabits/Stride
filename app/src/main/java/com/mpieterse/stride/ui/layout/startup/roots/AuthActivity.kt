@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.fragment.app.FragmentActivity
 import com.mpieterse.stride.ui.layout.central.roots.HomeActivity
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
-import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 import com.mpieterse.stride.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -23,11 +22,11 @@ import dagger.hilt.android.AndroidEntryPoint
 class AuthActivity : FragmentActivity() {
 
     private val authViewModel: AuthViewModel by viewModels()
-    
-    
+
+
 // --- Lifecycle
-    
-    
+
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {

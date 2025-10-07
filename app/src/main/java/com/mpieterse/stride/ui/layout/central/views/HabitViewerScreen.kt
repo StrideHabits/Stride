@@ -1,34 +1,19 @@
 package com.mpieterse.stride.ui.layout.central.views
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,152 +25,137 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
-import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
+import com.mpieterse.stride.ui.layout.central.components.HabitData
+import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
 import java.time.LocalDate
 
 @Composable
 fun HabitViewerScreen(
-    habitName: String = "Go to the gym",
-    habitImage: android.graphics.Bitmap? = null,
-    streakDays: Int = 265,
-    completedDates: List<Int> = listOf(8, 18, 19, 28, 29, 30),
+    habitId: String,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {}
 ) {
+    val vm: HabitViewerViewModel = hiltViewModel()
+    val state by vm.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(habitId) { vm.load(habitId) }
+
     var showEditDialog by remember { mutableStateOf(false) }
-    
-    // Local state for habit data (functional without database)
-    var currentHabitName by remember { mutableStateOf(habitName) }
-    var currentHabitImage by remember { mutableStateOf(habitImage) }
-    var currentStreakDays by remember { mutableStateOf(streakDays) }
-    var currentCompletedDates by remember { mutableStateOf(completedDates) }
-    
-    // Sample habit data for editing
-    val habitData = com.mpieterse.stride.ui.layout.central.components.HabitData(
-        name = currentHabitName,
-        frequency = 3, // days per week
-        tag = "Health & Fitness",
-        image = currentHabitImage
-    )
+
+    // Use ViewModel's display name and state directly - no local state needed
+    val displayName = state.displayName
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Main content
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Top Bar
-            Surface(
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        Column(Modifier.fillMaxSize()) {
+
+            // Top bar
+            Surface(color = Color.White, modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.size(24.dp)
-                    ) {
+                    IconButton(onClick = onBackClick, modifier = Modifier.size(24.dp)) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_arrow_left),
                             contentDescription = "Back",
                             tint = Color.Black
                         )
                     }
-                    
                     Text(
-                        text = currentHabitName,
+                        text = if (state.loading) "Loading…" else displayName,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         ),
-                        color = Color.Black,
+                        color = if (state.error != null) MaterialTheme.colorScheme.error else Color.Black,
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 16.dp),
                         textAlign = TextAlign.Center
                     )
-                    
-                    // Empty space to balance the back button
-                    Spacer(modifier = Modifier.width(48.dp))
+                    IconButton(
+                        onClick = { vm.completeToday(habitId) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.xic_uic_outline_check),
+                            contentDescription = "Complete Today",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
                 }
             }
-            
-            // Main Content
-            Surface(
-                color = Color.White,
-                modifier = Modifier.fillMaxSize()
-            ) {
+
+            // Main content
+            Surface(color = Color.White, modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Habit Image
                     HabitImageViewer(
-                        habitImage = currentHabitImage,
+                        habitImage = state.habitImage,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
-                    // Streak Banner
+
                     StreakBanner(
-                        streakDays = currentStreakDays,
+                        streakDays = state.streakDays,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
-                    // Calendar Section
-                    CalendarView(
-                        completedDates = currentCompletedDates,
-                        modifier = Modifier.fillMaxWidth(),
-                        onDateClick = { day ->
-                            // Toggle completion status for the day
-                            currentCompletedDates = if (day in currentCompletedDates) {
-                                currentCompletedDates.filter { it != day }
-                            } else {
-                                currentCompletedDates + day
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        CalendarView(
+                            completedDates = state.completedDates,
+                            modifier = Modifier.fillMaxWidth(),
+                            onDateClick = { day ->
+                                // Only allow clicks when not loading
+                                if (!state.loading) {
+                                    // Toggle check-in for this day
+                                    val date = LocalDate.now().withDayOfMonth(day)
+                                    vm.toggleCheckIn(habitId, date.toString())
+                                }
+                            }
+                        )
+                        
+                        // Show loading overlay on calendar when creating check-ins
+                        if (state.loading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Black.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = Color(0xFFFF9500),
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                         }
-                    )
+                    }
+
+
+                    if (state.error != null) {
+                        Text(
+                            text = state.error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                    
+                    
                 }
             }
         }
-        
-        // Bottom Action Bar
-        Surface(
-            color = Color.White,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { /* Achievement/Awards action */ }
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.xic_uic_outline_shield_check),
-                        contentDescription = "Achievements",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                // Empty space for FAB
-                Spacer(modifier = Modifier.width(56.dp))
-            }
-        }
-        
-        // Floating Action Button
+
+        // Edit FAB
         FloatingActionButton(
             onClick = { showEditDialog = true },
             containerColor = Color(0xFFFF9500),
@@ -203,26 +173,24 @@ fun HabitViewerScreen(
         }
     }
 
-    // Edit Dialog
+    // Simplified edit dialog — now uses only `name`
     UpsertDialog(
         title = "Edit Habit",
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
-        onConfirm = { updatedData ->
-            // Update local state with edited data
-            currentHabitName = updatedData.name
-            currentHabitImage = updatedData.image
-            // Keep streak and completed dates as they are (these would be calculated differently in real app)
-            println("Updated habit: ${updatedData.name}")
+        onConfirm = { updated ->
+            vm.updateLocalName(updated.name, habitId)
             showEditDialog = false
         },
-        initialData = habitData
+        initialData = HabitData(name = displayName)
     )
 }
 
+/* ---------- Helpers ---------- */
+
 @Composable
 private fun HabitImageViewer(
-    habitImage: android.graphics.Bitmap?,
+    habitImage: Bitmap?,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -241,10 +209,7 @@ private fun HabitImageViewer(
                 contentScale = ContentScale.Crop
             )
         } else {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "(IMAGE)",
                     style = MaterialTheme.typography.bodyLarge.copy(
@@ -288,27 +253,15 @@ private fun CalendarView(
     onDateClick: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Days of week header
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         DaysOfWeekHeader()
-        
-        // Calendar grid
-        CalendarGrid(
-            completedDates = completedDates,
-            onDateClick = onDateClick
-        )
+        CalendarGrid(completedDates = completedDates, onDateClick = onDateClick)
     }
 }
 
 @Composable
-private fun DaysOfWeekHeader(
-    modifier: Modifier = Modifier
-) {
+private fun DaysOfWeekHeader(modifier: Modifier = Modifier) {
     val daysOfWeek = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
-    
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
@@ -334,41 +287,26 @@ private fun CalendarGrid(
     onDateClick: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Generate calendar for current month (October 2024 based on your design)
-    val currentMonth = LocalDate.of(2024, 10, 1)
-    val firstDayOfMonth = currentMonth.dayOfWeek.value % 7 // Convert to 0-6 (Sunday = 0)
+    val currentMonth = LocalDate.now().withDayOfMonth(1)
+    val firstDayOfMonth = (currentMonth.dayOfWeek.value % 7)
     val daysInMonth = currentMonth.lengthOfMonth()
-    
-    // Calculate calendar grid
+
     val calendarDays = mutableListOf<List<Int?>>()
-    
-    // First week - fill empty spaces before month starts
-    val firstWeek = mutableListOf<Int?>()
-    repeat(firstDayOfMonth) { firstWeek.add(null) }
-    for (day in 1..(7 - firstDayOfMonth)) {
-        firstWeek.add(day)
-    }
+    val firstWeek = MutableList(firstDayOfMonth) { null as Int? }
+    for (d in 1..(7 - firstDayOfMonth)) firstWeek.add(d)
     calendarDays.add(firstWeek)
-    
-    // Remaining weeks
+
     var currentDay = 8 - firstDayOfMonth
     while (currentDay <= daysInMonth) {
-        val week = mutableListOf<Int?>()
-        repeat(7) { dayIndex ->
-            if (currentDay + dayIndex <= daysInMonth) {
-                week.add(currentDay + dayIndex)
-            } else {
-                week.add(null)
-            }
+        val week = MutableList(7) { idx ->
+            val day = currentDay + idx
+            if (day <= daysInMonth) day else null
         }
         calendarDays.add(week)
         currentDay += 7
     }
-    
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         calendarDays.forEach { week ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -378,11 +316,7 @@ private fun CalendarGrid(
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .clickable { 
-                                if (day != null) {
-                                    onDateClick(day)
-                                }
-                            },
+                            .clickable { if (day != null) onDateClick(day) },
                         contentAlignment = Alignment.Center
                     ) {
                         if (day != null) {
