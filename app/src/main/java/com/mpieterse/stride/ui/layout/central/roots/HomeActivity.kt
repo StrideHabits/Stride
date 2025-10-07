@@ -31,19 +31,12 @@ class HomeActivity : ComponentActivity() {
             val notificationsViewModel: NotificationsViewModel = hiltViewModel()
             val settingsViewModel: HomeSettingsViewModel = hiltViewModel()
 
-            // collect theme
             val theme by settingsViewModel.theme.collectAsStateWithLifecycle()
 
-            // ✅ reactively update via rememberUpdatedState
-            val currentTheme by rememberUpdatedState(theme)
-
-            // 👇 Wrap with key() to trigger recomposition when theme changes
-            key(currentTheme) {
-                StrideRoot(
-                    theme = currentTheme,
-                    notificationsViewModel = notificationsViewModel
-                )
-            }
+            StrideRoot(
+                theme = theme,
+                notificationsViewModel = notificationsViewModel
+            )
         }
     }
 }
@@ -59,7 +52,6 @@ private fun StrideRoot(
         AppAppearance.SYSTEM -> isSystemInDarkTheme()
     }
 
-    // Optional fade animation
     Crossfade(targetState = darkTheme, label = "ThemeSwitch") { dark ->
         AppTheme(darkTheme = dark) {
             HomeScaffold(notificationsViewModel = notificationsViewModel)
