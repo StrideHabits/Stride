@@ -6,20 +6,23 @@ import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
 import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.core.models.configuration.schema.ConfigurationSchema
+import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.ConfigurationService
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 class HomeSettingsViewModel @Inject constructor(
-    private val configService: ConfigurationService
+    private val configService: ConfigurationService,
+    private val authService: AuthenticationService
 ) : ViewModel() {
-
-    companion object { private const val TAG = "HomeSettingsViewModel" }
+    companion object {
+        private const val TAG = "HomeSettingsViewModel"
+    }
 
     private val _theme = MutableStateFlow(AppAppearance.LIGHT)
     val theme: StateFlow<AppAppearance> = _theme
@@ -53,4 +56,6 @@ class HomeSettingsViewModel @Inject constructor(
         _sync.value = value
         viewModelScope.launch { configService.put(ConfigurationSchema.syncFrequency, value) }
     }
+
+    fun logout() = authService.logout()
 }

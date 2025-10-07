@@ -25,6 +25,7 @@ import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.ui.layout.central.viewmodels.HomeSettingsViewModel
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
 
+@Preview(name = "Orientation H (21:9)", showBackground = true, widthDp = 1400, heightDp = 600)
 @Preview(name = "Orientation V (21:9)", showBackground = true, widthDp = 600, heightDp = 1400)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
