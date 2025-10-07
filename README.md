@@ -222,10 +222,6 @@ A short demonstration video will showcase the main app features, including login
 
 ---
 
-## 📝 References & Citations
-
----
-
 ## 📄 License
 
 This project is for **educational purposes** under the Varsity College BCAD program. Redistribution or commercial use is not permitted without written consent.
