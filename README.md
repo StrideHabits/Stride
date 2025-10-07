@@ -226,5 +226,22 @@ A short demonstration video will showcase the main app features, including login
 
 This project is for **educational purposes** under the Varsity College BCAD program. Redistribution or commercial use is not permitted without written consent.
 
+---
 
+# Images
+
+## Firebase
+![Firebase Perf](https://github.com/user-attachments/assets/c0512861-15d6-493a-b77e-3a76f3a9c310)
+
+## Github
+<img width="1275" height="1170" alt="image" src="https://github.com/user-attachments/assets/346da540-e606-46ad-8bc1-12127fb7fcf7" />
+
+<img width="891" height="1182" alt="image" src="https://github.com/user-attachments/assets/9ee401d4-eaaa-466b-bf16-f98c973db88c" />
+
+<img width="1145" height="870" alt="image" src="https://github.com/user-attachments/assets/fc7e9f06-2121-4cf0-b7c9-95d7dd08b821" />
+
+<img width="1285" height="868" alt="image" src="https://github.com/user-attachments/assets/3edff338-1949-435f-8813-7c418e2e5696" />
+
+## App working
+<img width="390" height="878" alt="image" src="https://github.com/user-attachments/assets/ea3d3b6c-1b48-420d-ad4f-3e79dbb514b2" />
 
