@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -50,9 +51,9 @@ import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignInScreen(
-    model: AuthViewModel,
     onAuthenticated: () -> Unit,
     modifier: Modifier,
+    model: AuthViewModel = hiltViewModel(),
 ) {
     val analytics = Firebase.analytics
     val authState by model.state.collectAsStateWithLifecycle()
@@ -175,7 +176,12 @@ fun AuthSignInScreen(
                 Modifier.height(64.dp)
             )
             IconButton(
-                onClick = { /* ... */ },
+                onClick = {
+                    val result = model.googleSignIn()
+                    if (result) {
+                        onAuthenticated()
+                    }
+                },
                 modifier = Modifier
                     .requiredSize(56.dp)
                     .align(Alignment.CenterHorizontally)

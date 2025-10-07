@@ -86,7 +86,7 @@ fun AuthNavGraph(
                 modifier = modifier,
                 model = authViewModel,
                 onAuthenticated = {
-                    // ...
+                    controller.navigate(AuthScreen.Locked.route)
                     controller.popBackStack()
                 },
                 onNavigateToSignIn = {
