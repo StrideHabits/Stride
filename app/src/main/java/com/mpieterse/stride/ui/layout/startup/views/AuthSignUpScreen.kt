@@ -23,10 +23,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,12 +42,14 @@ import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
+import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignUpScreen(
-    onSignUp: (email: String, password: String) -> Unit,
+    onSignUp: () -> Unit,
     onNavigateToSignIn: () -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
+    viewModel: AuthViewModel
 ) {
     val analytics = Firebase.analytics
     LaunchedEffect(Unit) {
@@ -58,11 +58,10 @@ fun AuthSignUpScreen(
         }
     }
 
-    var identityField by remember { mutableStateOf("") }
-    var passwordDefaultField by remember { mutableStateOf("") }
-    var passwordConfirmField by remember { mutableStateOf("") }
+    val formState by viewModel.signUpForm.formState.collectAsState()
 
 // --- UI
+
     Surface(
         color = Color(0xFF_161620),
         modifier = modifier
@@ -115,14 +114,15 @@ fun AuthSignUpScreen(
                 )
                 LocalOutlinedTextField(
                     label = "Email address",
-                    value = identityField,
+                    value = formState.identity.value,
                     onValueChange = { value ->
-                        identityField = value
+                        viewModel.signUpForm.onIdentityChanged(value)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     inputType = KeyboardType.Email,
                     fieldType = TextFieldType.Default,
                     inputAction = ImeAction.Next,
+                    isComponentErrored = (formState.identity.error != null)
                 )
             }
 
@@ -153,13 +153,14 @@ fun AuthSignUpScreen(
                 )
                 LocalOutlinedTextField(
                     label = "Create a strong password",
-                    value = passwordDefaultField,
+                    value = formState.passwordDefault.value,
                     onValueChange = { value ->
-                        passwordDefaultField = value
+                        viewModel.signUpForm.onPasswordDefaultChanged(value)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fieldType = TextFieldType.Private,
                     inputAction = ImeAction.Next,
+                    isComponentErrored = (formState.passwordDefault.error != null)
                 )
 
                 Spacer(
@@ -168,13 +169,14 @@ fun AuthSignUpScreen(
 
                 LocalOutlinedTextField(
                     label = "Confirm your password",
-                    value = passwordConfirmField,
+                    value = formState.passwordConfirm.value,
                     onValueChange = { value ->
-                        passwordConfirmField = value
+                        viewModel.signUpForm.onPasswordConfirmChanged(value)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fieldType = TextFieldType.Private,
                     inputAction = ImeAction.Done,
+                    isComponentErrored = (formState.passwordConfirm.error != null)
                 )
             }
 
@@ -184,7 +186,7 @@ fun AuthSignUpScreen(
             Column {
                 Button(
                     onClick = {
-                        onSignUp(identityField, passwordDefaultField)
+                        onSignUp()
                     },
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier
