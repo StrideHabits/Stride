@@ -45,13 +45,11 @@ import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
-import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignUpScreen(
     onAuthenticated: () -> Unit,
     onNavigateToSignIn: () -> Unit,
-    model: AuthViewModel,
     modifier: Modifier
 ) {
     val analytics = Firebase.analytics

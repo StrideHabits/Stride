@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,11 +26,70 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "V0"
-        buildConfigField("String", "API_BASE_URL", "\"https://summitapi.onrender.com/\"")
+
+        // --- Tooling Configuration
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        // --- Environment Variables
+
+        /**
+         * Function to retrieve a secret value from a property file.
+         *
+         * **Note:** This should be used only for the `local.properties` repository
+         * and these values should never be shared or committed to a version control
+         * system in any form.
+         *
+         * @param property The name of the property to retrieve.
+         * @param filename The name of the file to read from (should not be changed)
+         *
+         * @return The value of the requested property or an empty string if the
+         *         file or property could not be found.
+         *
+         * @author MP
+         */
+        fun getLocalSecret(
+            property: String, filename: String = "local.properties"
+        ): String {
+            val properties = Properties()
+            val propertiesFile = rootProject.file(filename)
+            if (propertiesFile.exists()) {
+                properties.load(FileInputStream(propertiesFile))
+            } else {
+                println("Local property file not found.")
+            }
+
+            return properties.getProperty(property) ?: ""
+        }
+
+        buildConfigField(
+            type = "String",
+            name = "API_BASE_URL",
+            value = "\"https://summitapi.onrender.com/\""
+        )
+
+        buildConfigField(
+            type = "String",
+            name = "GOOGLE_SERVER_CLIENT_ID",
+            value = "\"${
+                getLocalSecret("GOOGLE_SERVER_CLIENT_ID")
+            }\""
+        )
+    }
+
+    afterEvaluate {
+        val isEnvironmentProduction = gradle.startParameter.taskNames.any {
+            it.contains("release", ignoreCase = true)
+        }
+
+        if (isEnvironmentProduction) {
+            val clientId = (project.findProperty("GOOGLE_SERVER_CLIENT_ID") as? String).orEmpty()
+            if (clientId.isBlank()) throw GradleException(
+                "Essential property is missing from build: (use -P GOOGLE_SERVER_CLIENT_ID=...)"
+            )
         }
     }
 
@@ -45,7 +107,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    
+
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -70,6 +132,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
     implementation(libs.androidx.runtime.saveable)
+    implementation(libs.googleid)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ui.text.google.fonts)
@@ -86,6 +149,11 @@ dependencies {
     implementation(libs.androidx.datastore.core)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.okhttp)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.activity.ktx)
 
     testImplementation(libs.junit)
 
@@ -96,15 +164,5 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    // Retrofit + Gson converter
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-
-    // OkHttp + logging (use debugImplementation so release builds are clean)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
-    implementation(platform("androidx.compose:compose-bom:2024.09.02"))
-    implementation("androidx.compose.material:material-icons-extended")
+    debugImplementation(libs.logging.interceptor)
 }
