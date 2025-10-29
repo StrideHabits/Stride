@@ -2,22 +2,22 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
-import com.mpieterse.stride.data.dto.checkins.CheckInDto
+import com.mpieterse.stride.core.services.AppEventBus
+import com.mpieterse.stride.core.services.HabitNameOverrideService
 import com.mpieterse.stride.data.dto.habits.HabitDto
+import com.mpieterse.stride.data.local.entities.CheckInEntity
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
-import com.mpieterse.stride.core.services.HabitNameOverrideService
-import com.mpieterse.stride.core.services.AppEventBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.*
+import java.time.LocalDate
+import java.time.ZoneId
 
 @HiltViewModel
 class HabitViewerViewModel @Inject constructor(
@@ -35,168 +35,111 @@ class HabitViewerViewModel @Inject constructor(
         val displayName: String = "",
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
-        val completedDates: List<Int> = emptyList(),
-        val localNameOverride: String? = null
+        val completedDates: List<Int> = emptyList()
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
-    fun load(habitId: String) = viewModelScope.launch { //This method loads habit data and check-ins using ViewModel lifecycle management (Android Developers, 2024).
-        _state.value = _state.value.copy(loading = true, error = null)
+    private var observeJob: Job? = null
 
-        val habitName = when (val hr = habits.list()) {
-            is ApiResult.Ok<*> -> (hr.data as List<*>)
-                .filterIsInstance<HabitDto>()
-                .firstOrNull { it.id == habitId }?.name ?: "(Unknown habit)"
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = "Habit load failed: ${hr.code ?: ""} ${hr.message ?: ""}"
-                )
-                return@launch
+    fun load(habitId: String) {
+        _state.update { it.copy(loading = true, error = null, habitId = habitId) }
+
+        // 1) Get habit name online once
+        viewModelScope.launch {
+            val habitName = when (val hr = habits.list()) {
+                is ApiResult.Ok -> hr.data
+                    .filterIsInstance<HabitDto>()
+                    .firstOrNull { it.id == habitId }?.name ?: "(Unknown habit)"
+                is ApiResult.Err -> {
+                    _state.update { it.copy(loading = false, error = "Habit load failed") }
+                    return@launch
+                }
+                else -> {
+                    _state.update { it.copy(loading = false, error = "Unexpected result") }
+                    return@launch
+                }
+            }
+
+            // 2) Start observing local check-ins for live UI
+            observeJob?.cancel()
+            observeJob = viewModelScope.launch {
+                checkins.observe(habitId)
+                    .onStart { _state.update { it.copy(loading = true) } }
+                    .catch { _state.update { it.copy(loading = false, error = "Local load failed") } }
+                    .collect { list ->
+                        val completedThisMonth = monthDays(list)
+                        val streak = computeStreakDays(list)
+                        _state.update {
+                            it.copy(
+                                loading = false,
+                                habitName = habitName,
+                                displayName = nameOverrideService.getDisplayName(habitId, habitName),
+                                completedDates = completedThisMonth,
+                                streakDays = streak
+                            )
+                        }
+                    }
             }
         }
+    }
 
-        val mine: List<CheckInDto> = when (val cr = checkins.list()) {
-            is ApiResult.Ok<*> -> (cr.data as List<*>)
-                .filterIsInstance<CheckInDto>()
-                .filter { it.habitId == habitId }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    habitName = habitName,
-                    error = "Check-ins load failed: ${cr.code ?: ""} ${cr.message ?: ""}"
-                )
-                return@launch
+    fun completeToday(habitId: String) = toggleCheckIn(habitId, LocalDate.now().toString())
+
+    fun toggleCheckIn(habitId: String, isoDate: String) {
+        // Real toggle: if a non-deleted row exists for that day, set off; else set on.
+        viewModelScope.launch {
+            _state.update { it.copy(loading = true, error = null) }
+            try {
+                val local = checkins.observe(habitId).firstOrNull() ?: emptyList()
+                val hasForDay = local.any { it.dayKey == isoDate && !it.deleted }
+                val targetOn = !hasForDay
+                checkins.toggle(habitId, isoDate, on = targetOn)
+                eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
+                // UI will refresh via Flow collector
+                _state.update { it.copy(loading = false) }
+            } catch (e: Exception) {
+                _state.update { it.copy(loading = false, error = "Write failed") }
             }
         }
+    }
 
+    fun updateLocalName(newName: String) {
+        val id = _state.value.habitId
+        val real = if (id.isEmpty()) return else newName
+        nameOverrideService.updateHabitName(id, real)
+        _state.update { it.copy(displayName = newName) }
+        viewModelScope.launch { eventBus.emit(AppEventBus.AppEvent.HabitNameChanged) }
+    }
+
+    // Helpers
+
+    private fun monthDays(list: List<CheckInEntity>): List<Int> {
         val today = LocalDate.now()
         val monthStart = today.withDayOfMonth(1)
-        val completedThisMonth = mine.mapNotNull { checkin ->
-            try {
-                java.time.LocalDate.parse(checkin.dayKey)
-            } catch (e: Exception) { null }
-        }.filter { it.year == monthStart.year && it.month == monthStart.month }
+        return list.asSequence()
+            .filter { !it.deleted }
+            .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
+            .filter { it.year == monthStart.year && it.month == monthStart.month }
             .map { it.dayOfMonth }
             .distinct()
             .sorted()
-        
-        
-
-        val streak = computeStreakDays(mine.mapNotNull { checkin ->
-            try {
-                java.time.LocalDate.parse(checkin.dayKey)
-            } catch (e: Exception) { null }
-        }.distinct())
-
-        _state.value = _state.value.copy(
-            loading = false,
-            habitId = habitId,
-            habitName = habitName,
-            displayName = nameOverrideService.getDisplayName(habitId, habitName),
-            streakDays = streak,
-            completedDates = completedThisMonth
-        )
+            .toList()
     }
 
-    fun completeToday(habitId: String) = viewModelScope.launch { //This method creates a check-in for today using ViewModel lifecycle management (Android Developers, 2024).
-        _state.value = _state.value.copy(loading = true, error = null)
-        val today = LocalDate.now().toString()
-        when (val r = checkins.create(habitId, today)) {
-            is ApiResult.Ok<*> -> {
-                // Re-load to refresh streak and calendar
-                // This check-in is now saved to the API and will be visible in the home screen
-                load(habitId)
-                // Emit event to notify home screen
-                eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
-            }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = "Complete failed: ${r.code ?: ""} ${r.message ?: ""}"
-                )
-            }
-        }
-    }
-
-    fun toggleCheckIn(habitId: String, isoDate: String) = viewModelScope.launch { //This method toggles check-ins for specific dates using ViewModel lifecycle management (Android Developers, 2024).
-        Log.d("HabitViewerViewModel", "toggleCheckIn called: habitId=$habitId isoDate=$isoDate")
-        _state.value = _state.value.copy(loading = true, error = null)
-        
-        try {
-            // Create new check-in directly - let the API handle duplicates
-            when (val r = checkins.create(habitId, isoDate)) {
-                is ApiResult.Ok<*> -> {
-                    // Successfully created check-in, refresh data and emit event
-                    load(habitId)
-                    eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
-                }
-                is ApiResult.Err -> {
-                    val errorMessage = when {
-                        r.code == 409 -> "Check-in already exists for this date"
-                        r.code == 401 -> "Authentication required - please log in"
-                        r.code == 403 -> "Access denied"
-                        r.code == 404 -> "Habit not found"
-                        else -> "Failed to create check-in: ${r.message ?: "Unknown error"}"
-                    }
-                    _state.value = _state.value.copy(
-                        loading = false,
-                        error = errorMessage
-                    )
-                    // Clear error after a short delay for user-friendly messages
-                    if (r.code == 409) {
-                        kotlinx.coroutines.delay(2000)
-                        _state.value = _state.value.copy(error = null)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            _state.value = _state.value.copy(
-                loading = false,
-                error = "Network error: ${e.message ?: "Please check your connection"}"
-            )
-        }
-    }
-
-    fun updateLocalName(newName: String, habitId: String) { //This method updates habit display names using the name override service (Android Developers, 2024).
-        // Store in shared service so home screen can access it
-        nameOverrideService.updateHabitName(habitId, newName)
-        // Update local state to trigger UI refresh
-        _state.value = _state.value.copy(
-            localNameOverride = newName,
-            displayName = newName
-        )
-        // Emit event to notify home screen
-        viewModelScope.launch {
-            eventBus.emit(AppEventBus.AppEvent.HabitNameChanged)
-        }
-    }
-
-    fun getDisplayName(): String {
-        // Use the service to get the display name, which will be reactive to changes
-        return nameOverrideService.getDisplayName(_state.value.habitId, _state.value.habitName)
-    }
-
-    // Count consecutive days ending today.
-    private fun computeStreakDays(dates: List<LocalDate>): Int {
-        if (dates.isEmpty()) return 0
-        val set = dates.toHashSet()
-        var d = LocalDate.now()
+    // Count consecutive days ending today from local non-deleted rows
+    private fun computeStreakDays(list: List<CheckInEntity>): Int {
+        val days = list.asSequence()
+            .filter { !it.deleted }
+            .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
+            .toHashSet()
+        var d = LocalDate.now(ZoneId.systemDefault())
         var streak = 0
-        while (set.contains(d)) {
+        while (days.contains(d)) {
             streak++
             d = d.minusDays(1)
         }
         return streak
-    }
-
-    private fun String.toLocalDateOrNull(): LocalDate? {
-        return try {
-            Instant.parse(this).atZone(ZoneId.systemDefault()).toLocalDate()
-        } catch (_: Exception) {
-            try { LocalDate.parse(this) } catch (_: Exception) { null }
-        }
     }
 }

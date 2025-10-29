@@ -26,5 +26,6 @@ class LocalApplication : Application() {
         )
 
         authenticationListener.listen()
+        com.mpieterse.stride.workers.PullWorker.schedulePeriodic(this) // sync workers
     }
 }

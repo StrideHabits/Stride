@@ -59,4 +59,16 @@ interface SummitApiService {
     @Multipart
     @POST("api/uploads")
     suspend fun upload(@Part file: MultipartBody.Part): Response<UploadResponse> //This method uploads files to the REST API using Retrofit multipart requests (GeeksforGeeks, 2017).
+
+
+    @POST("sync/checkins/push")
+    suspend fun syncPush(@Body items: List<com.mpieterse.stride.data.remote.models.PushItem>)
+            : List<com.mpieterse.stride.data.remote.models.PushResult>
+
+    @GET("sync/checkins/changes")
+    suspend fun syncChanges(
+        @Query("since") since: String?,
+        @Query("pageSize") pageSize: Int = 200
+    ): com.mpieterse.stride.data.remote.models.ChangesPage
+
 }

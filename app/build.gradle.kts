@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
     id("com.google.devtools.ksp")
     id("com.google.gms.google-services")
     id("com.google.dagger.hilt.android")
@@ -132,6 +133,9 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.runtime.saveable)
     implementation(libs.googleid)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.common)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ui.text.google.fonts)
