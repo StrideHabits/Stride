@@ -24,10 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,12 +43,14 @@ import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
+import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
 fun AuthSignInScreen(
-    onSignIn: (email: String, password: String) -> Unit,
+    onSignIn: () -> Unit,
     onGoogleSignIn: () -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
+    viewModel: AuthViewModel
 ) {
     val analytics = Firebase.analytics
     LaunchedEffect(Unit) {
@@ -59,8 +59,7 @@ fun AuthSignInScreen(
         }
     }
 
-    var identityField by remember { mutableStateOf("") }
-    var passwordField by remember { mutableStateOf("") }
+    val formState by viewModel.signInForm.formState.collectAsState()
 
 // --- UI
 
@@ -95,14 +94,15 @@ fun AuthSignInScreen(
             )
             LocalOutlinedTextField(
                 label = "Email Address",
-                value = identityField,
+                value = formState.identity.value,
                 onValueChange = { value ->
-                    identityField = value
+                    viewModel.signInForm.onIdentityChanged(value)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 inputType = KeyboardType.Email,
                 fieldType = TextFieldType.Default,
                 inputAction = ImeAction.Next,
+                isComponentErrored = (formState.identity.error != null)
             )
 
             Spacer(
@@ -110,13 +110,14 @@ fun AuthSignInScreen(
             )
             LocalOutlinedTextField(
                 label = "Password",
-                value = passwordField,
+                value = formState.password.value,
                 onValueChange = { value ->
-                    passwordField = value
+                    viewModel.signInForm.onPasswordChanged(value)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 fieldType = TextFieldType.Private,
                 inputAction = ImeAction.Done,
+                isComponentErrored = (formState.password.error != null)
             )
 
             Spacer(
@@ -142,7 +143,7 @@ fun AuthSignInScreen(
             )
             Button(
                 onClick = {
-                    onSignIn(identityField, passwordField)
+                    onSignIn()
                 },
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier

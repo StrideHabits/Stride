@@ -24,8 +24,8 @@ android {
         applicationId = "com.mpieterse.stride"
         minSdk = 34
         targetSdk = 36
-        versionCode = 1
-        versionName = "V0"
+        versionCode = 2
+        versionName = "2025m10a"
         buildConfigField("String", "API_BASE_URL", "\"https://summitapi.onrender.com/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

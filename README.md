@@ -1,163 +1,85 @@
 # 🏃‍♂️ Stride — Android Habit Tracker
 
-**Stride** is a Kotlin-based Android habit tracking application built with a clean **MVVM architecture**, **Hilt dependency injection**, and **Jetpack Compose** for a modern, responsive UI. It integrates with the **SummitAPI** backend for authentication, habit tracking, and analytics. Firebase is used for **performance monitoring**, **logging**, **Crashlytics**, and **SSO (Google Sign-In)** — not as the primary data store.
+**Stride** is a Kotlin-based Android habit tracking app built with a clean **MVVM architecture**, **Hilt dependency injection**, and **Jetpack Compose** for a modern, responsive UI.
+It integrates with the **SummitAPI** backend for authentication, habit tracking, and analytics.
+
+> 🧭 **Full documentation and development notes are available on the Wiki:**
+> 🔗 [https://github.com/StrideHabits/Stride/wiki](https://github.com/StrideHabits/Stride/wiki)
 
 ---
 
-## 🚀 Features
+## 🚀 Quick Overview
 
-* **User Authentication** — Secure email/password and Google SSO sign-in.
-* **Habit Management** — Add, edit, and delete daily habits seamlessly.
-* **Check-In Tracking** — Record and view your progress per habit.
-* **Performance Analytics** — Integrated with Firebase Performance and Crashlytics.
-* **Modern UI/UX** — Built with Jetpack Compose and Material3 for smooth animations and consistent design.
-* **Cloud-Synced** — All data is stored on **SummitAPI**; no local Room database is currently used.
-* **Lightweight Navigation** — Single-activity structure with Compose `NavHost` and modular roots.
-* **Composable Architecture** — Each UI module (startup, shared, central) is structured for reusability.
+| Feature              | Description                                                |
+| -------------------- | ---------------------------------------------------------- |
+| **Authentication**   | Secure login via email/password and Google SSO.            |
+| **Habits & Streaks** | Add, edit, and track daily progress.                       |
+| **Reminders**        | Daily notifications for check-ins.                         |
+| **Settings**         | Theme, notification, and sync preferences.                 |
+| **Backend**          | Cloud-hosted REST API built in ASP.NET Core 8 (SummitAPI). |
+| **Analytics**        | Firebase Crashlytics and Performance monitoring.           |
 
 ---
 
 ## 🧩 Project Structure
 
 ```
-app/
-├── manifests/
-├── kotlin+java/
-│   └── com.mpieterse.stride/
-│       ├── core/
-│       │   ├── dependencies/          # Dependency injection modules (Hilt)
-│       │   ├── models/                # Core app models (User, Habit, etc.)
-│       │   ├── net/                   # Network utilities, API configs
-│       │   ├── services/              # Core Android & Firebase services
-│       │   ├── utils/                 # Common tools (Clogger, formatters, etc.)
-│       │   └── LocalApplication.kt    # Custom Application class
-│       │
-│       ├── data/
-│       │   ├── dto/                   # Data transfer objects (auth, habits, check-ins, etc.)
-│       │   ├── local/                 # Local stores (notifications, tokens)
-│       │   ├── remote/                # Retrofit network module + Summit API service
-│       │   └── repo/                  # Repositories for each feature (auth, habits, etc.)
-│       │
-│       └── ui/
-│           ├── layout/
-│           │   ├── central/           # Main app views, dashboards, viewmodels
-│           │   ├── shared/            # Common UI components used across modules
-│           │   ├── startup/           # Authentication & startup flow (AuthNavGraph, screens)
-│           │   └── theme/             # Material3 theme setup
-│           
-│           └── README.md (per section)
+com.mpieterse.stride/
+├── core/       → Models, DI, services, and utilities
+├── data/       → DTOs, repositories, and network modules
+└── ui/         → Jetpack Compose layouts (startup, shared, central)
 ```
 
----
-
-## 📱 How to Use
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/username/stride.git
-   ```
-
-2. **Open in Android Studio:**
-
-   * Open the `stride` folder.
-   * Let Gradle sync dependencies automatically.
-
-3. **Run the app:**
-
-   * Configure an emulator or connect a device.
-   * Click ▶️ *Run* to start the project.
-
-4. **Sign Up or Sign In:**
-
-   * Create a new account or use Google SSO.
-   * Data will sync to SummitAPI (cloud-hosted backend).
+The app follows a modular **MVVM + Repository** pattern for clarity and scalability.
 
 ---
 
 ## ⚙️ Tech Stack
 
-| Layer                    | Technology                                 |
-| ------------------------ | ------------------------------------------ |
-| **Language**             | Kotlin                                     |
-| **UI**                   | Jetpack Compose + Material3                |
-| **Architecture**         | MVVM                                       |
-| **DI**                   | Hilt                                       |
-| **Networking**           | Retrofit 2 + OkHttp                        |
-| **Logging & Monitoring** | Firebase Crashlytics, Performance, Clogger |
-| **Backend API**          | SummitAPI (ASP.NET Core + SQLite)          |
-| **Authentication**       | JWT + Google SSO                           |
+| Layer            | Technology                           |
+| ---------------- | ------------------------------------ |
+| **Language**     | Kotlin                               |
+| **UI**           | Jetpack Compose + Material3          |
+| **Architecture** | MVVM                                 |
+| **DI**           | Hilt                                 |
+| **Networking**   | Retrofit + OkHttp                    |
+| **Monitoring**   | Firebase Crashlytics + Performance   |
+| **Backend**      | SummitAPI (C# ASP.NET Core + SQLite) |
 
 ---
 
-## 🧠 Development Insights
+## 🧠 Development Highlights
 
-This project demonstrates a modern mobile app connected to a C# ASP.NET Core REST API. The structure follows clean architecture principles, emphasizing separation of concerns, modular repositories, and dependency injection for maintainability and testing.
+* **Clean architecture** and **Hilt DI** for separation of concerns.
+* **Reactive UI** powered by `StateFlow` and `collectAsStateWithLifecycle`.
+* **SummitAPI** backend for secure, cloud-based habit storage.
+* Firebase used for **monitoring**, not data storage.
 
-> Reference: *App Dev Insights (2024). Repository Design Pattern in Kotlin.* [Medium](https://medium.com/@appdevinsights/repository-design-pattern-in-kotlin-1d1aeff1ad40)
-
-> Reference: *Android Developers (2025). Dependency Injection in Android.* [Android Docs](https://developer.android.com/training/dependency-injection)
-
----
-
-## 🌐 SummitAPI Overview
-
-**SummitAPI** is the RESTful backend supporting Stride. Developed with **C# ASP.NET Core 8**, it provides endpoints for authentication, habit management, and check-in tracking. It uses **SQLite** as a lightweight relational database and issues **JWT tokens** for secure access.
-
-**Example Endpoints:**
-
-* `POST /api/users/register` → Register a new user
-* `POST /api/users/login` → Authenticate and receive JWT
-* `GET /api/habits` → Fetch all user habits
-* `POST /api/checkins` → Log a daily habit check-in
-
-> Reference: *GeeksforGeeks (2017). Introduction to Retrofit in Android.* [GeeksforGeeks](https://www.geeksforgeeks.org/android/introduction-retofit-2-android-set-1/)
+> 💡 For setup, API details, and feature breakdown — visit the [Wiki](https://github.com/StrideHabits/Stride/wiki).
 
 ---
 
-## 📚 References and Citations
+## 📸 Screenshots
 
-This project has been extensively referenced to ensure proper academic and professional standards. All major functions and methods that make the app work have been documented with inline comments and citations.
+**Firebase Performance:**
+![Firebase Perf](https://github.com/user-attachments/assets/c0512861-15d6-493a-b77e-3a76f3a9c310)
 
-### 📖 Reference Documentation
-
-**Complete reference list:** [`references.md`](./references.md)
-
-The `references.md` file contains comprehensive documentation of all sources used throughout the codebase, including:
-
-- **Android Development References** - ViewModel, DataStore, Biometric, Compose, Credential Manager
-- **Firebase References** - Authentication and API documentation  
-- **Network & API References** - Retrofit and networking documentation
-- **Architecture Pattern References** - Repository pattern documentation
-- **Kotlin References** - Coroutines, Data Classes, Enums, Sealed Classes
-- **Dependency Injection References** - Hilt documentation
-- **Material Design References** - Material Design 3 and components
-- **Navigation References** - Navigation component documentation
-- **State Management References** - StateFlow and SharedFlow documentation
-
-### 🏷️ Inline Citations
-
-Throughout the codebase, major functions and methods include inline citations following this format:
-```kotlin
-fun methodName() { //This method [description] using [technology] ([Source], [Year]).
-```
-
-**Referenced Components Include:**
-- Authentication services and user management
-- Repository pattern implementations
-- API service interfaces and networking
-- ViewModel lifecycle management
-- UI components and Jetpack Compose
-- Data transfer objects and models
-- Configuration and settings management
-- Local storage and caching
+**App Running on Device:** <img width="390" height="878" alt="image" src="https://github.com/user-attachments/assets/ea3d3b6c-1b48-420d-ad4f-3e79dbb514b2" />
 
 ---
+## 👥 Contributors
+
+A big thank you to everyone who contributed to Stride — your efforts are truly appreciated!
+
+| Nanme               | Student Number                       |
+| ------------------- | ------------------------------------ |
+| **Musa Ntuli**      | ST1029336                            |
+| **Dean Gibson**     | ST10326084                           |
+| **Fortune Mabona**  | ST10187287                           |
+| **Matthew Pieterse**| ST10257002                           |
+
 
 ## 📄 License
 
-This project is for **educational purposes** under the Varsity College BCAD program. Redistribution or commercial use is not permitted without written consent.
-
----
-
-
+Developed for **Varsity College BCAD** coursework.
+For educational use only — redistribution or commercial use is not permitted.
