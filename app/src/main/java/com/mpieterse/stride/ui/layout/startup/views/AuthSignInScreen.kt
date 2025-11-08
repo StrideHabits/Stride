@@ -16,12 +16,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,8 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
+import com.mpieterse.stride.core.validation.ValidationError
+import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
 import com.google.firebase.analytics.logEvent
@@ -60,6 +64,19 @@ fun AuthSignInScreen(
     }
 
     val formState by viewModel.signInForm.formState.collectAsState()
+    val isFormValid by viewModel.signInForm.isFormValid.collectAsState()
+    val authState by viewModel.authState.collectAsState()
+    val isLoading = authState is AuthState.Loading
+    val errorMessage = (authState as? AuthState.Error)?.message
+
+    // Clear authentication error (not validation errors) when user starts typing
+    LaunchedEffect(formState.identity.value, formState.password.value) {
+        // Only clear auth errors, not validation errors
+        val currentState = viewModel.authState.value
+        if (currentState is AuthState.Error && errorMessage != null) {
+            viewModel.clearError()
+        }
+    }
 
 // --- UI
 
@@ -102,7 +119,17 @@ fun AuthSignInScreen(
                 inputType = KeyboardType.Email,
                 fieldType = TextFieldType.Default,
                 inputAction = ImeAction.Next,
-                isComponentErrored = (formState.identity.error != null)
+                isComponentErrored = (formState.identity.error != null),
+                isComponentEnabled = !isLoading,
+                textSupporting = {
+                    if (formState.identity.error != null) {
+                        Text(
+                            text = getValidationErrorMessage(formState.identity.error!!),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             )
 
             Spacer(
@@ -117,8 +144,29 @@ fun AuthSignInScreen(
                 modifier = Modifier.fillMaxWidth(),
                 fieldType = TextFieldType.Private,
                 inputAction = ImeAction.Done,
-                isComponentErrored = (formState.password.error != null)
+                isComponentErrored = (formState.password.error != null),
+                isComponentEnabled = !isLoading,
+                textSupporting = {
+                    if (formState.password.error != null) {
+                        Text(
+                            text = getValidationErrorMessage(formState.password.error!!),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             )
+
+            // Display authentication error
+            if (errorMessage != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(
                 Modifier.height(12.dp)
@@ -145,15 +193,23 @@ fun AuthSignInScreen(
                 onClick = {
                     onSignIn()
                 },
+                enabled = isFormValid && !isLoading,
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier
                     .height(52.dp)
                     .fillMaxWidth()
             ) {
-                Text(
-                    text = "Sign In",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        text = "Sign In",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
+                    )
+                }
             }
 
             Spacer(
@@ -179,5 +235,23 @@ fun AuthSignInScreen(
                 )
             }
         }
+    }
+}
+
+// Helper function to convert ValidationError to user-friendly message
+private fun getValidationErrorMessage(error: ValidationError): String {
+    return when (error) {
+        is ValidationError.String -> when (error) {
+            ValidationError.String.REQUIRE_MIN_CHARS -> "Email is too short"
+            ValidationError.String.REQUIRE_MAX_CHARS -> "Email is too long"
+            ValidationError.String.INVALID_EMAIL_ADDRESS -> "Please enter a valid email address"
+            ValidationError.String.EXCLUDE_WHITESPACE -> "Email cannot contain spaces"
+            ValidationError.String.INCLUDE_LOWERCASE -> "Password must contain lowercase letters"
+            ValidationError.String.INCLUDE_UPPERCASE -> "Password must contain uppercase letters"
+            ValidationError.String.INCLUDE_NUMBERS -> "Password must contain numbers"
+            ValidationError.String.INCLUDE_SYMBOLS -> "Password must contain symbols"
+            else -> "Invalid input"
+        }
+        else -> "Invalid input"
     }
 }

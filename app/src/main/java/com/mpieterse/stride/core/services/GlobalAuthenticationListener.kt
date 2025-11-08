@@ -35,6 +35,7 @@ class GlobalAuthenticationListener
 
 
     private val appScope = CoroutineScope(Dispatchers.Main)
+    private var isAuthInProgress = false
 
 
 // --- Contracts
@@ -89,6 +90,15 @@ class GlobalAuthenticationListener
      * Secures the application when authentication is revoked.
      */
     private fun secureApplication() {
+        // Don't interrupt if authentication is actively in progress
+        // This prevents the listener from interfering during login/signup flows
+        if (isAuthInProgress) {
+            Clogger.d(
+                TAG, "Skipping secureApplication: authentication in progress"
+            )
+            return
+        }
+
         Clogger.d(
             TAG, "Securing the application due to revoked authentication"
         )
@@ -103,12 +113,26 @@ class GlobalAuthenticationListener
         }
     }
 
+    /**
+     * Marks that authentication is in progress. This prevents the listener from
+     * interfering with the authentication flow.
+     */
+    fun setAuthInProgress(inProgress: Boolean) {
+        isAuthInProgress = inProgress
+        Clogger.d(TAG, "Authentication in progress: $inProgress")
+    }
 
     /**
      * Handler for Firebase authentication state changes.
      */
     override fun onAuthStateChanged(server: FirebaseAuth) {
-        if (server.currentUser == null) secureApplication()
+        // Don't trigger secureApplication if authentication is actively in progress
+        // This prevents interrupting the auth flow when Firebase state changes during login/signup
+        if (server.currentUser == null && !isAuthInProgress) {
+            secureApplication()
+        } else if (server.currentUser == null && isAuthInProgress) {
+            Clogger.d(TAG, "Auth state changed to null during authentication - ignoring")
+        }
     }
 
 

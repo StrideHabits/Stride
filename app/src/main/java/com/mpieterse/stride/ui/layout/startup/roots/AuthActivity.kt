@@ -41,7 +41,17 @@ class AuthActivity : FragmentActivity() {
 
                 Surface(color = Color(0xFF161620)) {
                     when (authState) {
-                        is AuthState.Unauthenticated, is AuthState.Error -> AuthNavGraph(
+                        is AuthState.Unauthenticated -> AuthNavGraph(
+                            onGoToHomeActivity = ::navigateToHomeActivity,
+                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                            authViewModel = authViewModel
+                        )
+                        is AuthState.Error -> AuthNavGraph(
+                            onGoToHomeActivity = ::navigateToHomeActivity,
+                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                            authViewModel = authViewModel
+                        )
+                        is AuthState.Loading -> AuthNavGraph(
                             onGoToHomeActivity = ::navigateToHomeActivity,
                             modifier = Modifier.statusBarsPadding().fillMaxSize(),
                             authViewModel = authViewModel
