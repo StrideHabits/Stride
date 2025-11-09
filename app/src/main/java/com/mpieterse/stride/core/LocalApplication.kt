@@ -1,7 +1,9 @@
 package com.mpieterse.stride.core
 
 import android.app.Application
+import android.os.Build
 import com.mpieterse.stride.core.notifications.NotificationChannelManager
+import com.mpieterse.stride.core.permissions.NotificationPermissionManager
 import com.mpieterse.stride.core.services.FcmTokenManager
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.utils.Clogger
@@ -36,14 +38,37 @@ class LocalApplication : Application() {
             TAG, "Application initialized successfully"
         )
 
-        // Initialize notification channels
+        // Initialize notification channels (required for Android 8.0+)
         NotificationChannelManager.createChannels(this)
+        Clogger.d(TAG, "Notification channels created")
+
+        // Check notification permission status (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = NotificationPermissionManager.areNotificationsEnabled(this)
+            Clogger.d(TAG, "Notification permission status: $hasPermission")
+            if (!hasPermission) {
+                Clogger.w(TAG, "Notification permission not granted - notifications may not work")
+            }
+        }
 
         authenticationListener.listen()
         
         // Register FCM token with backend (async, non-blocking)
         applicationScope.launch {
-            fcmTokenManager.registerTokenWithBackend()
+            try {
+                Clogger.d(TAG, "Attempting to register FCM token with backend")
+                val result = fcmTokenManager.registerTokenWithBackend()
+                when (result) {
+                    is com.mpieterse.stride.core.net.ApiResult.Ok -> {
+                        Clogger.i(TAG, "FCM token registered successfully with backend")
+                    }
+                    is com.mpieterse.stride.core.net.ApiResult.Err -> {
+                        Clogger.w(TAG, "Failed to register FCM token: ${result.code} - ${result.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Clogger.e(TAG, "Error registering FCM token", e)
+            }
         }
     }
 }

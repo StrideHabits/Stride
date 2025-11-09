@@ -14,6 +14,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,8 +37,26 @@ fun UpsertDialog(
 ) {
     if (!isVisible) return
 
-    var name by remember { mutableStateOf(initialData?.name ?: "") }
+    var name by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf<String?>(null) }
+    
+    // Reset state when dialog opens or initialData changes
+    LaunchedEffect(isVisible, initialData?.name) {
+        if (isVisible) {
+            if (initialData != null) {
+                // Editing existing habit - load its data
+                name = initialData.name
+            } else {
+                // Creating new habit - start with empty name
+                name = ""
+            }
+            errorText = null
+        } else {
+            // Dialog closed - reset for next time
+            name = ""
+            errorText = null
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -64,7 +83,6 @@ fun UpsertDialog(
                         if (errorText != null) errorText = null
                     },
                     label = { Text("Habit name") },
-                    placeholder = { Text("Read 10m") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = errorText != null,
@@ -94,10 +112,19 @@ fun UpsertDialog(
                         errorText = "Please enter a name."
                         return@Button
                     }
-                    onConfirm(HabitData(name.trim()))
-                    // Do NOT auto-dismiss: mirrors Debug’s “press button triggers action” feel.
+                    val trimmedName = name.trim()
+                    if (trimmedName.isBlank()) {
+                        errorText = "Please enter a valid habit name."
+                        return@Button
+                    }
+                    onConfirm(HabitData(trimmedName))
+                    // Do NOT auto-dismiss: mirrors Debug's "press button triggers action" feel.
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500)),
+                enabled = name.trim().isNotBlank(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF9500),
+                    disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                ),
                 shape = RoundedCornerShape(8.dp)
             ) { Text("Create", color = Color.White) }
         },

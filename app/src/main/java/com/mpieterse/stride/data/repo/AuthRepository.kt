@@ -34,4 +34,9 @@ class AuthRepository @Inject constructor(
         }
 
     suspend fun logout() = tokens.clear() //This method clears stored authentication tokens using the Repository pattern (App Dev Insights, 2024).
+    
+    /**
+     * Check if a token exists and is not empty.
+     */
+    suspend fun hasToken(): Boolean = tokens.hasToken()
 }

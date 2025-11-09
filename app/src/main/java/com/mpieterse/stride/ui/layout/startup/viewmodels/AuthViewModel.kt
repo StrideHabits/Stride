@@ -33,10 +33,93 @@ class AuthViewModel
     private var isAuthenticating = false
 
     init {
-        if (authService.isUserSignedIn()) {
-            _authState.value = AuthState.Locked
-        } else {
-            _authState.value = AuthState.Unauthenticated
+        viewModelScope.launch {
+            if (authService.isUserSignedIn()) {
+                // Firebase user exists, check if we need to re-authenticate with API
+                _authState.value = AuthState.Locked
+                // Try to validate and refresh token in background
+                validateAndRefreshToken()
+            } else {
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
+    }
+    
+    /**
+     * Validates the current token and refreshes it if needed.
+     * This is called when app starts and Firebase user exists.
+     */
+    private suspend fun validateAndRefreshToken() {
+        try {
+            val user = authService.getCurrentUser()
+            if (user == null || user.email == null) {
+                Clogger.d("AuthViewModel", "No Firebase user or email, skipping token validation")
+                return
+            }
+            
+            // Check if token exists
+            val hasToken = authApi.hasToken()
+            
+            if (!hasToken) {
+                Clogger.d("AuthViewModel", "No token found, attempting to re-authenticate")
+                // Try to re-authenticate based on auth provider
+                reAuthenticateWithApi(user.email!!, user.uid)
+            } else {
+                Clogger.d("AuthViewModel", "Token exists, validation will happen on first API call")
+                // Token exists, but we don't validate it here to avoid blocking
+                // If it's invalid, API calls will fail and we'll handle it then
+            }
+        } catch (e: Exception) {
+            Clogger.e("AuthViewModel", "Error validating token", e)
+            // Don't change auth state on error, let user proceed to locked screen
+        }
+    }
+    
+    /**
+     * Re-authenticates with API based on Firebase auth provider.
+     * For Google users, uses Firebase UID as password.
+     * For email/password users, we can't auto re-auth (security - passwords not stored).
+     */
+    private suspend fun reAuthenticateWithApi(email: String, firebaseUid: String) {
+        try {
+            // Check if user signed in with Google
+            val user = authService.getCurrentUser()
+            val isGoogleUser = user?.providerData?.any { 
+                it.providerId == "google.com" 
+            } ?: false
+            
+            if (isGoogleUser) {
+                // Google user: Use Firebase UID as password
+                Clogger.d("AuthViewModel", "Re-authenticating Google user with API")
+                val apiLoginState = authApi.login(email, pass = firebaseUid)
+                
+                if (apiLoginState is ApiResult.Ok) {
+                    Clogger.d("AuthViewModel", "Successfully re-authenticated Google user with API")
+                } else {
+                    Clogger.w("AuthViewModel", "Failed to re-authenticate Google user: ${(apiLoginState as? ApiResult.Err)?.message}")
+                    // Try to register first, then login
+                    val apiRegistrationState = authApi.register(
+                        name = email,
+                        email = email,
+                        pass = firebaseUid
+                    )
+                    
+                    if (apiRegistrationState is ApiResult.Ok || 
+                        (apiRegistrationState is ApiResult.Err && 
+                         (apiRegistrationState.code == 409 || apiRegistrationState.code == 400))) {
+                        // User exists or was just created, try login again
+                        authApi.login(email, pass = firebaseUid)
+                    }
+                }
+            } else {
+                // Email/password user: Can't auto re-auth without password
+                // Token validation will happen on first API call
+                // If it fails, user will need to sign in again
+                Clogger.d("AuthViewModel", "Email/password user - cannot auto re-authenticate without password")
+            }
+        } catch (e: Exception) {
+            Clogger.e("AuthViewModel", "Error re-authenticating with API", e)
+            // Don't change auth state, let user proceed
         }
     }
 
@@ -348,7 +431,24 @@ class AuthViewModel
 
     fun unlockWithBiometrics(success: Boolean) { //This method handles biometric authentication unlock using Android biometric APIs (Android Developers, 2024).
         if (success) {
-            _authState.value = AuthState.Authenticated
+            viewModelScope.launch {
+                // Validate token before allowing access
+                val user = authService.getCurrentUser()
+                if (user != null && user.email != null) {
+                    val hasToken = authApi.hasToken()
+                    if (!hasToken) {
+                        // Try to re-authenticate and wait for it to complete
+                        Clogger.d("AuthViewModel", "No token found during unlock, re-authenticating...")
+                        reAuthenticateWithApi(user.email!!, user.uid)
+                        // Give a small delay to ensure token is stored
+                        kotlinx.coroutines.delay(200)
+                    } else {
+                        Clogger.d("AuthViewModel", "Token exists, proceeding with unlock")
+                    }
+                }
+                // Set authenticated state after token validation/refresh
+                _authState.value = AuthState.Authenticated
+            }
         }
     }
 

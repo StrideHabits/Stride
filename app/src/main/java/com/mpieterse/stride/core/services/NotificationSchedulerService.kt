@@ -44,9 +44,12 @@ class NotificationSchedulerService @Inject constructor(
      */
     fun scheduleNotification(notification: NotificationData, settings: NotificationSettings) {
         if (!notification.isEnabled || !settings.globalNotificationsEnabled) {
-            Clogger.d(TAG, "Notification ${notification.id} is disabled, skipping scheduling")
+            Clogger.d(TAG, "Notification ${notification.id} (${notification.habitName}) is disabled, skipping scheduling")
             return
         }
+        
+        Clogger.d(TAG, "Scheduling notification ${notification.id} for habit: ${notification.habitName}")
+        Clogger.d(TAG, "Notification time: ${notification.time}, Days: ${notification.daysOfWeek}")
         
         // Cancel existing work for this notification
         cancelNotification(notification.id)
@@ -56,7 +59,7 @@ class NotificationSchedulerService @Inject constructor(
             scheduleNotificationForDay(notification, dayOfWeek, settings)
         }
         
-        Clogger.d(TAG, "Scheduled notification ${notification.id} for ${notification.daysOfWeek.size} day(s)")
+        Clogger.i(TAG, "Successfully scheduled notification ${notification.id} for ${notification.daysOfWeek.size} day(s)")
     }
     
     /**
@@ -194,6 +197,7 @@ class NotificationSchedulerService @Inject constructor(
      * Cancels a scheduled notification.
      */
     fun cancelNotification(notificationId: String) {
+        Clogger.d(TAG, "Cancelling notification $notificationId")
         // Cancel all work items for this notification (all days)
         for (day in 1..7) {
             val tag = "${WORK_NAME_PREFIX}${notificationId}_$day"
@@ -204,7 +208,7 @@ class NotificationSchedulerService @Inject constructor(
             // Cancel unique periodic work
             workManager.cancelUniqueWork("${WORK_NAME_PREFIX}${notificationId}_$day")
         }
-        Clogger.d(TAG, "Cancelled notification $notificationId")
+        Clogger.d(TAG, "Cancelled all work for notification $notificationId")
     }
     
     /**
@@ -239,17 +243,26 @@ class NotificationWorker(
 ) : Worker(context, workerParams) {
     
     override fun doWork(): Result {
-        val notificationId = inputData.getString("notification_id") ?: return Result.failure()
-        val habitName = inputData.getString("habit_name") ?: "Habit Reminder"
-        val title = inputData.getString("title") ?: habitName
-        val body = inputData.getString("body") ?: "Time to work on your habit!"
-        val soundEnabled = inputData.getBoolean("sound_enabled", true)
-        val vibrationEnabled = inputData.getBoolean("vibration_enabled", true)
-        
-        // Display notification
-        displayNotification(notificationId, title, body, soundEnabled, vibrationEnabled)
-        
-        return Result.success()
+        return try {
+            val notificationId = inputData.getString("notification_id") ?: return Result.failure()
+            val habitName = inputData.getString("habit_name") ?: "Habit Reminder"
+            val title = inputData.getString("title") ?: habitName
+            val body = inputData.getString("body") ?: "Time to work on your habit!"
+            val soundEnabled = inputData.getBoolean("sound_enabled", true)
+            val vibrationEnabled = inputData.getBoolean("vibration_enabled", true)
+            
+            com.mpieterse.stride.core.utils.Clogger.d("NotificationWorker", "Executing notification work for: $habitName")
+            com.mpieterse.stride.core.utils.Clogger.d("NotificationWorker", "Notification ID: $notificationId, Title: $title, Body: $body")
+            
+            // Display notification
+            displayNotification(notificationId, title, body, soundEnabled, vibrationEnabled)
+            
+            com.mpieterse.stride.core.utils.Clogger.d("NotificationWorker", "Notification work completed successfully")
+            Result.success()
+        } catch (e: Exception) {
+            com.mpieterse.stride.core.utils.Clogger.e("NotificationWorker", "Error executing notification work", e)
+            Result.failure()
+        }
     }
     
     private fun displayNotification(

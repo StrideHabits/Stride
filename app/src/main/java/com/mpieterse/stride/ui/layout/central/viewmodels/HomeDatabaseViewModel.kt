@@ -41,11 +41,12 @@ class HomeDatabaseViewModel @Inject constructor(
         val logs: List<String> = emptyList()
     )
 
-    private val _state = MutableStateFlow(UiState(loading = true))
+    private val _state = MutableStateFlow(UiState(loading = false))
     val state: StateFlow<UiState> = _state
 
     init {
-        refresh()
+        // Don't refresh immediately - let the screen handle timing after authentication
+        // This prevents race conditions where refresh happens before token is ready
         // Listen for real-time events
         viewModelScope.launch {
             eventBus.events.collect { event ->
@@ -90,11 +91,24 @@ class HomeDatabaseViewModel @Inject constructor(
             // Load habits
             val habitsResult = habitsRepo.list()
             if (habitsResult is ApiResult.Err) {
-                _state.value = _state.value.copy(
-                    error = "${habitsResult.code ?: ""} ${habitsResult.message ?: "Unknown error"}"
-                )
-                setStatus("ERR ${habitsResult.code ?: ""} • list habits")
-                log("habits ❌ ${habitsResult.code} ${habitsResult.message}")
+                val errorCode = habitsResult.code
+                val errorMessage = habitsResult.message ?: "Unknown error"
+                
+                // Handle 401 Unauthorized - token might be expired or invalid
+                if (errorCode == 401) {
+                    _state.value = _state.value.copy(
+                        error = "Session expired. Please sign in again.",
+                        habits = emptyList()
+                    )
+                    setStatus("ERR 401 • Authentication required")
+                    log("habits ❌ 401 - Authentication required")
+                } else {
+                    _state.value = _state.value.copy(
+                        error = "${errorCode ?: ""} $errorMessage"
+                    )
+                    setStatus("ERR ${errorCode ?: ""} • list habits")
+                    log("habits ❌ ${errorCode} ${errorMessage}")
+                }
                 return@withLoading
             }
             

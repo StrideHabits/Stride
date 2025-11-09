@@ -30,27 +30,42 @@ class FcmTokenManager @Inject constructor(
      */
     suspend fun registerTokenWithBackend(): ApiResult<Boolean> {
         return try {
+            Clogger.d(TAG, "Starting FCM token registration process")
+            
             // Get FCM token
             val token = FirebaseMessaging.getInstance().token.await()
-            Clogger.d(TAG, "FCM Token retrieved: ${token.take(20)}...")
+            if (token.isNullOrBlank()) {
+                Clogger.e(TAG, "FCM token is null or blank")
+                return ApiResult.Err(null, "FCM token is null or blank")
+            }
+            
+            Clogger.d(TAG, "FCM Token retrieved successfully: ${token.take(20)}... (length: ${token.length})")
             
             // Get device ID (Android ID)
             val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            if (deviceId.isNullOrBlank()) {
+                Clogger.w(TAG, "Device ID is null or blank, using fallback")
+            } else {
+                Clogger.d(TAG, "Device ID retrieved: ${deviceId.take(10)}...")
+            }
             
             // Register token with backend
-            val request = FcmTokenRequest(token = token, deviceId = deviceId)
+            val request = FcmTokenRequest(token = token, deviceId = deviceId ?: "unknown")
+            Clogger.d(TAG, "Sending FCM token registration request to backend")
             val response = apiService.registerFcmToken(request)
             
             if (response.isSuccessful) {
-                Clogger.d(TAG, "FCM token registered successfully with backend")
+                val responseBody = response.body()
+                Clogger.i(TAG, "FCM token registered successfully with backend. Response: ${responseBody?.toString() ?: "empty"}")
                 ApiResult.Ok(true)
             } else {
-                Clogger.w(TAG, "Failed to register FCM token: ${response.code()} - ${response.message()}")
+                val errorBody = response.errorBody()?.string() ?: "No error body"
+                Clogger.w(TAG, "Failed to register FCM token: ${response.code()} - ${response.message()}. Error: $errorBody")
                 ApiResult.Err(response.code(), "Failed to register FCM token: ${response.message()}")
             }
         } catch (e: Exception) {
             Clogger.e(TAG, "Error registering FCM token", e)
-            ApiResult.Err(null, "Error registering FCM token: ${e.message}")
+            ApiResult.Err(null, "Error registering FCM token: ${e.message ?: "Unknown error"}")
         }
     }
     

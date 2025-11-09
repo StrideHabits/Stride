@@ -43,7 +43,9 @@ class StrideFirebaseMessagingService : FirebaseMessagingService() {
     }
     
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        Clogger.d(TAG, "From: ${remoteMessage.from}")
+        Clogger.d(TAG, "Received FCM message from: ${remoteMessage.from}")
+        Clogger.d(TAG, "Message ID: ${remoteMessage.messageId}")
+        Clogger.d(TAG, "Message Type: ${if (remoteMessage.notification != null) "Notification" else "Data"}")
         
         // Check if message contains data payload
         if (remoteMessage.data.isNotEmpty()) {
@@ -52,18 +54,24 @@ class StrideFirebaseMessagingService : FirebaseMessagingService() {
         }
         
         // Check if message contains notification payload
-        remoteMessage.notification?.let {
-            Clogger.d(TAG, "Message Notification Body: ${it.body}")
+        remoteMessage.notification?.let { notification ->
+            Clogger.d(TAG, "Message Notification - Title: ${notification.title}, Body: ${notification.body}")
             showNotification(
-                title = it.title ?: "Stride",
-                body = it.body ?: "",
+                title = notification.title ?: "Stride",
+                body = notification.body ?: "",
                 data = remoteMessage.data
             )
+        }
+        
+        // If no notification payload but has data, show notification from data
+        if (remoteMessage.notification == null && remoteMessage.data.isNotEmpty()) {
+            Clogger.d(TAG, "No notification payload, creating notification from data")
+            handleDataMessage(remoteMessage.data)
         }
     }
     
     override fun onNewToken(token: String) {
-        Clogger.d(TAG, "Refreshed token: $token")
+        Clogger.i(TAG, "FCM token refreshed: ${token.take(20)}... (length: ${token.length})")
         // Send token to backend
         sendRegistrationToServer(token)
     }
@@ -92,35 +100,52 @@ class StrideFirebaseMessagingService : FirebaseMessagingService() {
         body: String,
         data: Map<String, String> = emptyMap()
     ) {
-        val intent = Intent(this, HomeActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            // Add any extra data if needed
-            data.forEach { (key, value) ->
-                putExtra(key, value)
+        try {
+            Clogger.d(TAG, "Displaying notification - Title: $title, Body: $body")
+            
+            val intent = Intent(this, HomeActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                // Add any extra data if needed
+                data.forEach { (key, value) ->
+                    putExtra(key, value)
+                }
             }
+            
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            
+            val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val notificationBuilder = NotificationCompat.Builder(this, NotificationChannelManager.CHANNEL_HABIT_REMINDERS)
+                .setSmallIcon(R.drawable.xic_uic_outline_bell)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setAutoCancel(true)
+                .setSound(defaultSoundUri)
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationId = NOTIFICATION_ID_BASE + System.currentTimeMillis().toInt()
+            
+            // Check if notifications are enabled
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (!notificationManager.areNotificationsEnabled()) {
+                    Clogger.w(TAG, "Notifications are disabled by user")
+                    return
+                }
+            }
+            
+            notificationManager.notify(notificationId, notificationBuilder.build())
+            Clogger.d(TAG, "Notification displayed successfully with ID: $notificationId")
+        } catch (e: Exception) {
+            Clogger.e(TAG, "Error displaying notification", e)
         }
-        
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        
-        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        val notificationBuilder = NotificationCompat.Builder(this, NotificationChannelManager.CHANNEL_HABIT_REMINDERS)
-            .setSmallIcon(R.drawable.xic_uic_outline_bell)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .setSound(defaultSoundUri)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-        
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = NOTIFICATION_ID_BASE + System.currentTimeMillis().toInt()
-        notificationManager.notify(notificationId, notificationBuilder.build())
     }
     
     /**

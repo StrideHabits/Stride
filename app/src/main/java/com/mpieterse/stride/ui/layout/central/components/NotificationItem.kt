@@ -65,7 +65,7 @@ fun NotificationItem(
                     )
                     
                     Text(
-                        text = notification.time.format(DateTimeFormatter.ofPattern("h:mm a")),
+                        text = notification.time.format(DateTimeFormatter.ofPattern("HH:mm")),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (notification.isEnabled) Color(0xFFFF9500) else Color.Gray
                     )
