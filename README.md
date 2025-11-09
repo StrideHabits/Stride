@@ -71,7 +71,7 @@ The app follows a modular **MVVM + Repository** pattern for clarity and scalabil
 
 A big thank you to everyone who contributed to Stride — your efforts are truly appreciated!
 
-| Nanme               | Student Number                       |
+| Name               | Student Number                       |
 | ------------------- | ------------------------------------ |
 | **Musa Ntuli**      | ST1029336                            |
 | **Dean Gibson**     | ST10326084                           |
