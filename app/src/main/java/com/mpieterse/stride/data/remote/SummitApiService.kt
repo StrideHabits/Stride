@@ -5,6 +5,7 @@ import com.mpieterse.stride.data.dto.habits.*
 import com.mpieterse.stride.data.dto.checkins.*
 import com.mpieterse.stride.data.dto.settings.*
 import com.mpieterse.stride.data.dto.uploads.*
+import com.mpieterse.stride.data.dto.notifications.*
 import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -59,4 +60,8 @@ interface SummitApiService {
     @Multipart
     @POST("api/uploads")
     suspend fun upload(@Part file: MultipartBody.Part): Response<UploadResponse> //This method uploads files to the REST API using Retrofit multipart requests (GeeksforGeeks, 2017).
+
+    // Notifications / FCM
+    @POST("api/notifications/fcm-token")
+    suspend fun registerFcmToken(@Body body: FcmTokenRequest): Response<FcmTokenResponse> //This method registers FCM token with the backend through the REST API using Retrofit (GeeksforGeeks, 2017).
 }
