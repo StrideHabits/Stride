@@ -11,6 +11,7 @@ import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,6 +26,8 @@ class NotificationsViewModel @Inject constructor(
     private val habitRepository: HabitRepository,
     private val notificationScheduler: NotificationSchedulerService
 ) : ViewModel() {
+    
+    private var loadJob: Job? = null
 
     data class UiState(
         val loading: Boolean = true,
@@ -42,7 +45,8 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun loadData() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             try {
                 // Load habits from API
                 loadHabits()

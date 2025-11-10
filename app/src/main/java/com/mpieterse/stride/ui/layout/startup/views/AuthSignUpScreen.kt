@@ -148,7 +148,7 @@ fun AuthSignUpScreen(
                     textSupporting = {
                         if (formState.identity.error != null) {
                             Text(
-                                text = getValidationErrorMessage(formState.identity.error!!),
+                                text = getEmailValidationErrorMessage(formState.identity.error!!),
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -196,7 +196,7 @@ fun AuthSignUpScreen(
                     textSupporting = {
                         if (formState.passwordDefault.error != null) {
                             Text(
-                                text = getValidationErrorMessage(formState.passwordDefault.error!!),
+                                text = getPasswordValidationErrorMessage(formState.passwordDefault.error!!),
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -222,7 +222,7 @@ fun AuthSignUpScreen(
                     textSupporting = {
                         if (formState.passwordConfirm.error != null) {
                             Text(
-                                text = getValidationErrorMessage(formState.passwordConfirm.error!!),
+                                text = getPasswordValidationErrorMessage(formState.passwordConfirm.error!!),
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -318,20 +318,32 @@ fun AuthSignUpScreen(
     }
 }
 
-// Helper function to convert ValidationError to user-friendly message
-private fun getValidationErrorMessage(error: ValidationError): String {
+// Helper functions to convert ValidationError to user-friendly messages
+private fun getEmailValidationErrorMessage(error: ValidationError): String {
+    return when (error) {
+        is ValidationError.String -> when (error) {
+            ValidationError.String.INVALID_EMAIL_ADDRESS -> "Please enter a valid email address"
+            ValidationError.String.EXCLUDE_WHITESPACE -> "Email cannot contain spaces"
+            ValidationError.String.REQUIRE_MIN_CHARS -> "Email is too short"
+            ValidationError.String.REQUIRE_MAX_CHARS -> "Email is too long"
+            else -> "Invalid email"
+        }
+        else -> "Invalid email"
+    }
+}
+
+private fun getPasswordValidationErrorMessage(error: ValidationError): String {
     return when (error) {
         is ValidationError.String -> when (error) {
             ValidationError.String.REQUIRE_MIN_CHARS -> "Password must be at least 6 characters"
             ValidationError.String.REQUIRE_MAX_CHARS -> "Password is too long"
-            ValidationError.String.INVALID_EMAIL_ADDRESS -> "Please enter a valid email address"
             ValidationError.String.EXCLUDE_WHITESPACE -> "Password cannot contain spaces"
             ValidationError.String.INCLUDE_LOWERCASE -> "Password must contain lowercase letters"
             ValidationError.String.INCLUDE_UPPERCASE -> "Password must contain uppercase letters"
             ValidationError.String.INCLUDE_NUMBERS -> "Password must contain numbers"
             ValidationError.String.INCLUDE_SYMBOLS -> "Password must contain symbols"
-            else -> "Invalid input"
+            else -> "Invalid password"
         }
-        else -> "Invalid input"
+        else -> "Invalid password"
     }
 }

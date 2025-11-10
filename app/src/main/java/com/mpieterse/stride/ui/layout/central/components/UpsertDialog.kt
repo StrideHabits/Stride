@@ -62,7 +62,7 @@ fun UpsertDialog(
     var frequencyText by remember { mutableStateOf("") }
     var frequencyError by remember { mutableStateOf<String?>(null) }
     var tagExpanded by remember { mutableStateOf(false) }
-    var selectedTag by remember { mutableStateOf<String?>(baseCategories.first()) }
+    var selectedTag by remember { mutableStateOf<String?>(null) }
     var selectedImage by remember { mutableStateOf<Bitmap?>(null) }
     var imageBase64 by remember { mutableStateOf<String?>(null) }
     var imageMimeType by remember { mutableStateOf<String?>(null) }
@@ -78,7 +78,7 @@ fun UpsertDialog(
                 if (initialData.tag != null && initialData.tag !in baseCategories) {
                     categories = baseCategories + initialData.tag
                 }
-                selectedTag = initialData.tag ?: categories.first()
+                selectedTag = initialData.tag
                 imageBase64 = initialData.imageBase64
                 imageMimeType = initialData.imageMimeType
                 imageFileName = initialData.imageFileName
@@ -86,7 +86,7 @@ fun UpsertDialog(
             } else {
                 name = ""
                 frequencyText = ""
-                selectedTag = baseCategories.first()
+                selectedTag = null
                 selectedImage = null
                 imageBase64 = null
                 imageMimeType = null
@@ -98,7 +98,7 @@ fun UpsertDialog(
             name = ""
             frequencyText = ""
             categories = baseCategories
-            selectedTag = baseCategories.first()
+            selectedTag = null
             selectedImage = null
             imageBase64 = null
             imageMimeType = null

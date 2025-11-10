@@ -102,35 +102,10 @@ class NotificationSchedulerService @Inject constructor(
         // Note: PeriodicWorkRequest has a minimum interval of 15 minutes
         // For weekly notifications, we schedule a one-time work first with delay, then periodic
         
-        // First, schedule a one-time work for the initial occurrence
-        if (delay > 0) {
-            // Create a new Data object with the additional is_initial flag
-            val oneTimeWorkData = Data.Builder()
-                .putString("notification_id", notification.id)
-                .putString("habit_name", notification.habitName)
-                .putString("title", template.title)
-                .putString("body", template.body)
-                .putBoolean("sound_enabled", notification.soundEnabled && settings.defaultSoundEnabled)
-                .putBoolean("vibration_enabled", notification.vibrationEnabled && settings.defaultVibrationEnabled)
-                .putInt("day_of_week", dayOfWeek)
-                .putBoolean("is_initial", true)
-                .build()
-            
-            val oneTimeRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
-                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                .setInputData(oneTimeWorkData)
-                .addTag("${WORK_NAME_PREFIX}${notification.id}_${dayOfWeek}_initial")
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-                        .build()
-                )
-                .build()
-            
-            workManager.enqueue(oneTimeRequest)
-        }
+        // Align the first periodic run to the intended next occurrence
+        val periodicInitialDelay = delay.coerceAtLeast(0L)
         
-        // Then schedule the periodic work (weekly recurrence)
+        // Schedule the periodic work (weekly recurrence) anchored by the computed delay
         val periodicRequest = PeriodicWorkRequestBuilder<NotificationWorker>(
             7,
             TimeUnit.DAYS,
@@ -138,6 +113,7 @@ class NotificationSchedulerService @Inject constructor(
             TimeUnit.DAYS
         )
             .setInputData(workData)
+            .setInitialDelay(periodicInitialDelay, TimeUnit.MILLISECONDS)
             .addTag("${WORK_NAME_PREFIX}${notification.id}_$dayOfWeek")
             .setConstraints(
                 Constraints.Builder()

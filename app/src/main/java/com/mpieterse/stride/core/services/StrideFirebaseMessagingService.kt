@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Firebase Cloud Messaging service for handling push notifications.
@@ -31,6 +32,7 @@ class StrideFirebaseMessagingService : FirebaseMessagingService() {
     companion object {
         private const val TAG = "StrideFCMService"
         private const val NOTIFICATION_ID_BASE = 1000
+        private val notificationIdCounter = AtomicInteger(NOTIFICATION_ID_BASE)
     }
     
     @Inject
@@ -131,7 +133,9 @@ class StrideFirebaseMessagingService : FirebaseMessagingService() {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val notificationId = NOTIFICATION_ID_BASE + System.currentTimeMillis().toInt()
+            val notificationId = notificationIdCounter.getAndUpdate { current ->
+                if (current == Int.MAX_VALUE) NOTIFICATION_ID_BASE else current + 1
+            }
             
             // Check if notifications are enabled
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

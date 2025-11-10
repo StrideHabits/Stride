@@ -32,6 +32,8 @@ import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
 import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
 import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun HabitViewerScreen(
@@ -48,8 +50,15 @@ fun HabitViewerScreen(
 
     // Use ViewModel's display name and state directly - no local state needed
     val displayName = state.displayName
-    val initialImageBase64 = remember(state.habitImage) {
-        state.habitImage?.let { bitmapToBase64(it) }
+    var initialImageBase64 by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(showEditDialog, state.habitImage) {
+        val image = state.habitImage
+        initialImageBase64 =
+            if (showEditDialog && image != null) {
+                withContext(Dispatchers.Default) { bitmapToBase64(image) }
+            } else {
+                null
+            }
     }
     val initialImageMime = remember(state.habitImageUrl, state.habitImage) {
         when {

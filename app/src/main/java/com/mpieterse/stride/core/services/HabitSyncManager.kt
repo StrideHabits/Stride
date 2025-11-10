@@ -88,7 +88,6 @@ class HabitSyncManager @Inject constructor(
                             Clogger.w(TAG, "Sync failed (${result.code}): ${result.message}")
                             if (result.code != null && result.code in 400..499 && result.code !in listOf(429, 401, 403)) {
                                 pendingHabitsStore.remove(habit.id)
-                                anySynced = true
                                 Clogger.w(TAG, "Dropped pending habit '${habit.name}' due to client error ${result.code}")
                             }
                             if (result.code == 401 || result.code == 403) {
