@@ -48,6 +48,19 @@ fun HabitViewerScreen(
 
     // Use ViewModel's display name and state directly - no local state needed
     val displayName = state.displayName
+    val initialImageBase64 = remember(state.habitImage) {
+        state.habitImage?.let { bitmapToBase64(it) }
+    }
+    val initialImageMime = remember(state.habitImageUrl, state.habitImage) {
+        when {
+            state.habitImageUrl?.endsWith(".png", ignoreCase = true) == true -> "image/png"
+            state.habitImage != null -> "image/jpeg"
+            else -> null
+        }
+    }
+    val initialImageFileName = remember(state.habitImageUrl) {
+        state.habitImageUrl?.substringAfterLast('/')
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -179,17 +192,18 @@ fun HabitViewerScreen(
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
-            vm.updateLocalName(updated.name, habitId)
+            vm.updateHabit(habitId, updated)
             showEditDialog = false
         },
         initialData = HabitDraft(
             name = displayName,
-            frequency = 0,
-            tag = null,
-            imageBase64 = null,
-            imageMimeType = null,
-            imageFileName = null
-        )
+            frequency = state.habitFrequency,
+            tag = state.habitTag,
+            imageBase64 = initialImageBase64,
+            imageMimeType = initialImageMime,
+            imageFileName = initialImageFileName
+        ),
+        confirmButtonLabel = "Save Changes"
     )
 }
 
@@ -227,6 +241,12 @@ private fun HabitImageViewer(
             }
         }
     }
+}
+
+private fun bitmapToBase64(bitmap: Bitmap): String {
+    val outputStream = java.io.ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+    return android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.DEFAULT)
 }
 
 @Composable

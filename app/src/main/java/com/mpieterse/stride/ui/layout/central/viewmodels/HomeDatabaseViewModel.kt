@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.dto.uploads.UploadResponse
+import com.mpieterse.stride.data.dto.checkins.CheckInDto
+import com.mpieterse.stride.data.dto.habits.HabitDto
+import com.mpieterse.stride.data.local.HabitCacheStore
 import com.mpieterse.stride.data.local.PendingHabit
 import com.mpieterse.stride.data.local.PendingHabitsStore
 import com.mpieterse.stride.data.local.TokenStore
@@ -13,6 +16,7 @@ import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.data.repo.UploadRepository
 import com.mpieterse.stride.core.services.AppEventBus
+import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.HabitNameOverrideService
 import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,6 +39,8 @@ class HomeDatabaseViewModel @Inject constructor(
     private val tokenStore: TokenStore,
     private val pendingHabitsStore: PendingHabitsStore,
     private val uploadRepository: UploadRepository,
+    private val habitCacheStore: HabitCacheStore,
+    private val authenticationService: AuthenticationService,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -113,6 +119,28 @@ class HomeDatabaseViewModel @Inject constructor(
             val pendingHabits = pendingHabitsStore.getAll()
             val pendingRows = pendingHabits.map { toPendingRow(it) }
             val daysHeader = headerFor(lastThreeDays)
+
+            val activeUserId = runCatching { authenticationService.getCurrentUser()?.uid }.getOrNull()
+            val mostRecentCache = habitCacheStore.getMostRecentEntry()
+            val cacheEntry = when {
+                !activeUserId.isNullOrBlank() -> habitCacheStore.getEntryForUser(activeUserId)
+                else -> mostRecentCache?.second
+            }
+            val cacheUserId = when {
+                !activeUserId.isNullOrBlank() -> activeUserId
+                else -> mostRecentCache?.first
+            }
+            val cachedRows = cacheEntry?.let { entry ->
+                buildHabitRows(entry.habits, entry.checkins, lastThreeDays)
+            }.orEmpty()
+            if (cachedRows.isNotEmpty()) {
+                val merged = mergeRows(cachedRows, pendingRows)
+                _state.value = _state.value.copy(
+                    habits = merged,
+                    daysHeader = daysHeader,
+                    error = null
+                )
+            }
             
             // Load habits
             val habitsResult = habitsRepo.list()
@@ -124,7 +152,7 @@ class HomeDatabaseViewModel @Inject constructor(
                 if (errorCode == 401) {
                     _state.value = _state.value.copy(
                         error = "Session expired. Please sign in again.",
-                        habits = pendingRows,
+                        habits = mergeRows(cachedRows, pendingRows),
                         daysHeader = daysHeader
                     )
                     setStatus("ERR 401 • Authentication required")
@@ -132,7 +160,7 @@ class HomeDatabaseViewModel @Inject constructor(
                 } else {
                     _state.value = _state.value.copy(
                         error = "${errorCode ?: ""} $errorMessage",
-                        habits = pendingRows,
+                        habits = mergeRows(cachedRows, pendingRows),
                         daysHeader = daysHeader
                     )
                     setStatus("ERR ${errorCode ?: ""} • list habits")
@@ -153,32 +181,7 @@ class HomeDatabaseViewModel @Inject constructor(
             }
             
             // Create habit rows with real progress
-            val items = habitDtos.map { habit ->
-                val habitCheckins = allCheckins.filter { it.habitId == habit.id }
-                val today = LocalDate.now()
-                val completedLastThreeDays = habitCheckins.mapNotNull { checkin ->
-                    try {
-                        // Parse the dayKey directly since it's in yyyy-MM-dd format
-                        java.time.LocalDate.parse(checkin.dayKey)
-                    } catch (e: Exception) { 
-                        null 
-                    }
-                }.filter { date -> lastThreeDays.contains(date) }
-                
-                val progress = if (lastThreeDays.isNotEmpty()) completedLastThreeDays.size.toFloat() / lastThreeDays.size else 0f
-                val checklist = lastThreeDays.map { date -> completedLastThreeDays.contains(date) }
-                val streaked = completedLastThreeDays.contains(today)
-                
-                HabitRowUi(
-                    id = habit.id,
-                    name = nameOverrideService.getDisplayName(habit.id, habit.name),
-                    tag = habit.tag ?: "Habit",
-                    progress = progress,
-                    checklist = checklist,
-                    streaked = streaked,
-                    pending = false
-                )
-            }
+            val items = buildHabitRows(habitDtos, allCheckins, lastThreeDays)
 
             val combinedItems = items + pendingRows
 
@@ -189,6 +192,12 @@ class HomeDatabaseViewModel @Inject constructor(
             )
             setStatus("OK • list habits")
             log("habits ✅ count=${combinedItems.size} (pending=${pendingRows.size})")
+
+            if (!activeUserId.isNullOrBlank()) {
+                habitCacheStore.update(activeUserId, habitDtos, allCheckins)
+            } else if (!cacheUserId.isNullOrBlank()) {
+                habitCacheStore.update(cacheUserId, habitDtos, allCheckins)
+            }
         }
     }
     
@@ -319,6 +328,46 @@ class HomeDatabaseViewModel @Inject constructor(
             val dayNumber = date.dayOfMonth.toString()
             "$dayName\n$dayNumber"
         }
+
+    private fun buildHabitRows(
+        habits: List<HabitDto>,
+        checkins: List<CheckInDto>,
+        lastThreeDays: List<LocalDate>
+    ): List<HabitRowUi> = habits.map { habit ->
+        val habitCheckins = checkins.filter { it.habitId == habit.id }
+        val today = LocalDate.now()
+        val completedLastThreeDays = habitCheckins.mapNotNull { checkin ->
+            try {
+                java.time.LocalDate.parse(checkin.dayKey)
+            } catch (e: Exception) {
+                null
+            }
+        }.filter { date -> lastThreeDays.contains(date) }
+
+        val progress = if (lastThreeDays.isNotEmpty()) completedLastThreeDays.size.toFloat() / lastThreeDays.size else 0f
+        val checklist = lastThreeDays.map { date -> completedLastThreeDays.contains(date) }
+        val streaked = completedLastThreeDays.contains(today)
+
+        HabitRowUi(
+            id = habit.id,
+            name = nameOverrideService.getDisplayName(habit.id, habit.name),
+            tag = habit.tag ?: "Habit",
+            progress = progress,
+            checklist = checklist,
+            streaked = streaked,
+            pending = false
+        )
+    }
+
+    private fun mergeRows(
+        primary: List<HabitRowUi>,
+        pending: List<HabitRowUi>
+    ): List<HabitRowUi> {
+        if (pending.isEmpty()) return primary
+        val existingIds = primary.map { it.id }.toMutableSet()
+        val additional = pending.filter { existingIds.add(it.id) }
+        return primary + additional
+    }
 
     private suspend fun resolveImageUrl(draft: HabitDraft): ApiResult<String?> {
         if (!draft.imageBase64.isNullOrBlank()) {

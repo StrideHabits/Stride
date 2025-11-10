@@ -2,6 +2,7 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.graphics.Bitmap
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,8 +11,12 @@ import com.mpieterse.stride.data.dto.checkins.CheckInDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.local.HabitCacheStore
+import com.mpieterse.stride.data.local.HabitImageOverride
 import com.mpieterse.stride.core.services.HabitNameOverrideService
 import com.mpieterse.stride.core.services.AppEventBus
+import com.mpieterse.stride.core.services.AuthenticationService
+import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +33,9 @@ class HabitViewerViewModel @Inject constructor(
     private val habits: HabitRepository,
     private val checkins: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
-    private val eventBus: AppEventBus
+    private val eventBus: AppEventBus,
+    private val habitCacheStore: HabitCacheStore,
+    private val authenticationService: AuthenticationService
 ) : ViewModel() {
 
     data class UiState(
@@ -38,6 +45,9 @@ class HabitViewerViewModel @Inject constructor(
         val habitName: String = "",
         val displayName: String = "",
         val habitImage: Bitmap? = null,
+        val habitImageUrl: String? = null,
+        val habitTag: String? = null,
+        val habitFrequency: Int = 0,
         val streakDays: Int = 0,
         val completedDates: List<Int> = emptyList(),
         val localNameOverride: String? = null
@@ -66,11 +76,23 @@ class HabitViewerViewModel @Inject constructor(
         // Try load the habit image (if available)
         val bitmap = withContext(Dispatchers.IO) {
             try {
+                val activeUserId = runCatching { authenticationService.getCurrentUser()?.uid }.getOrNull()
+                val override = when {
+                    !activeUserId.isNullOrBlank() -> habitCacheStore.getImageOverride(activeUserId, habitId)
+                    else -> habitCacheStore.getMostRecentEntry()
+                        ?.second
+                        ?.overrides
+                        ?.get(habitId)
+                }
+                if (override != null && override.base64.isNotBlank()) {
+                    decodeBase64ToBitmap(override.base64)
+                } else {
                 val rawUrl = habit?.imageUrl
                 val normalized = rawUrl?.let { normalizeImageUrl(it) }
                 if (!normalized.isNullOrBlank()) {
                     URL(normalized).openStream().use { input -> BitmapFactory.decodeStream(input) }
                 } else null
+                }
             } catch (e: Exception) {
                 null
             }
@@ -115,6 +137,9 @@ class HabitViewerViewModel @Inject constructor(
             habitName = habitName,
             displayName = nameOverrideService.getDisplayName(habitId, habitName),
             habitImage = bitmap,
+            habitImageUrl = habit?.imageUrl,
+            habitTag = habit?.tag,
+            habitFrequency = habit?.frequency ?: 0,
             streakDays = streak,
             completedDates = completedThisMonth
         )
@@ -198,6 +223,48 @@ class HabitViewerViewModel @Inject constructor(
         return nameOverrideService.getDisplayName(_state.value.habitId, _state.value.habitName)
     }
 
+    fun updateHabit(habitId: String, draft: HabitDraft) = viewModelScope.launch {
+        val currentName = _state.value.habitName
+        if (draft.name != currentName) {
+            updateLocalName(draft.name, habitId)
+        }
+
+        val userId = runCatching { authenticationService.getCurrentUser()?.uid }.getOrNull()
+            ?: habitCacheStore.getMostRecentEntry()?.first
+            ?: return@launch
+
+        habitCacheStore.updateHabitMetadata(userId, habitId) { habit ->
+            habit.copy(
+                name = draft.name,
+                frequency = draft.frequency,
+                tag = draft.tag
+            )
+        }
+        habitCacheStore.upsertImageOverride(
+            userId,
+            habitId,
+            draft.imageBase64?.takeIf { it.isNotBlank() }?.let {
+                HabitImageOverride(
+                    base64 = it,
+                    mimeType = draft.imageMimeType,
+                    fileName = draft.imageFileName
+                )
+            }
+        )
+
+        val updatedBitmap = draft.imageBase64?.let { decodeBase64ToBitmap(it) }
+        _state.value = _state.value.copy(
+            habitName = draft.name,
+            displayName = nameOverrideService.getDisplayName(habitId, draft.name),
+            habitImage = updatedBitmap,
+            habitImageUrl = _state.value.habitImageUrl,
+            habitTag = draft.tag,
+            habitFrequency = draft.frequency
+        )
+
+        eventBus.emit(AppEventBus.AppEvent.HabitUpdated)
+    }
+
     // Count consecutive days ending today.
     private fun computeStreakDays(dates: List<LocalDate>): Int {
         if (dates.isEmpty()) return 0
@@ -226,4 +293,9 @@ class HabitViewerViewModel @Inject constructor(
         return if (upgraded.startsWith("http")) upgraded
         else "https://summitapi.onrender.com/$upgraded".replace("//", "/").replace("https:/", "https://")
     }
+
+    private fun decodeBase64ToBitmap(base64: String): Bitmap? = runCatching {
+        val bytes = Base64.decode(base64, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }.getOrNull()
 }

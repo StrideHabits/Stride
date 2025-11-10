@@ -49,7 +49,8 @@ fun UpsertDialog(
     onDismiss: () -> Unit,
     onConfirm: (HabitDraft) -> Unit,
     modifier: Modifier = Modifier,
-    initialData: HabitDraft? = null
+    initialData: HabitDraft? = null,
+    confirmButtonLabel: String = "Add to List"
 ) {
     if (!isVisible) return
 
@@ -244,6 +245,19 @@ fun UpsertDialog(
                         ),
                         modifier = Modifier.padding(top = 8.dp)
                     )
+                    if (selectedImage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = {
+                                selectedImage = null
+                                imageBase64 = null
+                                imageMimeType = null
+                                imageFileName = null
+                            }
+                        ) {
+                            Text("Remove image")
+                        }
+                    }
                 }
             }
         },
@@ -281,7 +295,7 @@ fun UpsertDialog(
                     disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
                 ),
                 shape = RoundedCornerShape(8.dp)
-            ) { Text("Add to List", color = Color.White) }
+            ) { Text(confirmButtonLabel, color = Color.White) }
         },
         dismissButton = {
             OutlinedButton(
