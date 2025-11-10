@@ -1,17 +1,17 @@
-import java.io.FileInputStream
-import java.util.Properties
+        import java.io.FileInputStream
+        import java.util.Properties
 
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.kapt")
-    id("com.google.devtools.ksp")
-    id("com.google.gms.google-services")
-    id("com.google.dagger.hilt.android")
-    id("com.google.firebase.crashlytics")
-    id("com.google.firebase.firebase-perf")
-}
+        plugins {
+            alias(libs.plugins.android.application)
+            alias(libs.plugins.kotlin.android)
+            alias(libs.plugins.kotlin.compose)
+            //id("org.jetbrains.kotlin.kapt")
+            id("com.google.devtools.ksp")
+            id("com.google.gms.google-services")
+            id("com.google.dagger.hilt.android")
+            id("com.google.firebase.crashlytics")
+            id("com.google.firebase.firebase-perf")
+        }
 
 android {
     namespace = "com.mpieterse.stride"
@@ -63,12 +63,6 @@ android {
 
         buildConfigField(
             type = "String",
-            name = "API_BASE_URL",
-            value = "\"https://summitapi.onrender.com/\""
-        )
-
-        buildConfigField(
-            type = "String",
             name = "GOOGLE_SERVER_CLIENT_ID",
             value = "\"${
                 getLocalSecret("GOOGLE_SERVER_CLIENT_ID")
@@ -100,13 +94,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
+    kotlinOptions { jvmTarget = "17" }
+    kotlin { jvmToolchain(17) }
 
     buildFeatures {
         compose = true
@@ -116,10 +109,12 @@ android {
 }
 
 dependencies {
+    // core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -130,6 +125,8 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.runtime.saveable)
     implementation(libs.googleid)
+
+    // Lifecycle
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.common)
@@ -137,6 +134,11 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.hilt.android.compiler)
 
+    implementation("com.google.dagger:hilt-android:2.57.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.57.1")
+
+
+    // Compose Navigation
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ui.text.google.fonts)
     implementation(libs.material)
@@ -144,14 +146,21 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.activity.compose)
+
+    // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.perf)
+
+    // DataStore
     implementation(libs.androidx.datastore.core)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+
+    // Networking
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.okhttp)

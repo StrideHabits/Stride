@@ -1,10 +1,12 @@
+// app/src/main/java/com/mpieterse/stride/ui/layout/central/viewmodels/HomeDatabaseViewModel.kt
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.services.AppEventBus
 import com.mpieterse.stride.core.services.HabitNameOverrideService
-import com.mpieterse.stride.data.local.entities.CheckInEntity
+import com.mpieterse.stride.data.dto.checkins.CheckInDto
+import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -79,14 +81,16 @@ class HomeDatabaseViewModel @Inject constructor(
     private suspend fun refreshInternal() = withLoading {
         _state.value = _state.value.copy(error = null)
 
-        // OFFLINE-FIRST: snapshot habits from Room
-        val habitEntities = try { habitsRepo.observeAll().first() } catch (_: Exception) { emptyList() }
+        // Off-line snapshot from Room via repo
+        val habits = try { habitsRepo.observeAll().first() } catch (_: Exception) { emptyList() }
 
         val days = lastThreeDays()
         val header = days.map { d -> "${d.dayOfWeek.name.take(3)}\n${d.dayOfMonth}" }
 
-        val rows = habitEntities.map { h ->
-            val local = try { checkinsRepo.observe(h.id).first() } catch (_: Exception) { emptyList() }
+        val rows = habits.map { h ->
+            val local: List<CheckInDto> =
+                try { checkinsRepo.observeForHabit(h.id).first() } catch (_: Exception) { emptyList() }
+
             val completed = localCompletedSet(local)
 
             val completedLast3 = days.map { d -> completed.contains(d) }
@@ -112,31 +116,32 @@ class HomeDatabaseViewModel @Inject constructor(
         log("habits(local) ✅ count=${rows.size}")
     }
 
-    private fun localCompletedSet(list: List<CheckInEntity>): Set<LocalDate> =
+    private fun localCompletedSet(list: List<CheckInDto>): Set<LocalDate> =
         list.asSequence()
-            .filter { !it.deleted }
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toSet()
 
-    // OFFLINE-FIRST create: queue locally
+    // Queue create locally via repo API
     fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
         withLoading {
             try {
-                habitsRepo.createLocal(
-                    name = name.trim(),
-                    frequency = 0,
-                    tag = null,
-                    imageUrl = null
+                habitsRepo.create(
+                    HabitCreateDto(
+                        name = name.trim(),
+                        frequency = 0,
+                        tag = null,
+                        imageUrl = null
+                    )
                 )
-                setStatus("OK • create habit (queued)")
-                log("create(local) ✅ $name")
+                setStatus("OK • create habit")
+                log("create ✅ $name")
                 eventBus.emit(AppEventBus.AppEvent.HabitCreated)
                 refresh()
                 onDone(true)
             } catch (e: Exception) {
                 setStatus("ERR • create habit")
                 _state.value = _state.value.copy(error = e.message ?: "Failed to create")
-                log("create(local) ❌ ${e.message}")
+                log("create ❌ ${e.message}")
                 onDone(false)
             }
         }

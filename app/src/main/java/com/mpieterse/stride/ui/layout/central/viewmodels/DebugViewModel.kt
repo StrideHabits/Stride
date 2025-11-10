@@ -1,12 +1,24 @@
+// app/src/main/java/com/mpieterse/stride/ui/layout/central/viewmodels/DebugViewModel.kt
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.mpieterse.stride.core.net.ApiResult
-import com.mpieterse.stride.data.dto.habits.HabitDto
+import com.mpieterse.stride.data.dto.checkins.CheckInCreateDto
+import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.settings.SettingsDto
-import com.mpieterse.stride.data.local.entities.CheckInEntity
-import com.mpieterse.stride.data.repo.*
+import com.mpieterse.stride.data.repo.CheckInRepository
+import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.repo.concrete.AuthRepository
+import com.mpieterse.stride.data.repo.concrete.SettingsRepository
+import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.workers.PullWorker
+import com.mpieterse.stride.workers.PushWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -16,13 +28,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import android.content.Context
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.ExistingWorkPolicy
-import com.mpieterse.stride.workers.PushWorker
-import com.mpieterse.stride.workers.PullWorker
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
@@ -35,7 +40,6 @@ class DebugViewModel @Inject constructor(
 
     data class HabitRow(val id: String, val name: String)
 
-    // keep UI compatibility
     fun listHabits() = observeHabits()
     fun listCheckIns() = listCheckInsSummary()
 
@@ -47,7 +51,7 @@ class DebugViewModel @Inject constructor(
         val habits: List<HabitRow> = emptyList(),
         val selectedHabitId: String? = null,
         val selectedHabitName: String? = null,
-        val selectedHabitLocalDates: List<String> = emptyList() // yyyy-MM-dd
+        val selectedHabitLocalDates: List<String> = emptyList()
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -65,7 +69,7 @@ class DebugViewModel @Inject constructor(
         return try { block() } finally { _state.value = _state.value.copy(loading = false) }
     }
 
-    // ---------------- Auth ----------------
+    // -------- Auth --------
 
     fun register(name: String, email: String, pass: String) = viewModelScope.launch {
         withLoading {
@@ -82,9 +86,7 @@ class DebugViewModel @Inject constructor(
                 is ApiResult.Ok<*> -> {
                     setStatus("OK • login"); log("login ✅ token=****")
                     _state.value = _state.value.copy(currentEmail = email)
-                    // start local observers
                     observeHabits()
-                    // optional: initial pull + periodic schedule
                     ctx?.let {
                         PullWorker.enqueueOnce(it)
                         PullWorker.schedulePeriodic(it)
@@ -96,14 +98,13 @@ class DebugViewModel @Inject constructor(
         }
     }
 
-    // ---------------- Habits (offline-first) ----------------
+    // -------- Habits --------
 
     fun observeHabits() {
         habitsJob?.cancel()
         habitsJob = viewModelScope.launch {
             habitsRepo.observeAll().collectLatest { list ->
-                val rows = list.map { HabitRow(it.id, it.name) }
-                _state.value = _state.value.copy(habits = rows)
+                _state.value = _state.value.copy(habits = list.map { HabitRow(it.id, it.name) })
                 setStatus("OK • habits (local)")
             }
         }
@@ -112,11 +113,13 @@ class DebugViewModel @Inject constructor(
     fun createHabit(name: String, frequency: Int, tag: String?, imageUrl: String?) = viewModelScope.launch {
         withLoading {
             try {
-                habitsRepo.createLocal(
-                    name = name.trim(),
-                    frequency = frequency.coerceAtLeast(0),
-                    tag = tag?.trim().takeUnless { it.isNullOrEmpty() },
-                    imageUrl = imageUrl?.trim().takeUnless { it.isNullOrEmpty() }
+                habitsRepo.create(
+                    HabitCreateDto(
+                        name = name.trim(),
+                        frequency = frequency.coerceAtLeast(0),
+                        tag = tag?.trim().takeUnless { it.isNullOrEmpty() },
+                        imageUrl = imageUrl?.trim().takeUnless { it.isNullOrEmpty() }
+                    )
                 )
                 setStatus("OK • create habit (queued)")
                 log("create ✅ $name (queued)")
@@ -131,14 +134,20 @@ class DebugViewModel @Inject constructor(
         observeSelectedHabitCheckins()
     }
 
-    // ---------------- Check-ins (offline-first) ----------------
+    // -------- Check-ins --------
 
     fun completeForDate(habitId: String, dayKey: String) = viewModelScope.launch {
         val id = habitId.trim(); val date = dayKey.trim()
         if (id.isEmpty() || date.isEmpty()) { log("complete ⚠️ missing habitId or date"); return@launch }
         withLoading {
             try {
-                checkinsRepo.toggle(id, date, on = true)
+                checkinsRepo.create(
+                    CheckInCreateDto(
+                        habitId = id,
+                        dayKey = date,
+                        completedAt = "${date}T00:00:00Z"
+                    )
+                )
                 setStatus("OK • complete (queued)")
                 log("complete ✅ habit=$id @ $date")
                 if (_state.value.selectedHabitId == id) observeSelectedHabitCheckins()
@@ -158,30 +167,27 @@ class DebugViewModel @Inject constructor(
         checkinsJob?.cancel()
         val id = _state.value.selectedHabitId ?: return
         checkinsJob = viewModelScope.launch {
-            checkinsRepo.observe(id).collectLatest { list ->
-                _state.value = _state.value.copy(selectedHabitLocalDates = localCompletedDates(list))
+            checkinsRepo.observeForHabit(id).collectLatest { list ->
+                _state.value = _state.value.copy(
+                    selectedHabitLocalDates = list.map { it.dayKey }.sorted()
+                )
             }
         }
     }
 
     fun listCheckInsSummary() = viewModelScope.launch {
-        // derive from current local state without network
         val rows = _state.value.habits
         var total = 0
         val perHabit = mutableListOf<Pair<String, Int>>()
         for (h in rows) {
-            val local: List<CheckInEntity> = try { checkinsRepo.observe(h.id).first() } catch (_: Exception) { emptyList() }
-            val cnt = local.count { !it.deleted }
+            val local = try { checkinsRepo.observeForHabit(h.id).first() } catch (_: Exception) { emptyList() }
+            val cnt = local.size
             total += cnt
             perHabit += h.name to cnt
         }
         setStatus("OK • list check-ins (local)")
         log("checkins ✅ total=$total  ${perHabit.joinToString { "${it.first}:${it.second}" }}")
     }
-
-    private fun localCompletedDates(list: List<CheckInEntity>): List<String> =
-        list.asSequence().filter { !it.deleted }.map { it.dayKey }.sorted().toList()
-
     // ---------------- Settings ----------------
 
     fun getSettings() = viewModelScope.launch {

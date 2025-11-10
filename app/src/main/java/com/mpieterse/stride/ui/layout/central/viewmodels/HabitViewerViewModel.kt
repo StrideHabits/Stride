@@ -1,4 +1,4 @@
-// HabitViewerViewModel.kt
+// app/src/main/java/com/mpieterse/stride/ui/layout/central/viewmodels/HabitViewerViewModel.kt
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.graphics.Bitmap
@@ -6,7 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.services.AppEventBus
 import com.mpieterse.stride.core.services.HabitNameOverrideService
-import com.mpieterse.stride.data.local.entities.CheckInEntity
+import com.mpieterse.stride.core.utils.checkInId
+import com.mpieterse.stride.data.dto.checkins.CheckInCreateDto
+import com.mpieterse.stride.data.dto.checkins.CheckInDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,15 +46,14 @@ class HabitViewerViewModel @Inject constructor(
     fun load(habitId: String) {
         _state.update { it.copy(loading = true, error = null, habitId = habitId) }
 
-        // Observe habit name locally and map to displayName via override service
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
             combine(
-                habits.observeAll()
-                    .map { list -> list.firstOrNull { it.id == habitId }?.name ?: "(Unknown habit)" }
+                habits.observeById(habitId)
+                    .map { it?.name ?: "(Unknown habit)" }
                     .distinctUntilChanged(),
-                checkins.observe(habitId)
-                    .map { list -> list.filter { !it.deleted } }
+                checkins.observeForHabit(habitId)
+                    .map { list -> list } // DTOs already
                     .onStart { emit(emptyList()) }
                     .catch { emit(emptyList()) }
             ) { habitName, localCheckins ->
@@ -83,11 +84,22 @@ class HabitViewerViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
-                // Decide toggle using current local state
-                val local = checkins.observe(habitId).firstOrNull().orEmpty()
-                val hasForDay = local.any { it.dayKey == isoDate && !it.deleted }
-                val targetOn = !hasForDay
-                checkins.toggle(habitId, isoDate, on = targetOn)
+                val local = checkins.observeForHabit(habitId).firstOrNull().orEmpty()
+                val existing = local.firstOrNull { it.dayKey == isoDate }
+                if (existing == null) {
+                    // create
+                    checkins.create(
+                        CheckInCreateDto(
+                            habitId = habitId,
+                            dayKey = isoDate,
+                            completedAt = "${isoDate}T00:00:00Z"
+                        )
+                    )
+                } else {
+                    // delete by deterministic id
+                    val id = existing.id.ifEmpty { checkInId(habitId, isoDate) }
+                    checkins.delete(id)
+                }
                 eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
                 _state.update { it.copy(loading = false) }
             } catch (e: Exception) {
@@ -106,7 +118,7 @@ class HabitViewerViewModel @Inject constructor(
 
     // Helpers
 
-    private fun monthDays(list: List<CheckInEntity>): List<Int> {
+    private fun monthDays(list: List<CheckInDto>): List<Int> {
         val today = LocalDate.now()
         val monthStart = today.withDayOfMonth(1)
         return list.asSequence()
@@ -118,7 +130,7 @@ class HabitViewerViewModel @Inject constructor(
             .toList()
     }
 
-    private fun computeStreakDays(list: List<CheckInEntity>): Int {
+    private fun computeStreakDays(list: List<CheckInDto>): Int {
         val days = list.asSequence()
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toHashSet()

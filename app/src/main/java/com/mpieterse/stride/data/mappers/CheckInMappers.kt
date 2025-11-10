@@ -40,3 +40,11 @@ fun Change.toEntity(
     rowVersion = rowVersion,
     syncState = syncState
 )
+
+fun CheckInEntity.toDto() = CheckInDto(
+    id = id,
+    habitId = habitId,
+    completedAt = completedAt,
+    dayKey = dayKey
+)
+
