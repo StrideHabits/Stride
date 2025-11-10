@@ -2,7 +2,16 @@ package com.mpieterse.stride.workers
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
-import androidx.work.*
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+//import androidx.work.Result
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
 import dagger.assisted.Assisted
@@ -21,16 +30,20 @@ class PushWorker @AssistedInject constructor(
     override suspend fun doWork(): Result = try {
         var anyApplied = false
 
-        // push habit creates first, so check-ins with new habits can succeed later
+        // push habit creates first
         anyApplied = habits.pushHabitCreates() || anyApplied
         anyApplied = checkins.pushBatch() || anyApplied
 
         if (anyApplied) PullWorker.enqueueOnce(applicationContext)
         Result.success()
     } catch (e: HttpException) {
-        if (e.code() == 401) Result.failure() else Result.retry()
-    } catch (_: Exception) {
-        Result.retry()
+        // surface HTTP details to Debug UI
+        val data = workDataOf("error" to "HTTP ${e.code()} ${e.message()}")
+        Result.failure(data)
+    } catch (e: Exception) {
+        // surface message; switch to retry() later if desired
+        val data = workDataOf("error" to (e.message ?: e::class.java.simpleName))
+        Result.failure(data)
     }
 
     companion object {

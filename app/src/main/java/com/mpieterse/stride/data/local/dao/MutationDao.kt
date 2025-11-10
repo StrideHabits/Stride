@@ -32,4 +32,13 @@ interface MutationDao {
 
     @Query("DELETE FROM mutations WHERE state='Applied'")
     suspend fun purgeApplied()
+
+    // remap any references to the temp habit id
+    @Query("""
+        UPDATE mutations 
+        SET habitId = CASE WHEN habitId = :oldId THEN :newId ELSE habitId END,
+            targetId = CASE WHEN targetType='Habit' AND targetId = :oldId THEN :newId ELSE targetId END
+        WHERE habitId = :oldId OR (targetType='Habit' AND targetId = :oldId)
+    """)
+    suspend fun remapIds(oldId: String, newId: String)
 }

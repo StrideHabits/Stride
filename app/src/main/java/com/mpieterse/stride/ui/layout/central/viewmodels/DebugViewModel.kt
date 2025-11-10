@@ -217,21 +217,42 @@ class DebugViewModel @Inject constructor(
 
     fun pushNow(ctx: Context) = viewModelScope.launch {
         val wm = WorkManager.getInstance(ctx)
-        val req = OneTimeWorkRequestBuilder<PushWorker>().addTag("debug-push-now").build()
-        setStatus("PUSH • enqueued"); log("push ▶️ enqueued ${req.id}")
+        val req = OneTimeWorkRequestBuilder<PushWorker>()
+            .addTag("debug-push-now")
+            .build()
+
+        setStatus("PUSH • enqueued")
+        log("push ▶️ enqueued ${req.id}")
         wm.enqueueUniqueWork("debug-push-now", ExistingWorkPolicy.REPLACE, req)
+
         wm.getWorkInfoByIdFlow(req.id).collectLatest { info ->
             when (info?.state) {
                 WorkInfo.State.ENQUEUED  -> setStatus("PUSH • enqueued")
                 WorkInfo.State.RUNNING   -> setStatus("PUSH • running")
-                WorkInfo.State.SUCCEEDED -> { setStatus("PUSH • success"); log("push ✅ ${req.id}") }
-                WorkInfo.State.FAILED    -> { setStatus("PUSH • failed"); log("push ❌ ${info.outputData}") }
-                WorkInfo.State.CANCELLED -> { setStatus("PUSH • cancelled"); log("push ⛔ cancelled") }
+                WorkInfo.State.SUCCEEDED -> {
+                    setStatus("PUSH • success")
+                    log("push ✅ ${req.id}")
+                }
+                WorkInfo.State.FAILED -> {
+                    setStatus("PUSH • failed")
+                    val err = info.outputData.getString("error")
+                    if (!err.isNullOrBlank()) {
+                        log("push ❌ $err")
+                    } else {
+                        // fallback: dump all keys if worker didn't populate "error"
+                        log("push ❌ Data ${info.outputData.keyValueMap}")
+                    }
+                }
+                WorkInfo.State.CANCELLED -> {
+                    setStatus("PUSH • cancelled")
+                    log("push ⛔ cancelled")
+                }
                 WorkInfo.State.BLOCKED   -> setStatus("PUSH • blocked")
                 null -> {}
             }
         }
     }
+
 
     fun pullNow(ctx: Context) = viewModelScope.launch {
         val wm = WorkManager.getInstance(ctx)
