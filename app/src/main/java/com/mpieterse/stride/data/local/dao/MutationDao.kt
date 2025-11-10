@@ -7,6 +7,7 @@ import androidx.room.Query
 import com.mpieterse.stride.data.local.entities.MutationEntity
 import com.mpieterse.stride.data.local.entities.MutationState
 
+// data/local/dao/MutationDao.kt
 @Dao
 interface MutationDao {
     @Insert
@@ -25,6 +26,9 @@ interface MutationDao {
 
     @Query("UPDATE mutations SET state=:state, attemptCount=attemptCount+1, lastError=:error WHERE localId IN(:ids)")
     suspend fun mark(ids: List<Long>, state: MutationState, error: String?)
+
+    @Query("UPDATE mutations SET state='Pending', lastError=NULL WHERE localId IN(:ids)")
+    suspend fun requeue(ids: List<Long>)
 
     @Query("DELETE FROM mutations WHERE state='Applied'")
     suspend fun purgeApplied()

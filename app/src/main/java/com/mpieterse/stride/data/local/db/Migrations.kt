@@ -1,4 +1,3 @@
-// data/local/db/Migrations.kt
 package com.mpieterse.stride.data.local.db
 
 import androidx.room.migration.Migration
@@ -6,7 +5,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        // habits
+        // habits (new table)
         db.execSQL("""
             CREATE TABLE IF NOT EXISTS habits(
                 id TEXT NOT NULL PRIMARY KEY,
@@ -22,10 +21,24 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
             )
         """.trimIndent())
 
-        // check_ins unique pair
-        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_checkins_habit_day ON check_ins(habitId, dayKey)")
+        // check_ins: ensure table exists (older v1 already had it), then indices
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS check_ins(
+                id TEXT NOT NULL PRIMARY KEY,
+                habitId TEXT NOT NULL,
+                dayKey TEXT NOT NULL,
+                completedAt TEXT NOT NULL,
+                deleted INTEGER NOT NULL,
+                updatedAt TEXT NOT NULL,
+                rowVersion TEXT NOT NULL,
+                syncState TEXT NOT NULL
+            )
+        """.trimIndent())
 
-        // mutations table if not present (guard for clean installs)
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_checkins_habit_day ON check_ins(habitId, dayKey)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_check_ins_habitId ON check_ins(habitId)")
+
+        // mutations (guard for clean installs)
         db.execSQL("""
             CREATE TABLE IF NOT EXISTS mutations(
                 localId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

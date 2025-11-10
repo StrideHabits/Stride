@@ -1,4 +1,3 @@
-// data/local/entities/MutationEntity.kt
 package com.mpieterse.stride.data.local.entities
 
 import androidx.room.Entity
@@ -13,10 +12,10 @@ data class MutationEntity(
     @PrimaryKey(autoGenerate = true) val localId: Long = 0,
 
     // idempotency + routing
-    val requestId: String,                   // UUID v4
-    val targetId: String,                    // habit.id or checkin.id
-    val targetType: TargetType,              // Habit or CheckIn
-    val op: MutationOp,                      // Create | Update | Delete
+    val requestId: String,        // UUID v4 per mutation
+    val targetId: String,         // habit.id or checkin.id
+    val targetType: TargetType,   // Habit or CheckIn
+    val op: MutationOp,           // Create | Update | Delete
 
     // payload (nullable by op/type)
     val name: String? = null,
