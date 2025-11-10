@@ -21,10 +21,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    @JvmStatic
     fun db(@ApplicationContext ctx: Context): AppDatabase =
         Room.databaseBuilder(ctx, AppDatabase::class.java, DB_NAME)
-            .fallbackToDestructiveMigration()               // drop+recreate on upgrade
-            .fallbackToDestructiveMigrationOnDowngrade()    // drop+recreate on downgrade
+            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
 }

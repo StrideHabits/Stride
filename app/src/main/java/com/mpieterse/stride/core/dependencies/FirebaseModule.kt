@@ -13,5 +13,6 @@ object FirebaseModule {
 
     @Provides
     @Singleton
+    @JvmStatic
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 }

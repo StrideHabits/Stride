@@ -22,6 +22,7 @@ object ServicesModule {
 
     @Provides
     @Singleton
+    @JvmStatic
     fun provideConfigurationService(
         @ApplicationContext ctx: Context
     ): ConfigurationService = ConfigurationService(ctx)
@@ -29,6 +30,7 @@ object ServicesModule {
 
     @Provides
     @Singleton
+    @JvmStatic
     fun provideCredentialManager(
         @ApplicationContext ctx: Context
     ): CredentialManager = CredentialManager.create(ctx)
@@ -36,6 +38,7 @@ object ServicesModule {
 
     @Provides
     @Singleton
+    @JvmStatic
     fun provideAuthService(
         firebaseAuth: FirebaseAuth
     ): AuthenticationService = AuthenticationService(firebaseAuth)

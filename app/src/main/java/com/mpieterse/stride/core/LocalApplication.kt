@@ -1,6 +1,7 @@
 package com.mpieterse.stride.core
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.utils.Clogger
@@ -19,7 +20,7 @@ class LocalApplication :
     companion object { const val TAG = "LocalApplication" }
 
     @Inject lateinit var authenticationListener: GlobalAuthenticationListener
-    @Inject lateinit var workerFactory: androidx.hilt.work.HiltWorkerFactory
+    @Inject lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
         super.onCreate()

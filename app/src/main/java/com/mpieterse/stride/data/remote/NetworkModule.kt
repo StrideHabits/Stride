@@ -36,11 +36,21 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    @Provides @Singleton fun tokenStore(@ApplicationContext c: Context) = TokenStore(c)
-    @Provides @Singleton fun notificationsStore(@ApplicationContext c: Context) = NotificationsStore(c)
 
-    @Provides @Singleton
-    fun authInterceptor(store: TokenStore) = Interceptor { chain ->
+    @Provides
+    @Singleton
+    @JvmStatic
+    fun tokenStore(@ApplicationContext c: Context): TokenStore = TokenStore(c)
+
+    @Provides
+    @Singleton
+    @JvmStatic
+    fun notificationsStore(@ApplicationContext c: Context): NotificationsStore = NotificationsStore(c)
+
+    @Provides
+    @Singleton
+    @JvmStatic
+    fun authInterceptor(store: TokenStore): Interceptor = Interceptor { chain ->
         val token = runBlocking { store.tokenFlow.first() }
         val req = if (!token.isNullOrBlank())
             chain.request().newBuilder()
@@ -50,7 +60,9 @@ object NetworkModule {
         chain.proceed(req)
     }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
+    @JvmStatic
     fun okHttp(auth: Interceptor): OkHttpClient {
         val logger = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
@@ -67,15 +79,19 @@ object NetworkModule {
             .build()
     }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
+    @JvmStatic
     fun retrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL) // must end with '/'
+            .baseUrl(BuildConfig.API_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
             .client(client)
             .build()
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
+    @JvmStatic
     fun api(retrofit: Retrofit): SummitApiService =
         retrofit.create(SummitApiService::class.java)
 }
