@@ -36,33 +36,45 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     @Provides @Singleton fun tokenStore(@ApplicationContext c: Context) = TokenStore(c)
-    
     @Provides @Singleton fun notificationsStore(@ApplicationContext c: Context) = NotificationsStore(c)
 
     @Provides @Singleton
     fun authInterceptor(store: TokenStore) = Interceptor { chain ->
         val token = runBlocking { store.tokenFlow.first() }
         val req = if (!token.isNullOrBlank())
-            chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
+            chain.request().newBuilder()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
         else chain.request()
         chain.proceed(req)
     }
 
     @Provides @Singleton
-    fun okHttp(auth: Interceptor): OkHttpClient =
-        OkHttpClient.Builder()
+    fun okHttp(auth: Interceptor): OkHttpClient {
+        val logger = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            else HttpLoggingInterceptor.Level.BASIC
+            redactHeader("Authorization")
+        }
+        return OkHttpClient.Builder()
             .addInterceptor(auth)
-            .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+            .addInterceptor(logger)
+            .callTimeout(java.time.Duration.ofSeconds(30))
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .readTimeout(java.time.Duration.ofSeconds(20))
+            .writeTimeout(java.time.Duration.ofSeconds(20))
             .build()
+    }
 
     @Provides @Singleton
     fun retrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL) // must end with '/'
             .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
             .client(client)
             .build()
 
     @Provides @Singleton
-    fun api(retrofit: Retrofit): SummitApiService = retrofit.create(SummitApiService::class.java)
+    fun api(retrofit: Retrofit): SummitApiService =
+        retrofit.create(SummitApiService::class.java)
 }
