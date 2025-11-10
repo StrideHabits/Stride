@@ -6,6 +6,8 @@ import androidx.work.*
 import com.mpieterse.stride.data.repo.CheckInRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import retrofit2.HttpException
+import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class PushWorker @AssistedInject constructor(
@@ -15,13 +17,19 @@ class PushWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = try {
-        repo.pushBatch()
+        val pushed = repo.pushBatch() // return count or boolean
+        // Optionally chain a small pull when we actually pushed something
+        if (pushed) PullWorker.enqueueOnce(applicationContext)
         Result.success()
-    } catch (e: Exception) {
+    } catch (e: HttpException) {
+        if (e.code() == 401) Result.failure() else Result.retry()
+    } catch (_: Exception) {
         Result.retry()
     }
 
     companion object {
+        const val UNIQUE_NAME = "push-mutations"
+
         fun enqueueOnce(context: Context) {
             val req = OneTimeWorkRequestBuilder<PushWorker>()
                 .setConstraints(
@@ -29,8 +37,14 @@ class PushWorker @AssistedInject constructor(
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
                 )
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
-            WorkManager.getInstance(context).enqueue(req)
+
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                UNIQUE_NAME,
+                ExistingWorkPolicy.KEEP,
+                req
+            )
         }
     }
 }
