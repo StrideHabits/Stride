@@ -13,8 +13,8 @@ import com.mpieterse.stride.data.local.entities.MutationEntity
 
 @Database(
     entities = [HabitEntity::class, CheckInEntity::class, MutationEntity::class],
-    version = 2,
-    exportSchema = true
+    version = 1,
+    exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {

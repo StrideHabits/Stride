@@ -31,4 +31,8 @@ interface CheckInDao {
 
     @Query("DELETE FROM check_ins WHERE id=:id")
     suspend fun hardDelete(id: String)
+
+    // remap foreign key habitId when server re-keys
+    @Query("UPDATE check_ins SET habitId=:newId WHERE habitId=:oldId")
+    suspend fun remapHabitId(oldId: String, newId: String)
 }

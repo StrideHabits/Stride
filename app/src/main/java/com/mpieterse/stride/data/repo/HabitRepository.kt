@@ -73,67 +73,54 @@ class HabitRepository @Inject constructor(
      *  - CheckInDao: @Query("UPDATE check_ins SET habitId=:newId WHERE habitId=:oldId")
      *  - MutationDao: @Query("UPDATE mutations SET habitId=:newId, targetId=CASE WHEN targetType='Habit' AND targetId=:oldId THEN :newId ELSE targetId END WHERE habitId=:oldId OR (targetType='Habit' AND targetId=:oldId)")
      */
+    // repos/HabitRepository.kt
     suspend fun pushHabitCreates(limit: Int = 50): Boolean {
         val batch = db.mutations().nextBatch(limit).filter { it.targetType == TargetType.Habit }
         if (batch.isEmpty()) return false
 
-        var anyApplied = false
-
-        batch.forEach { m ->
-            try {
-                val resp = api.createHabit(
-                    HabitCreateDto(
-                        name = m.name ?: error("name"),
-                        frequency = m.frequency ?: 0,
-                        tag = m.tag,
-                        imageUrl = m.imageUrl
+        return try {
+            db.withTransaction {
+                val applied = mutableListOf<Long>()
+                batch.forEach { m ->
+                    val resp = api.createHabit(
+                        HabitCreateDto(
+                            name = m.name ?: error("name"),
+                            frequency = m.frequency ?: 0,
+                            tag = m.tag,
+                            imageUrl = m.imageUrl
+                        )
                     )
-                )
-
-                val body = resp.body() ?: error("empty response")
-                val serverId = body.id
-                val oldId = m.targetId
-
-                db.withTransaction {
-                    // Insert new server habit row as Synced
+                    if (!resp.isSuccessful) {
+                        val body = resp.errorBody()?.string()?.take(400)
+                        throw IllegalStateException("POST /api/habits → ${resp.code()} ${resp.message()} ${body ?: ""}")
+                    }
+                    val dto = resp.body() ?: error("empty body")
                     db.habits().upsert(
                         HabitEntity(
-                            id = serverId,
-                            name = body.name,
-                            frequency = body.frequency,
-                            tag = body.tag,
-                            imageUrl = body.imageUrl,
+                            id = dto.id,
+                            name = dto.name,
+                            frequency = dto.frequency,
+                            tag = dto.tag,
+                            imageUrl = dto.imageUrl,
                             deleted = false,
-                            createdAt = body.createdAt,
-                            updatedAt = body.updatedAt,
+                            createdAt = dto.createdAt,
+                            updatedAt = dto.updatedAt,
                             rowVersion = "",
                             syncState = SyncState.Synced
                         )
                     )
-                    // Remap references from temp -> server id
-                    db.runQuery("UPDATE check_ins SET habitId=? WHERE habitId=?", arrayOf(serverId, oldId))
-                    db.runQuery("""
-                        UPDATE mutations 
-                        SET habitId = COALESCE(?, habitId),
-                            targetId = CASE 
-                                WHEN targetType='Habit' AND targetId=? THEN ? 
-                                ELSE targetId END
-                        WHERE habitId=? OR (targetType='Habit' AND targetId=?)
-                    """.trimIndent(), arrayOf(serverId, oldId, serverId, oldId, oldId))
-
-                    // Drop temp row if it exists
-                    db.habits().hardDelete(oldId)
-
-                    // Mark mutation applied
-                    db.mutations().markApplied(listOf(m.localId))
+                    applied += m.localId
                 }
-                anyApplied = true
-            } catch (t: Throwable) {
-                db.mutations().mark(listOf(m.localId), MutationState.Failed, t.message)
+                if (applied.isNotEmpty()) db.mutations().markApplied(applied)
             }
+            true
+        } catch (t: Throwable) {
+            db.mutations().mark(batch.map { it.localId }, MutationState.Failed, t.message)
+            throw t  // let PushWorker capture and surface it
         }
-        return anyApplied
     }
+
+
 
     private fun AppDatabase.runQuery(sql: String, args: Array<Any?>) {
         this.openHelper.writableDatabase.execSQL(sql, args)
