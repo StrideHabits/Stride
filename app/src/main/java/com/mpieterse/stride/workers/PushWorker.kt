@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.mpieterse.stride.data.repo.CheckInRepository
+import com.mpieterse.stride.data.repo.HabitRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import retrofit2.HttpException
@@ -13,13 +14,18 @@ import java.util.concurrent.TimeUnit
 class PushWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
-    private val repo: CheckInRepository
+    private val habits: HabitRepository,
+    private val checkins: CheckInRepository
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = try {
-        val pushed = repo.pushBatch() // return count or boolean
-        // Optionally chain a small pull when we actually pushed something
-        if (pushed) PullWorker.enqueueOnce(applicationContext)
+        var anyApplied = false
+
+        // push habit creates first, so check-ins with new habits can succeed later
+        anyApplied = habits.pushHabitCreates() || anyApplied
+        anyApplied = checkins.pushBatch() || anyApplied
+
+        if (anyApplied) PullWorker.enqueueOnce(applicationContext)
         Result.success()
     } catch (e: HttpException) {
         if (e.code() == 401) Result.failure() else Result.retry()

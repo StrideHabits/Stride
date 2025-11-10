@@ -28,8 +28,10 @@ class PullWorker @AssistedInject constructor(
         try {
             var hasMore = true
             while (hasMore) {
-                val page = api.syncChanges(since) // includes auth via interceptor
+                val page = api.syncChanges(since)
+
                 db.withTransaction {
+                    // bulk upsert
                     page.items.forEach { c ->
                         db.checkIns().upsert(
                             CheckInEntity(
@@ -40,11 +42,12 @@ class PullWorker @AssistedInject constructor(
                                 deleted = c.deleted,
                                 updatedAt = c.updatedAt,
                                 rowVersion = c.rowVersion
-                                // syncState defaults to Synced
                             )
                         )
                     }
                 }
+
+                // advance cursor to last item’s UpdatedAt; keep if server returns null
                 since = page.nextSince ?: since
                 SyncPrefs.setSince(applicationContext, since)
                 hasMore = page.hasMore
