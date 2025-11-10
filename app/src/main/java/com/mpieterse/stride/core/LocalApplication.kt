@@ -5,6 +5,10 @@ import androidx.work.Configuration
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp

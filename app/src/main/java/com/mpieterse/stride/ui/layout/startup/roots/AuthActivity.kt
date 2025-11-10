@@ -41,11 +41,19 @@ class AuthActivity : FragmentActivity() {
 
                 Surface(color = Color(0xFF161620)) {
                     when (authState) {
-                        is AuthState.Unauthenticated, is AuthState.Error -> AuthNavGraph(
-                            onGoToHomeActivity = ::navigateToHomeActivity,
-                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
-                            authViewModel = authViewModel
-                        )
+                        is AuthState.Unauthenticated,
+                        is AuthState.Error,
+                        is AuthState.Loading -> {
+                            // Keep showing AuthNavGraph for these states to preserve navigation
+                            // The individual screens (SignIn/SignUp) will handle loading/error states
+                            // By grouping these states together, AuthNavGraph won't be recreated
+                            // when authState changes from Unauthenticated to Loading/Error
+                            AuthNavGraph(
+                                onGoToHomeActivity = ::navigateToHomeActivity,
+                                modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                                authViewModel = authViewModel
+                            )
+                        }
                         is AuthState.Locked -> AuthLockedScreen(
                             modifier = Modifier.statusBarsPadding().fillMaxSize(),
                             onSuccess = {

@@ -67,6 +67,17 @@ The app follows a modular **MVVM + Repository** pattern for clarity and scalabil
 **App Running on Device:** <img width="390" height="878" alt="image" src="https://github.com/user-attachments/assets/ea3d3b6c-1b48-420d-ad4f-3e79dbb514b2" />
 
 ---
+## 👥 Contributors
+
+A big thank you to everyone who contributed to Stride — your efforts are truly appreciated!
+
+| Name               | Student Number                       |
+| ------------------- | ------------------------------------ |
+| **Musa Ntuli**      | ST1029336                            |
+| **Dean Gibson**     | ST10326084                           |
+| **Fortune Mabona**  | ST10187287                           |
+| **Matthew Pieterse**| ST10257002                           |
+
 
 ## 📄 License
 

@@ -16,7 +16,11 @@ fun AuthNavGraph(
     modifier: Modifier  = Modifier,
     authViewModel: AuthViewModel
 ) {
+    // NavController will persist as long as AuthNavGraph stays in composition
+    // Since we keep AuthNavGraph for Unauthenticated, Loading, and Error states,
+    // the NavController won't be recreated when authState changes to Loading/Error
     val controller = rememberNavController()
+    
     NavHost(navController = controller, startDestination = AuthScreen.Launch.route) {
         composable(route = AuthScreen.Launch.route) {
             AuthLaunchScreen(

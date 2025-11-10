@@ -2,6 +2,13 @@
 <manifest
         xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
     <application
             android:name=".core.LocalApplication"
             android:allowBackup="true"
@@ -12,6 +19,16 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/Theme.StrideHabits">
+        
+        <!-- Firebase Cloud Messaging Service -->
+        <service
+            android:name=".core.services.StrideFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <activity
                 android:name=".ui.layout.central.roots.HomeActivity"
                 android:exported="false"

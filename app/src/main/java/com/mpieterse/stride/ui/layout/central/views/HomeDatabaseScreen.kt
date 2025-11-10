@@ -34,8 +34,10 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showCreate by rememberSaveable { mutableStateOf(false) }
     
-    // Refresh when returning to this screen
+    // Refresh when screen is first created, with a small delay to allow authentication to complete
     LaunchedEffect(Unit) {
+        // Small delay to allow token re-authentication to complete after unlock
+        kotlinx.coroutines.delay(500)
         viewModel.refresh()
     }
 
@@ -109,9 +111,14 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
                                     progress = row.progress,
                                     checklist = row.checklist,
                                     streaked = row.streaked,
-                                    onClick = { onNavigateToHabitViewer(row.id) },
+                                    enabled = !row.pending,
+                                    onClick = {
+                                        if (!row.pending) onNavigateToHabitViewer(row.id)
+                                    },
                                     onCheckInClick = { dayIndex ->
-                                        viewModel.checkInHabit(row.id, dayIndex)
+                                        if (!row.pending) {
+                                            viewModel.checkInHabit(row.id, dayIndex)
+                                        }
                                     }
                                 )
                             }
@@ -144,7 +151,7 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         isVisible = showCreate,
         onDismiss = { showCreate = false },
         onConfirm = { data ->
-            viewModel.createHabit(data.name) { ok ->
+            viewModel.createHabit(data) { ok ->
                 if (ok) showCreate = false
             }
         }

@@ -12,5 +12,12 @@ suspend inline fun <T> safeCall(crossinline block: suspend () -> retrofit2.Respo
         if (res.isSuccessful && body != null) ApiResult.Ok(body)
         else ApiResult.Err(res.code(), res.errorBody()?.string() ?: "Unknown error")
     } catch (e: Exception) {
-        ApiResult.Err(null, e.message ?: "Network error")
+        // Preserve exception type information for better error handling
+        val errorMessage = when {
+            e is java.net.SocketTimeoutException -> "timeout: ${e.message ?: "Request timed out"}"
+            e is java.net.UnknownHostException -> "network: ${e.message ?: "Unable to reach server"}"
+            e is java.io.IOException -> "network: ${e.message ?: "Network error"}"
+            else -> e.message ?: "Network error"
+        }
+        ApiResult.Err(null, errorMessage)
     }

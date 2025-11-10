@@ -22,9 +22,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
-import com.mpieterse.stride.ui.layout.central.components.HabitData
+import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
 import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun HabitViewerScreen(
@@ -149,10 +151,18 @@ fun HabitViewerScreen(
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
-            vm.updateLocalName(updated.name)
+            vm.updateHabit(habitId, updated)
             showEditDialog = false
         },
-        initialData = HabitData(name = state.displayName)
+        initialData = HabitDraft(
+            name = displayName,
+            frequency = state.habitFrequency,
+            tag = state.habitTag,
+            imageBase64 = initialImageBase64,
+            imageMimeType = initialImageMime,
+            imageFileName = initialImageFileName
+        ),
+        confirmButtonLabel = "Save Changes"
     )
 }
 
@@ -188,6 +198,12 @@ private fun HabitImageViewer(
             }
         }
     }
+}
+
+private fun bitmapToBase64(bitmap: Bitmap): String {
+    val outputStream = java.io.ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+    return android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.DEFAULT)
 }
 
 @Composable

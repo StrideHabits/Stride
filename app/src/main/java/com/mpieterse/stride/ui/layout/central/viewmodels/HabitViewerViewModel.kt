@@ -22,7 +22,9 @@ class HabitViewerViewModel @Inject constructor(
     private val habits: HabitRepository,
     private val checkins: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
-    private val eventBus: AppEventBus
+    private val eventBus: AppEventBus,
+    private val habitCacheStore: HabitCacheStore,
+    private val authenticationService: AuthenticationService
 ) : ViewModel() {
 
     data class UiState(
@@ -32,6 +34,9 @@ class HabitViewerViewModel @Inject constructor(
         val habitName: String = "",
         val displayName: String = "",
         val habitImage: Bitmap? = null,
+        val habitImageUrl: String? = null,
+        val habitTag: String? = null,
+        val habitFrequency: Int = 0,
         val streakDays: Int = 0,
         val completedDates: List<Int> = emptyList()
     )

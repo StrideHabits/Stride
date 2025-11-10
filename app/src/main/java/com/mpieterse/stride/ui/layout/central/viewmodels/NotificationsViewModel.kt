@@ -20,8 +20,11 @@ import java.time.LocalTime
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
     private val notificationsStore: NotificationsStore,
-    private val habitRepository: HabitRepository
+    private val habitRepository: HabitRepository,
+    private val notificationScheduler: NotificationSchedulerService
 ) : ViewModel() {
+    
+    private var loadJob: Job? = null
 
     data class UiState(
         val loading: Boolean = true,
@@ -67,6 +70,14 @@ class NotificationsViewModel @Inject constructor(
                 error = null
             )
         }.collect { ui -> _state.value = ui }
+    }
+    
+    /**
+     * Refresh habits from the API.
+     * Useful when habits might have been added/updated and we need the latest list.
+     */
+    fun refreshHabits() = viewModelScope.launch {
+        loadHabits()
     }
 
     fun addNotification(notification: NotificationData) = viewModelScope.launch {

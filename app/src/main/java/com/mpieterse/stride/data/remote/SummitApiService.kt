@@ -73,3 +73,9 @@ interface SummitApiService {
         @Query("pageSize") pageSize: Int = 200
     ): ChangesPage
 }
+    suspend fun upload(@Part file: MultipartBody.Part): Response<UploadResponse> //This method uploads files to the REST API using Retrofit multipart requests (GeeksforGeeks, 2017).
+
+    // Notifications / FCM
+    @POST("api/notifications/fcm-token")
+    suspend fun registerFcmToken(@Body body: FcmTokenRequest): Response<FcmTokenResponse> //This method registers FCM token with the backend through the REST API using Retrofit (GeeksforGeeks, 2017).
+}
