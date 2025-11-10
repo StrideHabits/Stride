@@ -155,10 +155,10 @@ fun DebugScreen(
                         ) { Text("Create") }
 
                         Button(
-                            onClick = { model.listHabits() },
+                            onClick = { model.login(email, pass, ctx) },   // was: model.login(email, pass)
                             enabled = !state.loading,
                             modifier = Modifier.weight(1f)
-                        ) { Text("List") }
+                        ) { Text("Login") }
                     }
 
                     if (state.habits.isNotEmpty()) {

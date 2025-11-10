@@ -35,6 +35,10 @@ class DebugViewModel @Inject constructor(
 
     data class HabitRow(val id: String, val name: String)
 
+    // keep UI compatibility
+    fun listHabits() = observeHabits()
+    fun listCheckIns() = listCheckInsSummary()
+
     data class UiState(
         val loading: Boolean = false,
         val status: String = "—",
