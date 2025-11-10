@@ -41,6 +41,7 @@ fun HabitItem( //This composable displays individual habit items with progress t
     progress: Float = 0F,
     streaked: Boolean = false,
     checklist: List<Boolean> = emptyList(),
+    enabled: Boolean = true,
     onClick: () -> Unit = {},
     onCheckInClick: (Int) -> Unit = {}
 ) {
@@ -70,7 +71,9 @@ fun HabitItem( //This composable displays individual habit items with progress t
                     chipText = chipText,
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { onClick() }
+                        .clickable(
+                            enabled = enabled
+                        ) { onClick() }
                 )
 
                 if (checklist.isNotEmpty()) {

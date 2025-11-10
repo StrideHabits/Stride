@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Build
 import com.mpieterse.stride.core.notifications.NotificationChannelManager
 import com.mpieterse.stride.core.permissions.NotificationPermissionManager
+import com.mpieterse.stride.core.services.HabitSyncManager
 import com.mpieterse.stride.core.services.FcmTokenManager
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.utils.Clogger
@@ -25,6 +26,9 @@ class LocalApplication : Application() {
     
     @Inject
     lateinit var fcmTokenManager: FcmTokenManager
+
+    @Inject
+    lateinit var habitSyncManager: HabitSyncManager
     
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -52,6 +56,8 @@ class LocalApplication : Application() {
         }
 
         authenticationListener.listen()
+
+        habitSyncManager.start()
         
         // Register FCM token with backend (async, non-blocking)
         applicationScope.launch {

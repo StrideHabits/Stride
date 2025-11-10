@@ -29,7 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
-import com.mpieterse.stride.ui.layout.central.components.HabitData
+import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
 import java.time.LocalDate
 
@@ -182,7 +182,14 @@ fun HabitViewerScreen(
             vm.updateLocalName(updated.name, habitId)
             showEditDialog = false
         },
-        initialData = HabitData(name = displayName)
+        initialData = HabitDraft(
+            name = displayName,
+            frequency = 0,
+            tag = null,
+            imageBase64 = null,
+            imageMimeType = null,
+            imageFileName = null
+        )
     )
 }
 

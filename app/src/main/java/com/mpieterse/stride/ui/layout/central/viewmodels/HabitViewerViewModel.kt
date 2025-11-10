@@ -17,7 +17,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.time.*
+import java.net.URL
+import android.graphics.BitmapFactory
 
 @HiltViewModel
 class HabitViewerViewModel @Inject constructor(
@@ -45,16 +49,30 @@ class HabitViewerViewModel @Inject constructor(
     fun load(habitId: String) = viewModelScope.launch { //This method loads habit data and check-ins using ViewModel lifecycle management (Android Developers, 2024).
         _state.value = _state.value.copy(loading = true, error = null)
 
-        val habitName = when (val hr = habits.list()) {
+        val habit: HabitDto? = when (val hr = habits.list()) {
             is ApiResult.Ok<*> -> (hr.data as List<*>)
                 .filterIsInstance<HabitDto>()
-                .firstOrNull { it.id == habitId }?.name ?: "(Unknown habit)"
+                .firstOrNull { it.id == habitId }
             is ApiResult.Err -> {
                 _state.value = _state.value.copy(
                     loading = false,
                     error = "Habit load failed: ${hr.code ?: ""} ${hr.message ?: ""}"
                 )
                 return@launch
+            }
+        }
+        val habitName = habit?.name ?: "(Unknown habit)"
+
+        // Try load the habit image (if available)
+        val bitmap = withContext(Dispatchers.IO) {
+            try {
+                val rawUrl = habit?.imageUrl
+                val normalized = rawUrl?.let { normalizeImageUrl(it) }
+                if (!normalized.isNullOrBlank()) {
+                    URL(normalized).openStream().use { input -> BitmapFactory.decodeStream(input) }
+                } else null
+            } catch (e: Exception) {
+                null
             }
         }
 
@@ -96,6 +114,7 @@ class HabitViewerViewModel @Inject constructor(
             habitId = habitId,
             habitName = habitName,
             displayName = nameOverrideService.getDisplayName(habitId, habitName),
+            habitImage = bitmap,
             streakDays = streak,
             completedDates = completedThisMonth
         )
@@ -198,5 +217,13 @@ class HabitViewerViewModel @Inject constructor(
         } catch (_: Exception) {
             try { LocalDate.parse(this) } catch (_: Exception) { null }
         }
+    }
+
+    private fun normalizeImageUrl(url: String): String {
+        // If API returns http for our host, upgrade to https to avoid cleartext issues
+        val upgraded = url.replace("http://summitapi.onrender.com", "https://summitapi.onrender.com")
+        // If a relative path is ever returned, prefix with https base
+        return if (upgraded.startsWith("http")) upgraded
+        else "https://summitapi.onrender.com/$upgraded".replace("//", "/").replace("https:/", "https://")
     }
 }

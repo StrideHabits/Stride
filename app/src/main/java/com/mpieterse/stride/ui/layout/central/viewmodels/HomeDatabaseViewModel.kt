@@ -1,18 +1,30 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.content.Context
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
-import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.dto.uploads.UploadResponse
+import com.mpieterse.stride.data.local.PendingHabit
+import com.mpieterse.stride.data.local.PendingHabitsStore
+import com.mpieterse.stride.data.local.TokenStore
 import com.mpieterse.stride.data.repo.CheckInRepository
-import com.mpieterse.stride.core.services.HabitNameOverrideService
+import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.repo.UploadRepository
 import com.mpieterse.stride.core.services.AppEventBus
+import com.mpieterse.stride.core.services.HabitNameOverrideService
+import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.FileOutputStream
+import java.time.LocalDate
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 @HiltViewModel
 class HomeDatabaseViewModel @Inject constructor(
@@ -20,7 +32,15 @@ class HomeDatabaseViewModel @Inject constructor(
     private val checkinsRepo: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
     private val eventBus: AppEventBus,
+    private val tokenStore: TokenStore,
+    private val pendingHabitsStore: PendingHabitsStore,
+    private val uploadRepository: UploadRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
+
+    companion object {
+        private const val PENDING_PREFIX = "pending:"
+    }
 
     data class HabitRowUi(
         val id: String,
@@ -29,6 +49,7 @@ class HomeDatabaseViewModel @Inject constructor(
         val progress: Float = 0f,
         val checklist: List<Boolean> = emptyList(),
         val streaked: Boolean = false,
+        val pending: Boolean = false,
     )
 
     data class UiState(
@@ -87,6 +108,11 @@ class HomeDatabaseViewModel @Inject constructor(
     private fun refreshInternal() = viewModelScope.launch {
         withLoading {
             _state.value = _state.value.copy(error = null)
+
+            val lastThreeDays = getLastThreeDays()
+            val pendingHabits = pendingHabitsStore.getAll()
+            val pendingRows = pendingHabits.map { toPendingRow(it) }
+            val daysHeader = headerFor(lastThreeDays)
             
             // Load habits
             val habitsResult = habitsRepo.list()
@@ -98,13 +124,16 @@ class HomeDatabaseViewModel @Inject constructor(
                 if (errorCode == 401) {
                     _state.value = _state.value.copy(
                         error = "Session expired. Please sign in again.",
-                        habits = emptyList()
+                        habits = pendingRows,
+                        daysHeader = daysHeader
                     )
                     setStatus("ERR 401 • Authentication required")
                     log("habits ❌ 401 - Authentication required")
                 } else {
                     _state.value = _state.value.copy(
-                        error = "${errorCode ?: ""} $errorMessage"
+                        error = "${errorCode ?: ""} $errorMessage",
+                        habits = pendingRows,
+                        daysHeader = daysHeader
                     )
                     setStatus("ERR ${errorCode ?: ""} • list habits")
                     log("habits ❌ ${errorCode} ${errorMessage}")
@@ -127,7 +156,6 @@ class HomeDatabaseViewModel @Inject constructor(
             val items = habitDtos.map { habit ->
                 val habitCheckins = allCheckins.filter { it.habitId == habit.id }
                 val today = LocalDate.now()
-                val lastThreeDays = getLastThreeDays()
                 val completedLastThreeDays = habitCheckins.mapNotNull { checkin ->
                     try {
                         // Parse the dayKey directly since it's in yyyy-MM-dd format
@@ -147,25 +175,20 @@ class HomeDatabaseViewModel @Inject constructor(
                     tag = habit.tag ?: "Habit",
                     progress = progress,
                     checklist = checklist,
-                    streaked = streaked
+                    streaked = streaked,
+                    pending = false
                 )
             }
-            
-            // Generate 3-day header
-            val lastThreeDays = getLastThreeDays()
-            val daysHeader = lastThreeDays.map { date ->
-                val dayName = date.dayOfWeek.name.take(3) // MON, TUE, etc.
-                val dayNumber = date.dayOfMonth.toString()
-                "$dayName\n$dayNumber"
-            }
-            
+
+            val combinedItems = items + pendingRows
+
             _state.value = _state.value.copy(
-                habits = items, 
+                habits = combinedItems, 
                 daysHeader = daysHeader,
                 error = null
             )
             setStatus("OK • list habits")
-            log("habits ✅ count=${items.size}")
+            log("habits ✅ count=${combinedItems.size} (pending=${pendingRows.size})")
         }
     }
     
@@ -178,32 +201,57 @@ class HomeDatabaseViewModel @Inject constructor(
         )
     }
 
-    fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch { //This method creates a new habit through the API using ViewModel lifecycle management (Android Developers, 2024).
+    fun createHabit(draft: HabitDraft, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch { //This method creates a new habit through the API using ViewModel lifecycle management (Android Developers, 2024).
         withLoading {
-            when (val r = habitsRepo.create(name)) {
-                is ApiResult.Ok<*> -> {
-                    setStatus("OK • create habit")
-                    val h = r.data as? com.mpieterse.stride.data.dto.habits.HabitDto
-                    log("create ✅ ${h?.name ?: "—"} (${h?.id ?: "?"})")
-                    // Emit event to notify other screens
-                    eventBus.emit(AppEventBus.AppEvent.HabitCreated)
-                    // Refresh so the new habit shows up
-                    refresh()
-                    onDone(true)
-                }
+            val hasToken = runCatching { tokenStore.hasToken() }.getOrDefault(false)
+            if (!hasToken) {
+                queuePendingHabit(draft)
+                onDone(true)
+                return@withLoading
+            }
+
+            when (val imageResult = resolveImageUrl(draft)) {
                 is ApiResult.Err -> {
-                    setStatus("ERR ${r.code ?: ""} • create habit")
-                    log("create ❌ ${r.code} ${r.message}")
-                    _state.value = _state.value.copy(
-                        error = "${r.code ?: ""} ${r.message ?: "Failed to create"}"
-                    )
-                    onDone(false)
+                    setStatus("QUEUED • habit")
+                    log("create ⏳ queued ${draft.name} (image upload pending)")
+                    queuePendingHabit(draft)
+                    onDone(true)
+                    return@withLoading
+                }
+                is ApiResult.Ok -> {
+                    when (val r = habitsRepo.create(draft.name, draft.frequency, draft.tag, imageResult.data)) {
+                        is ApiResult.Ok<*> -> {
+                            setStatus("OK • create habit")
+                            val h = r.data as? com.mpieterse.stride.data.dto.habits.HabitDto
+                            log("create ✅ ${h?.name ?: "—"} (${h?.id ?: "?"})")
+                            eventBus.emit(AppEventBus.AppEvent.HabitCreated)
+                            refresh()
+                            onDone(true)
+                        }
+                        is ApiResult.Err -> {
+                            if (r.code == 401 || r.code == 403 || r.code == null) {
+                                queuePendingHabit(draft)
+                                onDone(true)
+                            } else {
+                                setStatus("ERR ${r.code ?: ""} • create habit")
+                                log("create ❌ ${r.code} ${r.message}")
+                                _state.value = _state.value.copy(
+                                    error = "${r.code ?: ""} ${r.message ?: "Failed to create"}"
+                                )
+                                onDone(false)
+                            }
+                        }
+                    }
+                }
                 }
             }
-        }
     }
 
     fun checkInHabit(habitId: String, dayIndex: Int) = viewModelScope.launch { //This method creates a check-in for a habit using ViewModel lifecycle management (Android Developers, 2024).
+        if (habitId.startsWith(PENDING_PREFIX)) {
+            log("check-in skipped for pending habit: $habitId")
+            return@launch
+        }
         log("checkInHabit called: habitId=$habitId dayIndex=$dayIndex")
         val lastThreeDays = getLastThreeDays()
         log("lastThreeDays: $lastThreeDays")
@@ -230,6 +278,78 @@ class HomeDatabaseViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun queuePendingHabit(draft: HabitDraft) {
+        val pendingHabit = PendingHabit(
+            name = draft.name,
+            frequency = draft.frequency,
+            tag = draft.tag,
+            imageUrl = null,
+            imageDataBase64 = draft.imageBase64,
+            imageMimeType = draft.imageMimeType,
+            imageFileName = draft.imageFileName
+        )
+        pendingHabitsStore.add(pendingHabit)
+        setStatus("QUEUED • habit")
+        log("create ⏳ queued ${pendingHabit.name}")
+        val pendingRow = toPendingRow(pendingHabit)
+        val header = if (_state.value.daysHeader.isEmpty()) headerFor(getLastThreeDays()) else _state.value.daysHeader
+        val updatedHabits = _state.value.habits.filterNot { it.id == pendingRow.id } + pendingRow
+        _state.value = _state.value.copy(
+            habits = updatedHabits,
+            daysHeader = header,
+            error = null
+        )
+    }
+
+    private fun toPendingRow(habit: PendingHabit): HabitRowUi =
+        HabitRowUi(
+            id = "$PENDING_PREFIX${habit.id}",
+            name = habit.name,
+            tag = habit.tag ?: "Pending",
+            progress = 0f,
+            checklist = emptyList(),
+            streaked = false,
+            pending = true
+        )
+
+    private fun headerFor(dates: List<LocalDate>): List<String> =
+        dates.map { date ->
+            val dayName = date.dayOfWeek.name.take(3)
+            val dayNumber = date.dayOfMonth.toString()
+            "$dayName\n$dayNumber"
+        }
+
+    private suspend fun resolveImageUrl(draft: HabitDraft): ApiResult<String?> {
+        if (!draft.imageBase64.isNullOrBlank()) {
+            val file = createTempImageFile(draft) ?: return ApiResult.Err(null, "Failed to prepare image")
+            return try {
+                when (val upload = uploadRepository.upload(file.absolutePath)) {
+                    is ApiResult.Ok -> {
+                        val response = upload.data as? UploadResponse
+                        ApiResult.Ok(response?.url ?: response?.path)
+                    }
+                    is ApiResult.Err -> upload
+                }
+            } finally {
+                file.delete()
+            }
+        }
+        return ApiResult.Ok(null)
+    }
+
+    private fun createTempImageFile(draft: HabitDraft): File? =
+        runCatching {
+            val bytes = Base64.decode(draft.imageBase64, Base64.DEFAULT)
+            val fileName = draft.imageFileName ?: "${UUID.randomUUID()}.jpg"
+            val safeName = if (fileName.contains(".")) fileName else "$fileName.jpg"
+            val file = File(appContext.cacheDir, "habit_draft_$safeName")
+            FileOutputStream(file).use { it.write(bytes) }
+            file
+        }.getOrElse {
+            log("Failed to prepare temp image: ${it.message}")
+            null
+        }
 }
 
 

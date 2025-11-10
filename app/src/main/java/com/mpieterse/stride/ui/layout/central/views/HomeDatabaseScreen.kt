@@ -111,9 +111,14 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
                                     progress = row.progress,
                                     checklist = row.checklist,
                                     streaked = row.streaked,
-                                    onClick = { onNavigateToHabitViewer(row.id) },
+                                    enabled = !row.pending,
+                                    onClick = {
+                                        if (!row.pending) onNavigateToHabitViewer(row.id)
+                                    },
                                     onCheckInClick = { dayIndex ->
-                                        viewModel.checkInHabit(row.id, dayIndex)
+                                        if (!row.pending) {
+                                            viewModel.checkInHabit(row.id, dayIndex)
+                                        }
                                     }
                                 )
                             }
@@ -146,7 +151,7 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         isVisible = showCreate,
         onDismiss = { showCreate = false },
         onConfirm = { data ->
-            viewModel.createHabit(data.name) { ok ->
+            viewModel.createHabit(data) { ok ->
                 if (ok) showCreate = false
             }
         }
