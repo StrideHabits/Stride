@@ -36,10 +36,22 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import com.mpieterse.stride.ui.layout.shared.components.ImagePicker
 import java.io.ByteArrayOutputStream
 import java.util.UUID
+import com.mpieterse.stride.utils.bitmapToBase64
+import com.mpieterse.stride.utils.base64ToBitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,9 +64,15 @@ fun UpsertDialog(
     initialData: HabitDraft? = null,
     confirmButtonLabel: String = "Add to List"
 ) {
-    if (!isVisible) return
-
     val baseCategories = listOf("Health & Fitness", "Productivity", "Mindfulness", "Wellness")
+    
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
+                scaleIn(initialScale = 0.9f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)) + 
+               scaleOut(targetScale = 0.9f, animationSpec = tween(150, easing = FastOutLinearInEasing))
+    ) {
     var categories by remember { mutableStateOf(baseCategories) }
 
     var name by remember { mutableStateOf("") }
@@ -146,12 +164,18 @@ fun UpsertDialog(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 )
-                if (nameError != null) {
-                    Text(
-                        text = nameError!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                AnimatedVisibility(
+                    visible = nameError != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    if (nameError != null) {
+                        Text(
+                            text = nameError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
 
                 OutlinedTextField(
@@ -175,12 +199,18 @@ fun UpsertDialog(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 )
-                if (frequencyError != null) {
-                    Text(
-                        text = frequencyError!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                AnimatedVisibility(
+                    visible = frequencyError != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    if (frequencyError != null) {
+                        Text(
+                            text = frequencyError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
 
                 ExposedDropdownMenuBox(
@@ -245,17 +275,23 @@ fun UpsertDialog(
                         ),
                         modifier = Modifier.padding(top = 8.dp)
                     )
-                    if (selectedImage != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = {
-                                selectedImage = null
-                                imageBase64 = null
-                                imageMimeType = null
-                                imageFileName = null
+                    AnimatedVisibility(
+                        visible = selectedImage != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        if (selectedImage != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    selectedImage = null
+                                    imageBase64 = null
+                                    imageMimeType = null
+                                    imageFileName = null
+                                }
+                            ) {
+                                Text("Remove image")
                             }
-                        ) {
-                            Text("Remove image")
                         }
                     }
                 }
@@ -309,15 +345,7 @@ fun UpsertDialog(
         ),
         modifier = modifier
     )
+    }
 }
 
-private fun bitmapToBase64(bitmap: Bitmap): String {
-    val outputStream = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-    return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
-}
 
-private fun base64ToBitmap(base64: String): Bitmap? = runCatching {
-    val bytes = Base64.decode(base64, Base64.DEFAULT)
-    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-}.getOrNull()

@@ -5,6 +5,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
@@ -80,31 +89,47 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
 
                 when {
                     state.loading -> {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        AnimatedVisibility(
+                            visible = state.loading,
+                            enter = fadeIn() + scaleIn(initialScale = 0.9f),
+                            exit = fadeOut()
                         ) {
-                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                            Text("Loading…", style = MaterialTheme.typography.bodyMedium)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                Text("Loading…", style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                     }
                     state.error != null -> {
-                        Text(
-                            text = "Error: ${state.error}",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                        AnimatedVisibility(
+                            visible = state.error != null,
+                            enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
+                            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 })
+                        ) {
+                            Text(
+                                text = "Error: ${state.error}",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
                     }
                     else -> {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(state.habits, key = { it.id }) { row ->
+                            items(
+                                items = state.habits,
+                                key = { it.id },
+                                contentType = { "habit" }
+                            ) { row ->
                                 HabitItem(
                                     cardText = row.name,
                                     chipText = row.tag,
@@ -128,20 +153,35 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
             }
         }
 
-        // FAB (stays on top)
-        FloatingActionButton(
-            onClick = { showCreate = true },
-            containerColor = Color(0xFFFF9500),
-            contentColor = Color.White,
+        // FAB (stays on top) with animation
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
                 .zIndex(2f)
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Create Habit"
-            )
+            AnimatedVisibility(
+                visible = !state.loading && state.error == null,
+                enter = fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) + 
+                        scaleIn(initialScale = 0.5f, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                        slideInVertically(
+                            initialOffsetY = { it },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ),
+                exit = fadeOut(animationSpec = tween(200)) + 
+                       scaleOut(targetScale = 0.5f, animationSpec = tween(200))
+            ) {
+                FloatingActionButton(
+                    onClick = { showCreate = true },
+                    containerColor = Color(0xFFFF9500),
+                    contentColor = Color.White
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create Habit"
+                    )
+                }
+            }
         }
     }
 

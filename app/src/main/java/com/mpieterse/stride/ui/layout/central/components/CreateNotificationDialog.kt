@@ -19,6 +19,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import kotlinx.coroutines.launch
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdownStringOnly
@@ -36,9 +46,15 @@ fun CreateNotificationDialog(
     initialData: NotificationData? = null,
     key: String? = null
 ) {
-    if (!isVisible) return
-
     val context = LocalContext.current
+    
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
+                scaleIn(initialScale = 0.9f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)) + 
+               scaleOut(targetScale = 0.9f, animationSpec = tween(150, easing = FastOutLinearInEasing))
+    ) {
     
     // Initialize state - will be reset when dialog opens
     var habitName by remember { mutableStateOf("") }
@@ -90,7 +106,13 @@ fun CreateNotificationDialog(
     // Show time picker dialog
     var showTimePicker by remember { mutableStateOf(false) }
     
-    if (showTimePicker) {
+    AnimatedVisibility(
+        visible = showTimePicker,
+        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
+                scaleIn(initialScale = 0.9f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)) + 
+               scaleOut(targetScale = 0.9f, animationSpec = tween(150, easing = FastOutLinearInEasing))
+    ) {
         TimePickerDialog24Hour(
             initialHour = timeHour.toIntOrNull() ?: 9,
             initialMinute = timeMinute.toIntOrNull() ?: 0,
@@ -150,7 +172,11 @@ fun CreateNotificationDialog(
                         )
                         
                         // Show error if habit is not selected when creating new notification
-                        if (initialData == null && habitName.isBlank() && availableHabits.isNotEmpty()) {
+                        AnimatedVisibility(
+                            visible = initialData == null && habitName.isBlank() && availableHabits.isNotEmpty(),
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
                             Text(
                                 text = "Please select a habit",
                                 style = MaterialTheme.typography.bodySmall.copy(
@@ -321,7 +347,11 @@ fun CreateNotificationDialog(
                         }
                     }
                     
-                    if (selectedDays.isEmpty()) {
+                    AnimatedVisibility(
+                        visible = selectedDays.isEmpty(),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
                         Text(
                             text = "Please select at least one day",
                             style = MaterialTheme.typography.bodySmall.copy(
@@ -414,6 +444,7 @@ fun CreateNotificationDialog(
         ),
         modifier = Modifier.fillMaxWidth(0.95f)
     )
+    }
 }
 
 @Composable

@@ -1,5 +1,6 @@
 package com.mpieterse.stride.ui.layout.central.components
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
@@ -12,15 +13,16 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.roots.HomeNavGraph
 import com.mpieterse.stride.ui.layout.central.roots.HomeScreen
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This composable creates the main app scaffold with bottom navigation using Jetpack Compose (Android Developers, 2024).
-    val controller = rememberNavController()
+    val controller = rememberAnimatedNavController()
     val destinationDefault = HomeScreen.Database
     var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }
 

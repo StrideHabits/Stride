@@ -11,6 +11,7 @@ import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -72,6 +73,8 @@ class NotificationsViewModel @Inject constructor(
                         notificationScheduler.rescheduleAllNotifications(notifications, settings)
                     }
                 }.collect { }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     loading = false,

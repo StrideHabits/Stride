@@ -25,6 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
@@ -34,6 +43,7 @@ import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.mpieterse.stride.utils.bitmapToBase64
 
 @Composable
 fun HabitViewerScreen(
@@ -60,12 +70,9 @@ fun HabitViewerScreen(
                 null
             }
     }
-    val initialImageMime = remember(state.habitImageUrl, state.habitImage) {
-        when {
-            state.habitImageUrl?.endsWith(".png", ignoreCase = true) == true -> "image/png"
-            state.habitImage != null -> "image/jpeg"
-            else -> null
-        }
+    val initialImageMime = remember(state.habitImage) {
+        // We only set a MIME when we actually produce a new Base64 from the bitmap (JPEG)
+        if (state.habitImage != null) "image/jpeg" else null
     }
     val initialImageFileName = remember(state.habitImageUrl) {
         state.habitImageUrl?.substringAfterLast('/')
@@ -163,13 +170,19 @@ fun HabitViewerScreen(
                     }
 
 
-                    if (state.error != null) {
-                        Text(
-                            text = state.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                    AnimatedVisibility(
+                        visible = state.error != null,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 })
+                    ) {
+                        if (state.error != null) {
+                            Text(
+                                text = state.error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
                     }
                     
                     
@@ -177,21 +190,33 @@ fun HabitViewerScreen(
             }
         }
 
-        // Edit FAB
-        FloatingActionButton(
-            onClick = { showEditDialog = true },
-            containerColor = Color(0xFFFF9500),
-            contentColor = Color.White,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-                .size(56.dp)
+        // Edit FAB with animation
+        AnimatedVisibility(
+            visible = !state.loading,
+            enter = fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) + 
+                    scaleIn(initialScale = 0.5f, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                    slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ),
+            exit = fadeOut(animationSpec = tween(200)) + 
+                   scaleOut(targetScale = 0.5f, animationSpec = tween(200))
         ) {
-            Icon(
-                painter = painterResource(R.drawable.xic_uic_outline_edit),
-                contentDescription = "Edit Habit",
-                modifier = Modifier.size(24.dp)
-            )
+            FloatingActionButton(
+                onClick = { showEditDialog = true },
+                containerColor = Color(0xFFFF9500),
+                contentColor = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .size(56.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.xic_uic_outline_edit),
+                    contentDescription = "Edit Habit",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 
@@ -252,11 +277,7 @@ private fun HabitImageViewer(
     }
 }
 
-private fun bitmapToBase64(bitmap: Bitmap): String {
-    val outputStream = java.io.ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-    return android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.DEFAULT)
-}
+
 
 @Composable
 private fun StreakBanner(

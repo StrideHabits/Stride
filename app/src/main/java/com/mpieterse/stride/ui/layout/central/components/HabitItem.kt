@@ -43,9 +43,10 @@ fun HabitItem( //This composable displays individual habit items with progress t
     checklist: List<Boolean> = emptyList(),
     enabled: Boolean = true,
     onClick: () -> Unit = {},
-    onCheckInClick: (Int) -> Unit = {}
+    onCheckInClick: (Int) -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
-    Column {
+    Column(modifier = modifier) {
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent,

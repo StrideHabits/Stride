@@ -4,13 +4,49 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -105,55 +141,94 @@ fun NotificationsScreen(
                 )
 
                 // Notifications List
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "Habit Reminders",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        ),
-                        color = Color.Black,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                val contentState = when {
+                    state.loading -> NotificationsContentState.Loading
+                    state.notifications.isEmpty() -> NotificationsContentState.Empty
+                    else -> NotificationsContentState.Content
+                }
 
-                    if (state.loading) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Loading notifications...")
-                        }
-                    } else if (state.notifications.isEmpty()) {
-                        EmptyNotificationsState(
-                            modifier = Modifier.fillMaxWidth()
+                AnimatedContent(
+                    targetState = contentState,
+                    modifier = Modifier.weight(1f),
+                    transitionSpec = {
+                        val enter = fadeIn(
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                delayMillis = 90,
+                                easing = FastOutSlowInEasing
+                            )
+                        ) + scaleIn(
+                            initialScale = 0.98f,
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                delayMillis = 90,
+                                easing = FastOutSlowInEasing
+                            )
                         )
-                    } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(
-                                items = state.notifications,
-                                key = { it.id }
-                            ) { notification ->
-                                NotificationItem(
-                                    notification = notification,
-                                    onToggleEnabled = { enabled ->
-                                        viewModel.toggleNotificationEnabled(notification.id, enabled)
-                                    },
-                                    onEdit = {
-                                        checkPermissionsAndExecute {
-                                            notificationToEdit = notification
-                                            showEditNotificationDialog = true
-                                        }
-                                    },
-                                    onDelete = {
-                                        viewModel.deleteNotification(notification.id)
-                                    }
+                        enter togetherWith fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 150,
+                                easing = FastOutLinearInEasing
+                            )
+                        )
+                    },
+                    label = "notifications-content"
+                ) { target ->
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = "Habit Reminders",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            ),
+                            color = Color.Black,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+
+                        when (target) {
+                            NotificationsContentState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Loading notifications...")
+                                }
+                            }
+                            NotificationsContentState.Empty -> {
+                                EmptyNotificationsState(
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+                            }
+                            NotificationsContentState.Content -> {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    items(
+                                        items = state.notifications,
+                                        key = { it.id },
+                                        contentType = { "notification" }
+                                    ) { notification ->
+                                        NotificationItem(
+                                            notification = notification,
+                                            onToggleEnabled = { enabled ->
+                                                viewModel.toggleNotificationEnabled(notification.id, enabled)
+                                            },
+                                            onEdit = {
+                                                checkPermissionsAndExecute {
+                                                    notificationToEdit = notification
+                                                    showEditNotificationDialog = true
+                                                }
+                                            },
+                                            onDelete = {
+                                                viewModel.deleteNotification(notification.id)
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -161,24 +236,39 @@ fun NotificationsScreen(
             }
         }
 
-        // Floating Action Button
-        FloatingActionButton(
-            onClick = {
-                checkPermissionsAndExecute {
-                    showCreateNotificationDialog = true
-                }
-            },
-            containerColor = Color(0xFFFF9500),
-            contentColor = Color.White,
+        // Floating Action Button with animation
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.xic_uic_outline_plus),
-                contentDescription = "Add Notification",
-                modifier = Modifier.padding(4.dp)
-            )
+            AnimatedVisibility(
+                visible = !state.loading,
+                enter = fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) + 
+                        scaleIn(initialScale = 0.5f, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                        slideInVertically(
+                            initialOffsetY = { it },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ),
+                exit = fadeOut(animationSpec = tween(200)) + 
+                       scaleOut(targetScale = 0.5f, animationSpec = tween(200))
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        checkPermissionsAndExecute {
+                            showCreateNotificationDialog = true
+                        }
+                    },
+                    containerColor = Color(0xFFFF9500),
+                    contentColor = Color.White
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.xic_uic_outline_plus),
+                        contentDescription = "Add Notification",
+                        modifier = Modifier.padding(4.dp)
+                    )
+                }
+            }
         }
     }
     
@@ -403,4 +493,10 @@ private fun EmptyNotificationsState(
             )
         }
     }
+}
+
+private enum class NotificationsContentState {
+    Loading,
+    Empty,
+    Content
 }

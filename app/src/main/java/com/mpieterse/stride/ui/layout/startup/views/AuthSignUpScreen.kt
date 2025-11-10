@@ -73,13 +73,7 @@ fun AuthSignUpScreen(
     val passwordsMatch = formState.passwordDefault.value == formState.passwordConfirm.value
     val showPasswordMatchError = formState.passwordConfirm.value.isNotEmpty() && !passwordsMatch
 
-    // Clear authentication error (not validation errors) when user starts typing
-    LaunchedEffect(formState.identity.value, formState.passwordDefault.value, formState.passwordConfirm.value) {
-        // Only clear auth errors, not validation errors
-        if (errorMessage != null) {
-            viewModel.clearError()
-        }
-    }
+    // Clear authentication error only in direct response to user input (handled in onValueChange)
 
 // --- UI
 
@@ -138,6 +132,7 @@ fun AuthSignUpScreen(
                     value = formState.identity.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onIdentityChanged(value)
+                        if (errorMessage != null) viewModel.clearError()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     inputType = KeyboardType.Email,
@@ -187,6 +182,7 @@ fun AuthSignUpScreen(
                     value = formState.passwordDefault.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onPasswordDefaultChanged(value)
+                        if (errorMessage != null) viewModel.clearError()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fieldType = TextFieldType.Private,
@@ -213,6 +209,7 @@ fun AuthSignUpScreen(
                     value = formState.passwordConfirm.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onPasswordConfirmChanged(value)
+                        if (errorMessage != null) viewModel.clearError()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fieldType = TextFieldType.Private,

@@ -1,19 +1,29 @@
 package com.mpieterse.stride.ui.layout.central.roots
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.google.accompanist.navigation.animation.AnimatedNavHost
+import com.google.accompanist.navigation.animation.composable
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 import com.mpieterse.stride.ui.layout.central.views.DebugScreen
 import com.mpieterse.stride.ui.layout.central.views.HabitViewerScreen
 import com.mpieterse.stride.ui.layout.central.views.HomeDatabaseScreen
 import com.mpieterse.stride.ui.layout.central.views.HomeSettingsScreen
 import com.mpieterse.stride.ui.layout.central.views.NotificationsScreen
+import com.mpieterse.stride.ui.animations.fadeThroughEnter
+import com.mpieterse.stride.ui.animations.fadeThroughExit
+import com.mpieterse.stride.ui.animations.sharedAxisBackwardEnter
+import com.mpieterse.stride.ui.animations.sharedAxisBackwardExit
+import com.mpieterse.stride.ui.animations.sharedAxisForwardEnter
+import com.mpieterse.stride.ui.animations.sharedAxisForwardExit
+import com.mpieterse.stride.ui.animations.slideDownExit
+import com.mpieterse.stride.ui.animations.slideUpEnter
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun HomeNavGraph(
     modifier: Modifier = Modifier,
@@ -21,14 +31,19 @@ fun HomeNavGraph(
     currentDestination: String,
     notificationsViewModel: NotificationsViewModel
 ) {
-    NavHost(
+    AnimatedNavHost(
         navController = controller,
-        startDestination = currentDestination
+        startDestination = currentDestination,
+        modifier = modifier,
+        enterTransition = { fadeThroughEnter() },
+        exitTransition = { fadeThroughExit() },
+        popEnterTransition = { fadeThroughEnter() },
+        popExitTransition = { fadeThroughExit() }
     ) {
         // Database
         composable(route = HomeScreen.Database.route) {
             HomeDatabaseScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onNavigateToHabitViewer = { id ->
                     controller.navigate(HomeScreen.HabitViewer.buildRoute(id))
                 }
@@ -40,7 +55,7 @@ fun HomeNavGraph(
             route = HomeScreen.Notifications.route
         ) {
             NotificationsScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 viewModel = notificationsViewModel
             )
         }
@@ -50,7 +65,7 @@ fun HomeNavGraph(
             route = HomeScreen.Settings.route
         ) {
             HomeSettingsScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onEnterDebug = {
                     controller.navigate(HomeScreen.Debug.route)
                 }
@@ -60,11 +75,15 @@ fun HomeNavGraph(
         // HabitViewer
         composable(
             route = HomeScreen.HabitViewer.route,  // "habit/{habitId}"
-            arguments = listOf(navArgument("habitId") { type = NavType.StringType })
+            arguments = listOf(navArgument("habitId") { type = NavType.StringType }),
+            enterTransition = { slideUpEnter() },
+            exitTransition = { sharedAxisForwardExit() },
+            popEnterTransition = { sharedAxisBackwardEnter() },
+            popExitTransition = { slideDownExit() }
         ) { backStackEntry ->
             val habitId = backStackEntry.arguments?.getString("habitId") ?: return@composable
             HabitViewerScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 habitId = habitId,
                 onBackClick = { controller.popBackStack() }
             )
@@ -75,7 +94,7 @@ fun HomeNavGraph(
             route = HomeScreen.Debug.route
         ) {
             DebugScreen(
-                modifier = modifier
+                modifier = Modifier
             )
         }
     }
