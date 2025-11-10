@@ -2,10 +2,8 @@ package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.services.AppEventBus
 import com.mpieterse.stride.core.services.HabitNameOverrideService
-import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.local.entities.CheckInEntity
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
@@ -68,7 +66,6 @@ class HomeDatabaseViewModel @Inject constructor(
     }
     private fun setStatus(s: String) { _state.value = _state.value.copy(status = s) }
 
-    // suspend wrapper so we can call suspend code inside
     private suspend fun <T> withLoading(block: suspend () -> T): T {
         _state.value = _state.value.copy(loading = true)
         return try { block() } finally { _state.value = _state.value.copy(loading = false) }
@@ -82,26 +79,13 @@ class HomeDatabaseViewModel @Inject constructor(
     private suspend fun refreshInternal() = withLoading {
         _state.value = _state.value.copy(error = null)
 
-        // use existing repo methods
-        val habitsResult = habitsRepo.list()
-        val habitDtos: List<HabitDto> = when (habitsResult) {
-            is ApiResult.Ok<*> -> (habitsResult.data as? List<*>)?.filterIsInstance<HabitDto>() ?: emptyList()
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    error = "${habitsResult.code ?: ""} ${habitsResult.message ?: "Unknown error"}"
-                )
-                setStatus("ERR ${habitsResult.code ?: ""} • list habits")
-                log("habits ❌ ${habitsResult.code} ${habitsResult.message}")
-                return@withLoading
-            }
-            else -> emptyList()
-        }
-
+        // OFFLINE-FIRST: snapshot habits from Room
+        val habitEntities = try { habitsRepo.observeAll().first() } catch (_: Exception) { emptyList() }
 
         val days = lastThreeDays()
         val header = days.map { d -> "${d.dayOfWeek.name.take(3)}\n${d.dayOfMonth}" }
 
-        val rows = habitDtos.map { h ->
+        val rows = habitEntities.map { h ->
             val local = try { checkinsRepo.observe(h.id).first() } catch (_: Exception) { emptyList() }
             val completed = localCompletedSet(local)
 
@@ -124,8 +108,8 @@ class HomeDatabaseViewModel @Inject constructor(
             daysHeader = header,
             error = null
         )
-        setStatus("OK • list habits")
-        log("habits ✅ count=${rows.size}")
+        setStatus("OK • list habits (local)")
+        log("habits(local) ✅ count=${rows.size}")
     }
 
     private fun localCompletedSet(list: List<CheckInEntity>): Set<LocalDate> =
@@ -134,25 +118,26 @@ class HomeDatabaseViewModel @Inject constructor(
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toSet()
 
+    // OFFLINE-FIRST create: queue locally
     fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
         withLoading {
-            when (val r = habitsRepo.create(name)) {            // existing repo method
-                is ApiResult.Ok<*> -> {
-                    setStatus("OK • create habit")
-                    log("create ✅ ${(r.data as? HabitDto)?.name ?: "—"}")
-                    eventBus.emit(AppEventBus.AppEvent.HabitCreated)
-                    refresh()
-                    onDone(true)
-                }
-                is ApiResult.Err -> {
-                    setStatus("ERR ${r.code ?: ""} • create habit")
-                    log("create ❌ ${r.code} ${r.message}")
-                    _state.value = _state.value.copy(
-                        error = "${r.code ?: ""} ${r.message ?: "Failed to create"}"
-                    )
-                    onDone(false)
-                }
-                else -> onDone(false)
+            try {
+                habitsRepo.createLocal(
+                    name = name.trim(),
+                    frequency = 0,
+                    tag = null,
+                    imageUrl = null
+                )
+                setStatus("OK • create habit (queued)")
+                log("create(local) ✅ $name")
+                eventBus.emit(AppEventBus.AppEvent.HabitCreated)
+                refresh()
+                onDone(true)
+            } catch (e: Exception) {
+                setStatus("ERR • create habit")
+                _state.value = _state.value.copy(error = e.message ?: "Failed to create")
+                log("create(local) ❌ ${e.message}")
+                onDone(false)
             }
         }
     }
