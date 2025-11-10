@@ -1,3 +1,4 @@
+// data/local/dao/CheckInDao.kt   (add markSynced helper)
 package com.mpieterse.stride.data.local.dao
 
 import androidx.room.*
@@ -14,4 +15,7 @@ interface CheckInDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(vararg items: CheckInEntity)
+
+    @Query("UPDATE check_ins SET syncState=:state, updatedAt=:updatedAt, rowVersion=:rowVersion WHERE id=:id")
+    suspend fun markSynced(id: String, state: String, updatedAt: String, rowVersion: String)
 }
