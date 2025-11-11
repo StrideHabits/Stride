@@ -24,6 +24,9 @@ import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
 import com.mpieterse.stride.ui.layout.central.components.HabitData
 import com.mpieterse.stride.ui.layout.central.viewmodels.HabitViewerViewModel
+import com.mpieterse.stride.utils.bitmapToBase64
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 @Composable
@@ -37,9 +40,27 @@ fun HabitViewerScreen(
     LaunchedEffect(habitId) { vm.load(habitId) }
 
     var showEditDialog by remember { mutableStateOf(false) }
+    var initialImageBase64 by remember { mutableStateOf<String?>(null) }
     val bg = MaterialTheme.colorScheme.background
     val onBg = MaterialTheme.colorScheme.onBackground
     val brand = MaterialTheme.colorScheme.primary
+    
+    // Convert habit image to Base64 when editing dialog opens
+    LaunchedEffect(showEditDialog, state.habitImage) {
+        val image = state.habitImage
+        initialImageBase64 = if (showEditDialog && image != null) {
+            withContext(Dispatchers.Default) { 
+                bitmapToBase64(image) 
+            }
+        } else {
+            null
+        }
+    }
+    
+    // Determine MIME type from bitmap
+    val initialImageMime = remember(state.habitImage) {
+        state.habitImage?.let { if (it.hasAlpha()) "image/png" else "image/jpeg" }
+    }
 
     Box(modifier = modifier.fillMaxSize().background(bg)) {
         Column(Modifier.fillMaxSize()) {
@@ -150,9 +171,18 @@ fun HabitViewerScreen(
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
             vm.updateLocalName(updated.name)
+            // TODO: Handle image update if imageBase64 is provided
+            // This would require updating the habit's image via the repository
             showEditDialog = false
         },
-        initialData = HabitData(name = state.displayName)
+        initialData = HabitData(
+            name = state.displayName,
+            frequency = state.frequency,
+            tag = state.tag,
+            imageBase64 = initialImageBase64,
+            imageMimeType = initialImageMime,
+            imageFileName = null // File name can be extracted from URL if available
+        )
     )
 }
 

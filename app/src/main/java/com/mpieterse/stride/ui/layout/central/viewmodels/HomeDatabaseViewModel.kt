@@ -123,15 +123,15 @@ class HomeDatabaseViewModel @Inject constructor(
             .toSet()
 
     // Queue create locally via repo API
-    fun createHabit(name: String, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+    fun createHabit(name: String, frequency: Int = 0, tag: String? = null, imageUrl: String? = null, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
         withLoading {
             try {
                 habitsRepo.create(
                     HabitCreateDto(
                         name = name.trim(),
-                        frequency = 0,
-                        tag = null,
-                        imageUrl = null
+                        frequency = frequency.coerceAtLeast(0),
+                        tag = tag?.trim().takeUnless { it.isNullOrEmpty() },
+                        imageUrl = imageUrl?.trim().takeUnless { it.isNullOrEmpty() }
                     )
                 )
                 setStatus("OK • create habit")

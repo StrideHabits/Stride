@@ -33,6 +33,8 @@ class HabitViewerViewModel @Inject constructor(
         val habitId: String = "",
         val habitName: String = "",
         val displayName: String = "",
+        val frequency: Int = 0,
+        val tag: String? = null,
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
         val completedDates: List<Int> = emptyList()
@@ -50,26 +52,29 @@ class HabitViewerViewModel @Inject constructor(
         observeJob = viewModelScope.launch {
             combine(
                 habits.observeById(habitId)
-                    .map { it?.name ?: "(Unknown habit)" }
                     .distinctUntilChanged(),
                 checkins.observeForHabit(habitId)
                     .map { list -> list } // DTOs already
                     .onStart { emit(emptyList()) }
                     .catch { emit(emptyList()) }
-            ) { habitName, localCheckins ->
+            ) { habitDto, localCheckins ->
+                val habitName = habitDto?.name ?: "(Unknown habit)"
                 val display = nameOverrideService.getDisplayName(habitId, habitName)
                 val completedThisMonth = monthDays(localCheckins)
                 val streak = computeStreakDays(localCheckins)
-                Triple(habitName, display, Pair(completedThisMonth, streak))
+                Pair(habitDto, Triple(habitName, display, Pair(completedThisMonth, streak)))
             }
                 .onStart { _state.update { it.copy(loading = true) } }
-                .collect { (habitName, display, pair) ->
+                .collect { (habitDto, triple) ->
+                    val (habitName, display, pair) = triple
                     val (days, streak) = pair
                     _state.update {
                         it.copy(
                             loading = false,
                             habitName = habitName,
                             displayName = display,
+                            frequency = habitDto?.frequency ?: 0,
+                            tag = habitDto?.tag,
                             completedDates = days,
                             streakDays = streak
                         )

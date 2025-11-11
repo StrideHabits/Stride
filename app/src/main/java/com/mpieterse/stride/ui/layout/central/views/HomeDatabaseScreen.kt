@@ -144,7 +144,14 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         isVisible = showCreate,
         onDismiss = { showCreate = false },
         onConfirm = { data ->
-            viewModel.createHabit(data.name) { ok ->
+            // TODO: Handle image upload - need to upload imageBase64 to server and get imageUrl
+            // For now, pass imageUrl as null if no image is uploaded
+            viewModel.createHabit(
+                name = data.name,
+                frequency = data.frequency,
+                tag = data.tag,
+                imageUrl = null // TODO: Upload image and get URL
+            ) { ok ->
                 if (ok) showCreate = false
             }
         }
