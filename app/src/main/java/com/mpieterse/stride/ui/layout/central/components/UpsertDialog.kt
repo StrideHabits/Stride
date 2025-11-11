@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import com.mpieterse.stride.ui.layout.central.models.HabitDraft
@@ -58,290 +60,292 @@ fun UpsertDialog(
     confirmButtonLabel: String = "Add to List"
 ) {
     val baseCategories = listOf("Health & Fitness", "Productivity", "Mindfulness", "Wellness")
-    
+
     if (isVisible) {
-    var categories by remember { mutableStateOf(baseCategories) }
+        var categories by remember { mutableStateOf(baseCategories) }
 
-    var name by remember { mutableStateOf("") }
-    var nameError by remember { mutableStateOf<String?>(null) }
-    var frequencyText by remember { mutableStateOf("") }
-    var frequencyError by remember { mutableStateOf<String?>(null) }
-    var tagExpanded by remember { mutableStateOf(false) }
-    var selectedTag by remember { mutableStateOf<String?>(null) }
-    var selectedImage by remember { mutableStateOf<Bitmap?>(null) }
-    var imageBase64 by remember { mutableStateOf<String?>(null) }
-    var imageMimeType by remember { mutableStateOf<String?>(null) }
-    var imageFileName by remember { mutableStateOf<String?>(null) }
+        var name by remember { mutableStateOf("") }
+        var nameError by remember { mutableStateOf<String?>(null) }
+        var frequencyText by remember { mutableStateOf("") }
+        var frequencyError by remember { mutableStateOf<String?>(null) }
+        var tagExpanded by remember { mutableStateOf(false) }
+        var selectedTag by remember { mutableStateOf<String?>(null) }
+        var selectedImage by remember { mutableStateOf<Bitmap?>(null) }
+        var imageBase64 by remember { mutableStateOf<String?>(null) }
+        var imageMimeType by remember { mutableStateOf<String?>(null) }
+        var imageFileName by remember { mutableStateOf<String?>(null) }
 
-    // Reset state when dialog opens or initialData changes
-    LaunchedEffect(isVisible, initialData) {
-        if (isVisible) {
-            categories = baseCategories
-            if (initialData != null) {
-                name = initialData.name
-                frequencyText = initialData.frequency.toString()
-                if (initialData.tag != null && initialData.tag !in baseCategories) {
-                    categories = baseCategories + initialData.tag
+        // Reset state when dialog opens or initialData changes
+        LaunchedEffect(isVisible, initialData) {
+            if (isVisible) {
+                categories = baseCategories
+                if (initialData != null) {
+                    name = initialData.name
+                    frequencyText = initialData.frequency.toString()
+                    if (initialData.tag != null && initialData.tag !in baseCategories) {
+                        categories = baseCategories + initialData.tag
+                    }
+                    selectedTag = initialData.tag
+                    imageBase64 = initialData.imageBase64
+                    imageMimeType = initialData.imageMimeType
+                    imageFileName = initialData.imageFileName
+                    selectedImage = initialData.imageBase64?.let { base64ToBitmap(it) }
+                } else {
+                    name = ""
+                    frequencyText = ""
+                    selectedTag = null
+                    selectedImage = null
+                    imageBase64 = null
+                    imageMimeType = null
+                    imageFileName = null
                 }
-                selectedTag = initialData.tag
-                imageBase64 = initialData.imageBase64
-                imageMimeType = initialData.imageMimeType
-                imageFileName = initialData.imageFileName
-                selectedImage = initialData.imageBase64?.let { base64ToBitmap(it) }
+                nameError = null
+                frequencyError = null
             } else {
                 name = ""
                 frequencyText = ""
+                categories = baseCategories
                 selectedTag = null
                 selectedImage = null
                 imageBase64 = null
                 imageMimeType = null
                 imageFileName = null
+                nameError = null
+                frequencyError = null
             }
-            nameError = null
-            frequencyError = null
-        } else {
-            name = ""
-            frequencyText = ""
-            categories = baseCategories
-            selectedTag = null
-            selectedImage = null
-            imageBase64 = null
-            imageMimeType = null
-            imageFileName = null
-            nameError = null
-            frequencyError = null
         }
-    }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp
-                ),
-                color = Color.Black,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = {
-                        name = it
-                        if (nameError != null) nameError = null
-                    },
-                    label = { Text("Habit name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    isError = nameError != null,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Gray.copy(alpha = 0.7f),
-                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
-                        focusedLabelColor = Color.Gray.copy(alpha = 0.8f),
-                        unfocusedLabelColor = Color.Gray.copy(alpha = 0.6f),
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-                AnimatedVisibility(
-                    visible = nameError != null,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(top = 8.dp)
                 ) {
-                    if (nameError != null) {
-                        Text(
-                            text = nameError!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = frequencyText,
-                    onValueChange = {
-                        frequencyText = it.filter { ch -> ch.isDigit() }
-                        if (frequencyError != null) frequencyError = null
-                    },
-                    label = { Text("Frequency (days/week)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isError = frequencyError != null,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Gray.copy(alpha = 0.7f),
-                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
-                        focusedLabelColor = Color.Gray.copy(alpha = 0.8f),
-                        unfocusedLabelColor = Color.Gray.copy(alpha = 0.6f),
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                AnimatedVisibility(
-                    visible = frequencyError != null,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    if (frequencyError != null) {
-                        Text(
-                            text = frequencyError!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-
-                ExposedDropdownMenuBox(
-                    expanded = tagExpanded,
-                    onExpandedChange = { tagExpanded = it }
-                ) {
-                    TextField(
-                        value = selectedTag ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Tag") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tagExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        colors = ExposedDropdownMenuDefaults.textFieldColors(
-                            focusedIndicatorColor = Color.Gray.copy(alpha = 0.7f),
-                            unfocusedIndicatorColor = Color.Gray.copy(alpha = 0.4f)
-                        )
-                    )
-                    ExposedDropdownMenu(
-                        expanded = tagExpanded,
-                        onDismissRequest = { tagExpanded = false }
-                    ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                text = { Text(category) },
-                                onClick = {
-                                    selectedTag = category
-                                    tagExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Column {
-                    Text(
-                        text = "Attach an image (optional)",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ImagePicker(
-                        selectedImage = selectedImage,
-                        onImageSelected = { bitmap ->
-                            selectedImage = bitmap
-                            if (bitmap != null) {
-                                val encoded = bitmapToBase64(bitmap)
-                                if (encoded != null) {
-                                    imageBase64 = encoded
-                                    // Determine MIME type based on whether bitmap has transparency
-                                    imageMimeType = if (bitmap.hasAlpha()) "image/png" else "image/jpeg"
-                                    val extension = if (bitmap.hasAlpha()) "png" else "jpg"
-                                    imageFileName = "habit_${UUID.randomUUID()}.$extension"
-                                } else {
-                                    // Encoding failed, clear image state
-                                    imageBase64 = null
-                                    imageMimeType = null
-                                    imageFileName = null
-                                }
-                            } else {
-                                imageBase64 = null
-                                imageMimeType = null
-                                imageFileName = null
-                            }
-                        }
-                    )
-                    Text(
-                        text = "Images are stored in BLOB storage and synced once your account reconnects.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color.Gray.copy(alpha = 0.7f)
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = {
+                            name = it
+                            if (nameError != null) nameError = null
+                        },
+                        label = { Text("Habit name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = nameError != null,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Gray.copy(alpha = 0.7f),
+                            unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                            focusedLabelColor = Color.Gray.copy(alpha = 0.8f),
+                            unfocusedLabelColor = Color.Gray.copy(alpha = 0.6f),
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
                         ),
-                        modifier = Modifier.padding(top = 8.dp)
+                        shape = RoundedCornerShape(8.dp)
                     )
                     AnimatedVisibility(
-                        visible = selectedImage != null,
+                        visible = nameError != null,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        if (selectedImage != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = {
-                                    selectedImage = null
+                        if (nameError != null) {
+                            Text(
+                                text = nameError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = frequencyText,
+                        onValueChange = {
+                            frequencyText = it.filter { ch -> ch.isDigit() }
+                            if (frequencyError != null) frequencyError = null
+                        },
+                        label = { Text("Frequency (days/week)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = frequencyError != null,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Gray.copy(alpha = 0.7f),
+                            unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                            focusedLabelColor = Color.Gray.copy(alpha = 0.8f),
+                            unfocusedLabelColor = Color.Gray.copy(alpha = 0.6f),
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    AnimatedVisibility(
+                        visible = frequencyError != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        if (frequencyError != null) {
+                            Text(
+                                text = frequencyError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    ExposedDropdownMenuBox(
+                        expanded = tagExpanded,
+                        onExpandedChange = { tagExpanded = it }
+                    ) {
+                        TextField(
+                            value = selectedTag ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Tag") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tagExpanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                focusedIndicatorColor = Color.Gray.copy(alpha = 0.7f),
+                                unfocusedIndicatorColor = Color.Gray.copy(alpha = 0.4f)
+                            )
+                        )
+                        ExposedDropdownMenu(
+                            expanded = tagExpanded,
+                            onDismissRequest = { tagExpanded = false }
+                        ) {
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        selectedTag = category
+                                        tagExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Column {
+                        Text(
+                            text = "Attach an image (optional)",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ImagePicker(
+                            selectedImage = selectedImage,
+                            onImageSelected = { bitmap ->
+                                selectedImage = bitmap
+                                if (bitmap != null) {
+                                    val encoded = bitmapToBase64(bitmap)
+                                    if (encoded != null) {
+                                        imageBase64 = encoded
+                                        // Determine MIME type based on whether bitmap has transparency
+                                        imageMimeType =
+                                            if (bitmap.hasAlpha()) "image/png" else "image/jpeg"
+                                        val extension = if (bitmap.hasAlpha()) "png" else "jpg"
+                                        imageFileName = "habit_${UUID.randomUUID()}.$extension"
+                                    } else {
+                                        // Encoding failed, clear image state
+                                        imageBase64 = null
+                                        imageMimeType = null
+                                        imageFileName = null
+                                    }
+                                } else {
                                     imageBase64 = null
                                     imageMimeType = null
                                     imageFileName = null
                                 }
-                            ) {
-                                Text("Remove image")
+                            }
+                        )
+                        Text(
+                            text = "Images are stored in BLOB storage and synced once your account reconnects.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color.Gray.copy(alpha = 0.7f)
+                            ),
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        AnimatedVisibility(
+                            visible = selectedImage != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            if (selectedImage != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedImage = null
+                                        imageBase64 = null
+                                        imageMimeType = null
+                                        imageFileName = null
+                                    }
+                                ) {
+                                    Text("Remove image")
+                                }
                             }
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isBlank()) {
-                        nameError = "Please enter a name."
-                        return@Button
-                    }
-                    val trimmedName = name.trim()
-                    if (trimmedName.isBlank()) {
-                        nameError = "Please enter a valid habit name."
-                        return@Button
-                    }
-                    val frequency = frequencyText.toIntOrNull()
-                    if (frequency == null || frequency !in 0..7) {
-                        frequencyError = "Enter a value between 0 and 7."
-                        return@Button
-                    }
-                    onConfirm(
-                        HabitDraft(
-                            name = trimmedName,
-                            frequency = frequency,
-                            tag = selectedTag?.takeIf { it.isNotBlank() },
-                            imageBase64 = imageBase64,
-                            imageMimeType = imageMimeType,
-                            imageFileName = imageFileName
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (name.isBlank()) {
+                            nameError = "Please enter a name."
+                            return@Button
+                        }
+                        val trimmedName = name.trim()
+                        if (trimmedName.isBlank()) {
+                            nameError = "Please enter a valid habit name."
+                            return@Button
+                        }
+                        val frequency = frequencyText.toIntOrNull()
+                        if (frequency == null || frequency !in 0..7) {
+                            frequencyError = "Enter a value between 0 and 7."
+                            return@Button
+                        }
+                        onConfirm(
+                            HabitDraft(
+                                name = trimmedName,
+                                frequency = frequency,
+                                tag = selectedTag?.takeIf { it.isNotBlank() },
+                                imageBase64 = imageBase64,
+                                imageMimeType = imageMimeType,
+                                imageFileName = imageFileName
+                            )
                         )
-                    )
-                },
-                enabled = name.trim().isNotBlank() && frequencyText.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF9500),
-                    disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) { Text(confirmButtonLabel, color = Color.White) }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(8.dp)
-            ) { Text("Cancel") }
-        },
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false
-        ),
-        modifier = modifier
-    )
+                    },
+                    enabled = name.trim().isNotBlank() && frequencyText.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF9500),
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) { Text(confirmButtonLabel, color = Color.White) }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(8.dp)
+                ) { Text("Cancel") }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false
+            ),
+            modifier = modifier
+        )
     }
+}
 
 

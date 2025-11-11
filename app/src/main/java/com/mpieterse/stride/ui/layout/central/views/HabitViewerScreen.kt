@@ -35,6 +35,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import android.net.Uri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
@@ -74,7 +75,7 @@ fun HabitViewerScreen(
         // Determine MIME type based on whether bitmap has transparency
         state.habitImage?.let { if (it.hasAlpha()) "image/png" else "image/jpeg" }
     }
-    val initialImageFileName = remember(state.habitImageUrl) {
+    val initialImageFileName: String? = remember(state.habitImageUrl) {
         state.habitImageUrl?.let { url ->
             runCatching {
                 Uri.parse(url).lastPathSegment
