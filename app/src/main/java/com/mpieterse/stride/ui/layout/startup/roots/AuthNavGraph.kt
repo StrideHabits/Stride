@@ -13,21 +13,26 @@ import com.mpieterse.stride.ui.layout.startup.views.AuthSignUpScreen
 @Composable
 fun AuthNavGraph(
     onGoToHomeActivity: () -> Unit,
-    modifier: Modifier  = Modifier,
+    modifier: Modifier = Modifier,
     authViewModel: AuthViewModel
 ) {
     val controller = rememberNavController()
-    NavHost(navController = controller, startDestination = AuthScreen.Launch.route) {
+    
+    NavHost(
+        navController = controller,
+        startDestination = AuthScreen.Launch.route,
+        modifier = modifier
+    ) {
         composable(route = AuthScreen.Launch.route) {
             AuthLaunchScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
                 onNavigateToSignUp = { controller.navigate(AuthScreen.SignUp.route) }
             )
         }
         composable(route = AuthScreen.SignIn.route) {
             AuthSignInScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onSignIn = { authViewModel.signIn() },
                 onGoogleSignIn = { authViewModel.googleSignIn() },
                 viewModel = authViewModel
@@ -35,7 +40,7 @@ fun AuthNavGraph(
         }
         composable(route = AuthScreen.SignUp.route) {
             AuthSignUpScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onSignUp = { authViewModel.signUp() },
                 onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
                 viewModel = authViewModel

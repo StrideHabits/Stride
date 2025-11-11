@@ -19,6 +19,7 @@ class AppEventBus @Inject constructor() {
     sealed class AppEvent {
         object HabitCreated : AppEvent()
         object HabitUpdated : AppEvent()
+        data class HabitDeleted(val habitId: String) : AppEvent()
         object CheckInCompleted : AppEvent()
         object HabitNameChanged : AppEvent()
     }

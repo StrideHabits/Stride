@@ -1,5 +1,9 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +42,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -60,6 +67,8 @@ fun AuthSignInScreen(
     }
 
     val formState by viewModel.signInForm.formState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
 // --- UI
 
@@ -90,19 +99,41 @@ fun AuthSignInScreen(
             )
 
             Spacer(
-                Modifier.height(64.dp)
+                Modifier.height(32.dp)
             )
+            
+            // Error Message
+            AnimatedVisibility(
+                visible = errorMessage != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                errorMessage?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
             LocalOutlinedTextField(
                 label = "Email Address",
                 value = formState.identity.value,
                 onValueChange = { value ->
                     viewModel.signInForm.onIdentityChanged(value)
+                    viewModel.clearError()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 inputType = KeyboardType.Email,
                 fieldType = TextFieldType.Default,
                 inputAction = ImeAction.Next,
-                isComponentErrored = (formState.identity.error != null)
+                isComponentErrored = (formState.identity.error != null),
+                isComponentEnabled = !isLoading
             )
 
             Spacer(
@@ -113,11 +144,13 @@ fun AuthSignInScreen(
                 value = formState.password.value,
                 onValueChange = { value ->
                     viewModel.signInForm.onPasswordChanged(value)
+                    viewModel.clearError()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 fieldType = TextFieldType.Private,
                 inputAction = ImeAction.Done,
-                isComponentErrored = (formState.password.error != null)
+                isComponentErrored = (formState.password.error != null),
+                isComponentEnabled = !isLoading
             )
 
             Spacer(
@@ -129,7 +162,8 @@ fun AuthSignInScreen(
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                 modifier = Modifier
                     .defaultMinSize(minHeight = 1.dp)
-                    .align(Alignment.End)
+                    .align(Alignment.End),
+                enabled = !isLoading
             ) {
                 Text(
                     text = "Forgot your password?",
@@ -139,7 +173,7 @@ fun AuthSignInScreen(
             }
 
             Spacer(
-                Modifier.height(64.dp)
+                Modifier.height(32.dp)
             )
             Button(
                 onClick = {
@@ -148,16 +182,25 @@ fun AuthSignInScreen(
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier
                     .height(52.dp)
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+                enabled = !isLoading
             ) {
-                Text(
-                    text = "Sign In",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "Sign In",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
+                    )
+                }
             }
 
             Spacer(
-                Modifier.height(64.dp)
+                Modifier.height(32.dp)
             )
             IconButton(
                 onClick = {
@@ -165,7 +208,8 @@ fun AuthSignInScreen(
                 },
                 modifier = Modifier
                     .requiredSize(56.dp)
-                    .align(Alignment.CenterHorizontally)
+                    .align(Alignment.CenterHorizontally),
+                enabled = !isLoading
             ) {
                 Icon(
                     painter = painterResource(

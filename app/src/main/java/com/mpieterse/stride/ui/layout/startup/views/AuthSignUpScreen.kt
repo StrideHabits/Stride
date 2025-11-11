@@ -1,5 +1,8 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,6 +40,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -59,6 +65,8 @@ fun AuthSignUpScreen(
     }
 
     val formState by viewModel.signUpForm.formState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
 // --- UI
 
@@ -89,8 +97,27 @@ fun AuthSignUpScreen(
             )
 
             Spacer(
-                Modifier.height(64.dp)
+                Modifier.height(32.dp)
             )
+            
+            // Error Message
+            AnimatedVisibility(
+                visible = errorMessage != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                errorMessage?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -117,12 +144,14 @@ fun AuthSignUpScreen(
                     value = formState.identity.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onIdentityChanged(value)
+                        viewModel.clearError()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     inputType = KeyboardType.Email,
                     fieldType = TextFieldType.Default,
                     inputAction = ImeAction.Next,
-                    isComponentErrored = (formState.identity.error != null)
+                    isComponentErrored = (formState.identity.error != null),
+                    isComponentEnabled = !isLoading
                 )
             }
 
@@ -156,11 +185,13 @@ fun AuthSignUpScreen(
                     value = formState.passwordDefault.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onPasswordDefaultChanged(value)
+                        viewModel.clearError()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fieldType = TextFieldType.Private,
                     inputAction = ImeAction.Next,
-                    isComponentErrored = (formState.passwordDefault.error != null)
+                    isComponentErrored = (formState.passwordDefault.error != null),
+                    isComponentEnabled = !isLoading
                 )
 
                 Spacer(
@@ -172,16 +203,18 @@ fun AuthSignUpScreen(
                     value = formState.passwordConfirm.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onPasswordConfirmChanged(value)
+                        viewModel.clearError()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fieldType = TextFieldType.Private,
                     inputAction = ImeAction.Done,
-                    isComponentErrored = (formState.passwordConfirm.error != null)
+                    isComponentErrored = (formState.passwordConfirm.error != null),
+                    isComponentEnabled = !isLoading
                 )
             }
 
             Spacer(
-                Modifier.height(64.dp)
+                Modifier.height(32.dp)
             )
             Column {
                 Button(
@@ -191,16 +224,23 @@ fun AuthSignUpScreen(
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier
                         .height(52.dp)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        text = "Sign Up",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight(
-                                600
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Sign Up",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight(600)
                             )
                         )
-                    )
+                    }
                 }
 
                 Spacer(
@@ -212,7 +252,9 @@ fun AuthSignUpScreen(
                     color = Color(0xFF_161620),
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
-                        .clickable { /* ... */ }
+                        .clickable(enabled = !isLoading) {
+                            onNavigateToSignIn()
+                        }
                         .padding(
                             horizontal = 6.dp,
                             vertical = 4.dp

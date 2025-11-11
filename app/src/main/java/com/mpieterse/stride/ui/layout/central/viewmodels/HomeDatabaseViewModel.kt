@@ -55,6 +55,7 @@ class HomeDatabaseViewModel @Inject constructor(
                     is AppEventBus.AppEvent.HabitUpdated,
                     is AppEventBus.AppEvent.CheckInCompleted,
                     is AppEventBus.AppEvent.HabitNameChanged -> refreshInternal()
+                    is AppEventBus.AppEvent.HabitDeleted -> refreshInternal()
                 }
             }
         }

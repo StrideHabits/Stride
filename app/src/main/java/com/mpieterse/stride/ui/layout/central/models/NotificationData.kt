@@ -7,6 +7,7 @@ import java.time.LocalTime
  */
 data class NotificationData(
     val id: String,
+    val habitId: String? = null, // Habit ID for tracking (nullable for backward compatibility)
     val habitName: String,
     val time: LocalTime,
     val daysOfWeek: List<Int>, // 1-7 (Monday-Sunday)

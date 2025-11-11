@@ -22,7 +22,8 @@ import javax.inject.Singleton
 class HabitRepositoryImpl @Inject constructor(
     private val api: SummitApiService,
     private val db: AppDatabase,
-    @ApplicationContext private val appContext: Context
+    @ApplicationContext private val appContext: Context,
+    private val eventBus: com.mpieterse.stride.core.services.AppEventBus
 ) : HabitRepository {
 
     // ---- Observe / Get (local first) ----
@@ -80,6 +81,8 @@ class HabitRepositoryImpl @Inject constructor(
         // remote delete then mark local
         api.deleteHabit(id)
         db.habits().markDeleted(id = id)
+        // Emit event for notification cleanup
+        eventBus.emit(com.mpieterse.stride.core.services.AppEventBus.AppEvent.HabitDeleted(id))
     }
 
     override suspend fun clearLocal() {
