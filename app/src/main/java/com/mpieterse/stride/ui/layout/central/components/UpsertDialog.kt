@@ -37,13 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import com.mpieterse.stride.ui.layout.central.models.HabitDraft
@@ -66,13 +59,7 @@ fun UpsertDialog(
 ) {
     val baseCategories = listOf("Health & Fitness", "Productivity", "Mindfulness", "Wellness")
     
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
-                scaleIn(initialScale = 0.9f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)) + 
-               scaleOut(targetScale = 0.9f, animationSpec = tween(150, easing = FastOutLinearInEasing))
-    ) {
+    if (isVisible) {
     var categories by remember { mutableStateOf(baseCategories) }
 
     var name by remember { mutableStateOf("") }
@@ -258,9 +245,19 @@ fun UpsertDialog(
                         onImageSelected = { bitmap ->
                             selectedImage = bitmap
                             if (bitmap != null) {
-                                imageBase64 = bitmapToBase64(bitmap)
-                                imageMimeType = "image/jpeg"
-                                imageFileName = "habit_${UUID.randomUUID()}.jpg"
+                                val encoded = bitmapToBase64(bitmap)
+                                if (encoded != null) {
+                                    imageBase64 = encoded
+                                    // Determine MIME type based on whether bitmap has transparency
+                                    imageMimeType = if (bitmap.hasAlpha()) "image/png" else "image/jpeg"
+                                    val extension = if (bitmap.hasAlpha()) "png" else "jpg"
+                                    imageFileName = "habit_${UUID.randomUUID()}.$extension"
+                                } else {
+                                    // Encoding failed, clear image state
+                                    imageBase64 = null
+                                    imageMimeType = null
+                                    imageFileName = null
+                                }
                             } else {
                                 imageBase64 = null
                                 imageMimeType = null
@@ -346,6 +343,5 @@ fun UpsertDialog(
         modifier = modifier
     )
     }
-}
 
 

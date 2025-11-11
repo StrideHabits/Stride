@@ -28,6 +28,7 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -108,6 +109,16 @@ class HomeDatabaseViewModel @Inject constructor(
     
     fun forceRefresh() = viewModelScope.launch {
         // Force refresh to get latest data from API
+        refreshInternal()
+    }
+    
+    /**
+     * Refreshes data after waiting for authentication token to be available.
+     * This is more robust than using a fixed delay.
+     */
+    fun refreshWhenReady() = viewModelScope.launch {
+        // Wait for token to be available (or timeout after reasonable wait)
+        tokenStore.tokenFlow.first { token -> !token.isNullOrBlank() }
         refreshInternal()
     }
     

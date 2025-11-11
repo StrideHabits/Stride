@@ -43,11 +43,9 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showCreate by rememberSaveable { mutableStateOf(false) }
     
-    // Refresh when screen is first created, with a small delay to allow authentication to complete
+    // Refresh when screen is first created, waiting for authentication to complete
     LaunchedEffect(Unit) {
-        // Small delay to allow token re-authentication to complete after unlock
-        kotlinx.coroutines.delay(500)
-        viewModel.refresh()
+        viewModel.refreshWhenReady()
     }
 
     Box(modifier = modifier.fillMaxSize()) {

@@ -64,7 +64,7 @@ import com.mpieterse.stride.ui.layout.central.components.NotificationItem
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 
 @Composable
 fun NotificationsScreen(
@@ -88,8 +88,9 @@ fun NotificationsScreen(
         if (isGranted) {
             // Permission granted, execute pending action
             pendingAction?.invoke()
+            pendingAction = null
         }
-        pendingAction = null
+        // If permission denied, preserve pendingAction so user can retry later
     }
     
     // Check if permissions are needed and show dialog
@@ -303,7 +304,10 @@ fun NotificationsScreen(
             },
             dismissButton = {
                 OutlinedButton(
-                    onClick = { showPermissionDialog = false },
+                    onClick = { 
+                        showPermissionDialog = false
+                        pendingAction = null // Clear pending action when user explicitly cancels
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color.Black
                     )
@@ -318,12 +322,10 @@ fun NotificationsScreen(
         )
     }
 
-    // Refresh habits when dialog is about to open
+    // Refresh habits when dialog is about to open and wait for completion
     LaunchedEffect(showCreateNotificationDialog) {
         if (showCreateNotificationDialog) {
-            viewModel.refreshHabits()
-            // Small delay to ensure habits are loaded
-            delay(100)
+            viewModel.refreshHabits().join()
         }
     }
     
@@ -335,16 +337,13 @@ fun NotificationsScreen(
             viewModel.addNotification(newNotification)
             showCreateNotificationDialog = false
         },
-        availableHabits = state.habits.map { it.name },
-        key = "create" // Add key to force recomposition when dialog opens
+        availableHabits = state.habits.map { it.name }
     )
 
-    // Refresh habits when edit dialog is about to open
+    // Refresh habits when edit dialog is about to open and wait for completion
     LaunchedEffect(showEditNotificationDialog) {
         if (showEditNotificationDialog) {
-            viewModel.refreshHabits()
-            // Small delay to ensure habits are loaded
-            delay(100)
+            viewModel.refreshHabits().join()
         }
     }
     
@@ -361,8 +360,7 @@ fun NotificationsScreen(
             notificationToEdit = null
         },
         availableHabits = state.habits.map { it.name },
-        initialData = notificationToEdit,
-        key = "edit" // Add key to force recomposition when dialog opens
+        initialData = notificationToEdit
     )
 }
 

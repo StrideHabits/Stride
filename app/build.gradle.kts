@@ -130,7 +130,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.accompanist.navigation.animation)
-    implementation("androidx.compose.animation:animation")
+    implementation(libs.androidx.animation)
     implementation(libs.hilt.android)
     implementation(libs.androidx.runtime.saveable)
     implementation(libs.googleid)

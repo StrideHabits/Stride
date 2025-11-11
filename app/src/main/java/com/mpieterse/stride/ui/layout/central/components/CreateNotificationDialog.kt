@@ -43,8 +43,7 @@ fun CreateNotificationDialog(
     onDismiss: () -> Unit,
     onConfirm: (NotificationData) -> Unit,
     availableHabits: List<String> = listOf("Go to the gym", "Read for 30 minutes", "Meditation", "Drink water", "Exercise"),
-    initialData: NotificationData? = null,
-    key: String? = null
+    initialData: NotificationData? = null
 ) {
     val context = LocalContext.current
     
@@ -65,11 +64,11 @@ fun CreateNotificationDialog(
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
     
-    // Reset state when dialog opens or initialData changes
+    // Load/reset state when dialog opens or data changes
     LaunchedEffect(isVisible, initialData?.id) {
         if (isVisible) {
             if (initialData != null) {
-                // Editing existing notification - load its data
+                // Load existing notification data
                 habitName = initialData.habitName.takeIf { availableHabits.contains(it) }
                     ?: availableHabits.firstOrNull() ?: ""
                 timeHour = initialData.time.hour.toString().padStart(2, '0')
@@ -79,7 +78,7 @@ fun CreateNotificationDialog(
                 soundEnabled = initialData.soundEnabled
                 vibrationEnabled = initialData.vibrationEnabled
             } else {
-                // Creating new notification - start with clean defaults
+                // Reset to defaults for new notification
                 habitName = "" // Start empty, user must select a habit
                 timeHour = "09"
                 timeMinute = "00"
@@ -88,15 +87,21 @@ fun CreateNotificationDialog(
                 soundEnabled = true
                 vibrationEnabled = true
             }
-        } else {
-            // Dialog closed - reset to defaults for next time
-            habitName = ""
-            timeHour = "09"
-            timeMinute = "00"
-            selectedDays = setOf()
-            message = ""
-            soundEnabled = true
-            vibrationEnabled = true
+        }
+    }
+    
+    // Cleanup when dialog closes
+    DisposableEffect(isVisible) {
+        onDispose {
+            if (!isVisible) {
+                habitName = ""
+                timeHour = "09"
+                timeMinute = "00"
+                selectedDays = setOf()
+                message = ""
+                soundEnabled = true
+                vibrationEnabled = true
+            }
         }
     }
     

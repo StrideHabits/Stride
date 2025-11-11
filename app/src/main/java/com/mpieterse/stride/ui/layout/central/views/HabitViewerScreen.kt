@@ -71,11 +71,15 @@ fun HabitViewerScreen(
             }
     }
     val initialImageMime = remember(state.habitImage) {
-        // We only set a MIME when we actually produce a new Base64 from the bitmap (JPEG)
-        if (state.habitImage != null) "image/jpeg" else null
+        // Determine MIME type based on whether bitmap has transparency
+        state.habitImage?.let { if (it.hasAlpha()) "image/png" else "image/jpeg" }
     }
     val initialImageFileName = remember(state.habitImageUrl) {
-        state.habitImageUrl?.substringAfterLast('/')
+        state.habitImageUrl?.let { url ->
+            runCatching {
+                Uri.parse(url).lastPathSegment
+            }.getOrNull()
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {

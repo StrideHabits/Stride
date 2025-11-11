@@ -16,10 +16,10 @@ private val DecelerateEasing = LinearOutSlowInEasing
 private val AccelerateEasing = FastOutLinearInEasing
 
 /**
- * Fade and scale animation for dialogs
+ * Content size animation for dialogs
  */
 @Composable
-fun Modifier.dialogEnterTransition(): Modifier = this.then(
+fun Modifier.dialogContentSizeTransition(): Modifier = this.then(
     Modifier.animateContentSize(
         animationSpec = tween(
             durationMillis = MediumDuration,
