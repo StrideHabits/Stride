@@ -83,18 +83,18 @@ fun CreateNotificationDialog(
         }
     }
     
-    // Cleanup when dialog leaves composition (on dismiss)
-    // Note: onDispose runs when this effect leaves composition, which happens when isVisible goes from true -> false.
-    // Therefore, reset state unconditionally inside onDispose.
+    // Cleanup when dialog closes
     DisposableEffect(isVisible) {
         onDispose {
-            habitName = ""
-            timeHour = "09"
-            timeMinute = "00"
-            selectedDays = setOf()
-            message = ""
-            soundEnabled = true
-            vibrationEnabled = true
+            if (!isVisible) {
+                habitName = ""
+                timeHour = "09"
+                timeMinute = "00"
+                selectedDays = setOf()
+                message = ""
+                soundEnabled = true
+                vibrationEnabled = true
+            }
         }
     }
     
@@ -599,42 +599,126 @@ private fun ScrollableNumberPicker(
     listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
+    // Encapsulate scroll snapping and click-to-snap behavior
+    val requestSnapToIndex = rememberNumberPickerScroller(
+        listState = listState,
+        items = items,
+        selectedValue = selectedValue,
+        onValueSelected = onValueSelected
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFF5F5F5)),
+        contentAlignment = Alignment.Center
+    ) {
+        NumberPickerSelectionOverlay(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            color = Color(0xFFFF9500).copy(alpha = 0.1f)
+        )
+        
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            contentPadding = PaddingValues(vertical = 76.dp) // Padding to center items
+        ) {
+            items(items.size) { index ->
+                val value = items[index]
+                val isSelected = value == selectedValue
+                NumberPickerItem(
+                    value = value,
+                    isSelected = isSelected,
+                    onClick = { requestSnapToIndex(index) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NumberPickerSelectionOverlay(
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFFFF9500).copy(alpha = 0.1f)
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color)
+    )
+}
+
+@Composable
+private fun NumberPickerItem(
+    value: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = value.toString().padStart(2, '0'),
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = if (isSelected) 24.sp else 18.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) Color(0xFFFF9500) else Color.Gray
+            )
+        )
+    }
+}
+
+@Composable
+private fun rememberNumberPickerScroller(
+    listState: LazyListState,
+    items: List<Int>,
+    selectedValue: Int,
+    onValueSelected: (Int) -> Unit
+): (Int) -> Unit {
     val coroutineScope = rememberCoroutineScope()
-    
-    // Track if we're programmatically scrolling to prevent infinite loops
     var isProgrammaticScroll by remember { mutableStateOf(false) }
     var lastFirstVisibleItem by remember { mutableStateOf(-1) }
     var lastScrollTime by remember { mutableStateOf(0L) }
     var isInitialized by remember { mutableStateOf(false) }
-    
+
     // Initialize the lastFirstVisibleItem on first composition
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(100) // Wait for layout
         lastFirstVisibleItem = listState.firstVisibleItemIndex
         isInitialized = true
     }
-    
+
     // Detect scroll changes and snap to center when scrolling stops (only for user-initiated scrolls)
     LaunchedEffect(listState.firstVisibleItemIndex) {
         // Don't process until initialized
         if (!isInitialized) return@LaunchedEffect
-        
+
         val currentFirstVisible = listState.firstVisibleItemIndex
         val currentTime = System.currentTimeMillis()
-        
+
         // Only process if:
         // 1. The first visible item changed
         // 2. We're not in the middle of a programmatic scroll
         // 3. Enough time has passed since last scroll (debounce)
-        if (currentFirstVisible != lastFirstVisibleItem && 
-            !isProgrammaticScroll && 
-            (currentTime - lastScrollTime) > 300) {
+        if (currentFirstVisible != lastFirstVisibleItem &&
+            !isProgrammaticScroll &&
+            (currentTime - lastScrollTime) > 300
+        ) {
             lastFirstVisibleItem = currentFirstVisible
             lastScrollTime = currentTime
-            
+
             // Wait for scroll to settle, then snap to center
             kotlinx.coroutines.delay(300)
-            
+
             // Check if still not programmatically scrolling (user might have scrolled again)
             if (!isProgrammaticScroll) {
                 val layoutInfo = listState.layoutInfo
@@ -644,7 +728,7 @@ private fun ScrollableNumberPicker(
                         val itemCenter = item.offset + item.size / 2
                         kotlin.math.abs(itemCenter - center)
                     }
-                    
+
                     centerItem?.let { item ->
                         val index = item.index
                         if (index in items.indices && items[index] != selectedValue) {
@@ -668,61 +752,18 @@ private fun ScrollableNumberPicker(
             }
         }
     }
-    
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFF5F5F5)),
-        contentAlignment = Alignment.Center
-    ) {
-        // Selection indicator (highlighted area)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .background(
-                    Color(0xFFFF9500).copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-        )
-        
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = PaddingValues(vertical = 76.dp) // Padding to center items
-        ) {
-            items(items.size) { index ->
-                val value = items[index]
-                val isSelected = value == selectedValue
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clickable {
-                            isProgrammaticScroll = true
-                            onValueSelected(value)
-                            coroutineScope.launch {
-                                listState.animateScrollToItem(index)
-                                kotlinx.coroutines.delay(500)
-                                isProgrammaticScroll = false
-                                lastFirstVisibleItem = index
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = value.toString().padStart(2, '0'),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = if (isSelected) 24.sp else 18.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color(0xFFFF9500) else Color.Gray
-                        )
-                    )
-                }
+
+    // Expose function to programmatically snap to an index
+    return { targetIndex: Int ->
+        if (targetIndex in items.indices) {
+            isProgrammaticScroll = true
+            coroutineScope.launch {
+                listState.animateScrollToItem(targetIndex)
+                onValueSelected(items[targetIndex])
+                kotlinx.coroutines.delay(500)
+                isProgrammaticScroll = false
+                lastFirstVisibleItem = targetIndex
+                lastScrollTime = System.currentTimeMillis()
             }
         }
     }
