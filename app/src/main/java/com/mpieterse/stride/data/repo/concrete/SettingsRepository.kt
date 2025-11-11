@@ -1,6 +1,6 @@
-package com.mpieterse.stride.data.repo
+package com.mpieterse.stride.data.repo.concrete
 
-import com.mpieterse.stride.core.net.*
+import com.mpieterse.stride.core.net.safeCall
 import com.mpieterse.stride.data.dto.settings.SettingsDto
 import com.mpieterse.stride.data.remote.SummitApiService
 import javax.inject.Inject
@@ -19,6 +19,8 @@ import javax.inject.Inject
 
 
 class SettingsRepository @Inject constructor(private val api: SummitApiService) {
-    suspend fun get() = safeCall { api.getSettings() } //This method retrieves user settings from the API using the Repository pattern (App Dev Insights, 2024).
-    suspend fun update(s: SettingsDto) = safeCall { api.updateSettings(s) } //This method updates user settings through the API using the Repository pattern (App Dev Insights, 2024).
+    suspend fun get() =
+        safeCall { api.getSettings() } //This method retrieves user settings from the API using the Repository pattern (App Dev Insights, 2024).
+    suspend fun update(s: SettingsDto) =
+        safeCall { api.updateSettings(s) } //This method updates user settings through the API using the Repository pattern (App Dev Insights, 2024).
 }

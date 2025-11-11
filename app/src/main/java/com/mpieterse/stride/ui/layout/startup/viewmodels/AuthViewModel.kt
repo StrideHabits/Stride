@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.GoogleAuthenticationClient
-import com.mpieterse.stride.data.repo.AuthRepository
+import com.mpieterse.stride.data.repo.concrete.AuthRepository
 import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
