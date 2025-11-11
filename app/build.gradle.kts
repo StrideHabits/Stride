@@ -157,7 +157,6 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     // Room dependencies temporarily disabled due to KSP compatibility issues
-    // Room files are ready in data/local/ but disabled until KSP/Room compatibility is resolved
     // implementation(libs.androidx.room.runtime)
     // implementation(libs.androidx.room.ktx)
     // ksp(libs.androidx.room.compiler)

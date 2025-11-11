@@ -41,6 +41,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import com.mpieterse.stride.ui.animations.expandVerticallyTransition
+import com.mpieterse.stride.ui.animations.shrinkVerticallyTransition
+import com.mpieterse.stride.ui.animations.fadeInTransition
+import com.mpieterse.stride.ui.animations.fadeOutTransition
 import com.mpieterse.stride.ui.layout.central.models.HabitDraft
 import com.mpieterse.stride.ui.layout.shared.components.ImagePicker
 import java.io.ByteArrayOutputStream
@@ -155,8 +159,8 @@ fun UpsertDialog(
                     )
                     AnimatedVisibility(
                         visible = nameError != null,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
+                        enter = expandVerticallyTransition(),
+                        exit = shrinkVerticallyTransition()
                     ) {
                         if (nameError != null) {
                             Text(
@@ -188,11 +192,11 @@ fun UpsertDialog(
                         ),
                         shape = RoundedCornerShape(8.dp)
                     )
-                    AnimatedVisibility(
-                        visible = frequencyError != null,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
+                AnimatedVisibility(
+                    visible = frequencyError != null,
+                    enter = expandVerticallyTransition(),
+                    exit = shrinkVerticallyTransition()
+                ) {
                         if (frequencyError != null) {
                             Text(
                                 text = frequencyError!!,
@@ -275,11 +279,11 @@ fun UpsertDialog(
                             ),
                             modifier = Modifier.padding(top = 8.dp)
                         )
-                        AnimatedVisibility(
-                            visible = selectedImage != null,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
+                    AnimatedVisibility(
+                        visible = selectedImage != null,
+                        enter = expandVerticallyTransition(),
+                        exit = shrinkVerticallyTransition()
+                    ) {
                             if (selectedImage != null) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedButton(

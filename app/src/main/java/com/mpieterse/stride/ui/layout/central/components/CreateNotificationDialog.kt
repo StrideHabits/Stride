@@ -20,15 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.FastOutLinearInEasing
+import com.mpieterse.stride.ui.animations.fadeInTransition
+import com.mpieterse.stride.ui.animations.fadeOutTransition
+import com.mpieterse.stride.ui.animations.expandVerticallyTransition
+import com.mpieterse.stride.ui.animations.shrinkVerticallyTransition
 import kotlinx.coroutines.launch
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdownStringOnly
@@ -49,10 +44,8 @@ fun CreateNotificationDialog(
     
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
-                scaleIn(initialScale = 0.9f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)) + 
-               scaleOut(targetScale = 0.9f, animationSpec = tween(150, easing = FastOutLinearInEasing))
+        enter = fadeInTransition(duration = 200),
+        exit = fadeOutTransition(duration = 150)
     ) {
     
     // Initialize state - will be reset when dialog opens
@@ -113,10 +106,8 @@ fun CreateNotificationDialog(
     
     AnimatedVisibility(
         visible = showTimePicker,
-        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
-                scaleIn(initialScale = 0.9f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing)) + 
-               scaleOut(targetScale = 0.9f, animationSpec = tween(150, easing = FastOutLinearInEasing))
+        enter = fadeInTransition(duration = 200),
+        exit = fadeOutTransition(duration = 150)
     ) {
         TimePickerDialog24Hour(
             initialHour = timeHour.toIntOrNull() ?: 9,
@@ -179,8 +170,8 @@ fun CreateNotificationDialog(
                         // Show error if habit is not selected when creating new notification
                         AnimatedVisibility(
                             visible = initialData == null && habitName.isBlank() && availableHabits.isNotEmpty(),
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+                            enter = expandVerticallyTransition(),
+                            exit = shrinkVerticallyTransition()
                         ) {
                             Text(
                                 text = "Please select a habit",
@@ -354,8 +345,8 @@ fun CreateNotificationDialog(
                     
                     AnimatedVisibility(
                         visible = selectedDays.isEmpty(),
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
+                        enter = expandVerticallyTransition(),
+                        exit = shrinkVerticallyTransition()
                     ) {
                         Text(
                             text = "Please select at least one day",

@@ -141,9 +141,9 @@ fun scaleInTransition(duration: Int = ShortDuration) = scaleIn(
 )
 
 /**
- * Expand vertically animation
+ * Expand vertically animation with fade
  */
-fun expandVertically(duration: Int = MediumDuration) = expandVertically(
+fun expandVerticallyTransition(duration: Int = MediumDuration) = expandVertically(
     animationSpec = tween(
         durationMillis = duration,
         easing = StandardEasing
@@ -156,9 +156,9 @@ fun expandVertically(duration: Int = MediumDuration) = expandVertically(
 )
 
 /**
- * Shrink vertically animation
+ * Shrink vertically animation with fade
  */
-fun shrinkVertically(duration: Int = ShortDuration) = shrinkVertically(
+fun shrinkVerticallyTransition(duration: Int = ShortDuration) = shrinkVertically(
     animationSpec = tween(
         durationMillis = duration,
         easing = AccelerateEasing
