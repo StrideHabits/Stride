@@ -12,20 +12,6 @@ import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
-/**
- * Service interface for communicating with the SummitAPI backend using Retrofit.
- *
- * This class defines the HTTP endpoints and request/response models used to interact
- * with the remote RESTful API. Retrofit handles serialization, request execution,
- * and network layer abstraction, enabling a clean separation between network logic
- * and application layers.
- *
- * @see <a href="https://www.geeksforgeeks.org/android/introduction-retofit-2-android-set-1/">
- *      GeeksforGeeks (2017). Introduction to Retrofit in Android.</a>
- *      [Accessed 6 Oct. 2025].
- */
-
-
 interface SummitApiService {
 
     // Users
@@ -36,17 +22,18 @@ interface SummitApiService {
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
     // Habits (CRUD via /api)
+    // FIX: All habit CRUD operations now use the "api/" prefix for consistency.
 
-    @GET("habits")
+    @GET("api/habits") // FIXED: Added "api/"
     suspend fun listHabits(): List<HabitDto>
 
-    @POST("habits")
+    @POST("api/habits") // FIXED: Added "api/" <-- This is the 404 fix
     suspend fun createHabit(@Body body: HabitCreateDto): HabitDto
 
-    @DELETE("habits/{id}")
+    @DELETE("api/habits/{id}") // FIXED: Added "api/"
     suspend fun deleteHabit(@Path("id") id: String)
 
-    @GET("api/habits")
+    @GET("api/habits") // This one was already correct
     suspend fun getHabits(): Response<List<HabitDto>>
 
     // Check-ins (CRUD via /api)

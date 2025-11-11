@@ -27,8 +27,8 @@ import javax.inject.Singleton
  * improves testability, scalability, and adherence to clean architecture principles.
  *
  * @see <a href="https://developer.android.com/training/dependency-injection">
- *      Android Developers (2025). Dependency injection in Android.</a>
- *      [Accessed 6 Oct. 2025].
+ * Android Developers (2025). Dependency injection in Android.</a>
+ * [Accessed 6 Oct. 2025].
  */
 
 
@@ -58,7 +58,7 @@ object NetworkModule {
         }
         return OkHttpClient.Builder()
             .addInterceptor(auth)
-            .addInterceptor(logger)
+            .addInterceptor(logger) // Interceptor is correctly added here
             .callTimeout(java.time.Duration.ofSeconds(30))
             .connectTimeout(java.time.Duration.ofSeconds(10))
             .readTimeout(java.time.Duration.ofSeconds(20))
@@ -69,7 +69,7 @@ object NetworkModule {
     @Provides @Singleton
     fun retrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL) // must end with '/'
+            .baseUrl(BuildConfig.API_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
             .client(client)
             .build()
