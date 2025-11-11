@@ -1,4 +1,4 @@
-// core/dependencies/RepositoryModule.kt
+// app/src/main/java/com/mpieterse/stride/core/dependencies/RepositoryModule.kt
 package com.mpieterse.stride.core.dependencies
 
 import com.mpieterse.stride.data.repo.CheckInRepository
@@ -14,9 +14,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
-    @Binds @Singleton
-    abstract fun bindHabitRepository(impl: HabitRepositoryImpl): HabitRepository
-
-    @Binds @Singleton
-    abstract fun bindCheckInRepository(impl: CheckInRepositoryImpl): CheckInRepository
+    @Binds @Singleton abstract fun bindHabitRepo(impl: HabitRepositoryImpl): HabitRepository
+    @Binds @Singleton abstract fun bindCheckInRepo(impl: CheckInRepositoryImpl): CheckInRepository
 }

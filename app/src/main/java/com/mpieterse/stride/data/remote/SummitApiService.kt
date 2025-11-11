@@ -36,11 +36,18 @@ interface SummitApiService {
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
     // Habits (CRUD via /api)
+
+    @GET("habits")
+    suspend fun listHabits(): List<HabitDto>
+
+    @POST("habits")
+    suspend fun createHabit(@Body body: HabitCreateDto): HabitDto
+
+    @DELETE("habits/{id}")
+    suspend fun deleteHabit(@Path("id") id: String)
+
     @GET("api/habits")
     suspend fun getHabits(): Response<List<HabitDto>>
-
-    @POST("api/habits")
-    suspend fun createHabit(@Body body: HabitCreateDto): Response<HabitDto>
 
     // Check-ins (CRUD via /api)
     @GET("api/checkins")
