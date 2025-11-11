@@ -137,7 +137,7 @@ fun NotificationsScreen(
             viewModel.addNotification(newNotification)
             showCreateNotificationDialog = false
         },
-        availableHabits = state.habits.map { it.name }
+        availableHabits = state.habits
     )
 
     // Edit Notification Dialog
@@ -152,7 +152,7 @@ fun NotificationsScreen(
             showEditNotificationDialog = false
             notificationToEdit = null
         },
-        availableHabits = state.habits.map { it.name },
+        availableHabits = state.habits,
         initialData = notificationToEdit
     )
 }

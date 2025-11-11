@@ -2,6 +2,7 @@ package com.mpieterse.stride.core
 
 import android.app.Application
 import androidx.work.Configuration
+import com.mpieterse.stride.core.notifications.NotificationChannelManager
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.HiltAndroidApp
@@ -20,6 +21,10 @@ class LocalApplication :
     override fun onCreate() {
         super.onCreate()
         Clogger.i(TAG, "Application initialized successfully")
+        
+        // Initialize notification channels
+        NotificationChannelManager.createChannels(this)
+        
         authenticationListener.listen()
         com.mpieterse.stride.workers.PullWorker.schedulePeriodic(this)
     }

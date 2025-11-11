@@ -24,7 +24,8 @@ class GlobalAuthenticationListener
     @ApplicationContext private val context: Context,
     private val firebaseAuth: FirebaseAuth,
     private val firebaseAuthService: AuthenticationService,
-    private val configurationService: ConfigurationService
+    private val configurationService: ConfigurationService,
+    private val fcmTokenManager: FcmTokenManager
 ) : FirebaseAuth.AuthStateListener, DefaultLifecycleObserver {
     companion object {
         private const val TAG = "GlobalAuthenticationListener"
@@ -35,6 +36,14 @@ class GlobalAuthenticationListener
 
 
     private val appScope = CoroutineScope(Dispatchers.Main)
+    
+    // Flag to temporarily disable navigation when handling errors in AuthActivity
+    @Volatile
+    private var isHandlingError = false
+    
+    fun setHandlingError(handling: Boolean) {
+        isHandlingError = handling
+    }
 
 
 // --- Contracts
@@ -87,19 +96,34 @@ class GlobalAuthenticationListener
 
     /**
      * Secures the application when authentication is revoked.
+     * If we're already handling an error in AuthActivity, don't navigate to avoid
+     * restarting the activity and going back to splash screen.
      */
     private fun secureApplication() {
         Clogger.d(
             TAG, "Securing the application due to revoked authentication"
         )
 
+        // Always erase configuration when securing the application
+        appScope.launch {
+            configurationService.erase()
+        }
+
+        // Don't navigate if we're already handling an error in AuthActivity
+        // This prevents restarting the activity and going back to splash screen
+        if (isHandlingError) {
+            Clogger.d(TAG, "Skipping navigation - already handling error in AuthActivity")
+            return
+        }
+
         val navigationIntent = Intent(context, AuthActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
 
-        context.startActivity(navigationIntent)
-        appScope.launch {
-            configurationService.erase()
+        try {
+            context.startActivity(navigationIntent)
+        } catch (e: Exception) {
+            Clogger.e(TAG, "Failed to navigate to AuthActivity", e)
         }
     }
 
@@ -108,7 +132,18 @@ class GlobalAuthenticationListener
      * Handler for Firebase authentication state changes.
      */
     override fun onAuthStateChanged(server: FirebaseAuth) {
-        if (server.currentUser == null) secureApplication()
+        if (server.currentUser == null) {
+            secureApplication()
+        } else {
+            // User is authenticated, initialize FCM token
+            appScope.launch {
+                try {
+                    fcmTokenManager.initializeToken()
+                } catch (e: Exception) {
+                    Clogger.e(TAG, "Failed to initialize FCM token", e)
+                }
+            }
+        }
     }
 
 

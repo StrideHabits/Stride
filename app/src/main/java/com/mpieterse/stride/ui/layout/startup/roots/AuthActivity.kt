@@ -12,8 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.material3.MaterialTheme
 import androidx.fragment.app.FragmentActivity
 import com.mpieterse.stride.ui.layout.central.roots.HomeActivity
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
@@ -31,17 +30,20 @@ class AuthActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color(0xFF161620).toArgb())
+            statusBarStyle = SystemBarStyle.light(
+                scrim = android.graphics.Color.WHITE,
+                darkScrim = android.graphics.Color.WHITE
+            )
         )
 
         setContent {
             AppTheme {
-                LocalStyledActivityStatusBar(color = Color(0xFF161620))
+                LocalStyledActivityStatusBar(color = MaterialTheme.colorScheme.background)
                 val authState by authViewModel.authState.collectAsState()
 
-                Surface(color = Color(0xFF161620)) {
+                Surface(color = MaterialTheme.colorScheme.background) {
                     when (authState) {
-                        is AuthState.Unauthenticated, is AuthState.Error -> AuthNavGraph(
+                        is AuthState.Unauthenticated -> AuthNavGraph(
                             onGoToHomeActivity = ::navigateToHomeActivity,
                             modifier = Modifier.statusBarsPadding().fillMaxSize(),
                             authViewModel = authViewModel
@@ -55,6 +57,12 @@ class AuthActivity : FragmentActivity() {
                             model = authViewModel
                         )
                         is AuthState.Authenticated -> navigateToHomeActivity()
+                        // Don't navigate on Error - let screens handle it
+                        is AuthState.Error -> AuthNavGraph(
+                            onGoToHomeActivity = ::navigateToHomeActivity,
+                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                            authViewModel = authViewModel
+                        )
                     }
                 }
             }

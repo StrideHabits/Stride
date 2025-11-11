@@ -20,7 +20,9 @@ import java.time.LocalTime
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
     private val notificationsStore: NotificationsStore,
-    private val habitRepository: HabitRepository
+    private val habitRepository: HabitRepository,
+    private val notificationScheduler: com.mpieterse.stride.core.services.NotificationSchedulerService,
+    private val eventBus: com.mpieterse.stride.core.services.AppEventBus
 ) : ViewModel() {
 
     data class UiState(
@@ -34,7 +36,21 @@ class NotificationsViewModel @Inject constructor(
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
-    init { loadData() }
+    init { 
+        loadData()
+        
+        // Listen for habit deletion events
+        viewModelScope.launch {
+            eventBus.events.collect { event ->
+                when (event) {
+                    is com.mpieterse.stride.core.services.AppEventBus.AppEvent.HabitDeleted -> {
+                        cleanupNotificationsForHabit(event.habitId)
+                    }
+                    else -> { /* ignore other events */ }
+                }
+            }
+        }
+    }
 
     private fun loadData() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, error = null)
@@ -54,14 +70,48 @@ class NotificationsViewModel @Inject constructor(
             }
         }
 
+        var isFirstEmission = true
+        
         combine(
             notificationsStore.notificationsFlow,
             notificationsStore.settingsFlow,
             habitsFlow
         ) { notifications, settings, habits ->
+            val habitIds = habits.map { it.id }.toSet()
+            val habitNames = habits.map { it.name }.toSet()
+            
+            // Filter out orphaned notifications
+            val validNotifications = notifications.filter { notification ->
+                when {
+                    // If habitId exists, check by ID
+                    !notification.habitId.isNullOrBlank() -> notification.habitId in habitIds
+                    // Otherwise, check by name (backward compatibility)
+                    else -> notification.habitName in habitNames
+                }
+            }
+            
+            // Auto-cleanup if any orphaned notifications found
+            if (validNotifications.size < notifications.size) {
+                val orphaned = notifications.filter { it !in validNotifications }
+                viewModelScope.launch {
+                    // Save cleaned list
+                    notificationsStore.saveNotifications(validNotifications)
+                    // Cancel scheduled notifications for orphaned ones
+                    orphaned.forEach { notificationScheduler.cancelNotification(it.id) }
+                }
+            }
+            
+            // Reschedule all notifications on first load
+            if (isFirstEmission) {
+                isFirstEmission = false
+                viewModelScope.launch {
+                    notificationScheduler.rescheduleAllNotifications(validNotifications, settings)
+                }
+            }
+            
             UiState(
                 loading = false,
-                notifications = notifications,
+                notifications = validNotifications,
                 habits = habits,
                 settings = settings,
                 error = null
@@ -74,32 +124,49 @@ class NotificationsViewModel @Inject constructor(
             Log.d("NotificationsViewModel", "Adding notification: ${notification.habitName} at ${notification.time}")
             val updated = _state.value.notifications.toMutableList().apply { add(notification) }
             notificationsStore.saveNotifications(updated)
+            
+            // Schedule the notification
+            notificationScheduler.scheduleNotification(notification, _state.value.settings)
+            
             _state.value = _state.value.copy(notifications = updated)
         } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to add notification", e)
             _state.value = _state.value.copy(error = "Failed to add notification: ${e.message}")
         }
     }
 
     fun updateNotification(updatedNotification: NotificationData) = viewModelScope.launch {
         try {
+            // Cancel old notification
+            notificationScheduler.cancelNotification(updatedNotification.id)
+            
             val list = _state.value.notifications.toMutableList()
             val idx = list.indexOfFirst { it.id == updatedNotification.id }
             if (idx != -1) {
                 list[idx] = updatedNotification
                 notificationsStore.saveNotifications(list)
+                
+                // Schedule updated notification
+                notificationScheduler.scheduleNotification(updatedNotification, _state.value.settings)
+                
                 _state.value = _state.value.copy(notifications = list)
             }
         } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to update notification", e)
             _state.value = _state.value.copy(error = "Failed to update notification: ${e.message}")
         }
     }
 
     fun deleteNotification(notificationId: String) = viewModelScope.launch {
         try {
+            // Cancel scheduled notification
+            notificationScheduler.cancelNotification(notificationId)
+            
             val updated = _state.value.notifications.filter { it.id != notificationId }
             notificationsStore.saveNotifications(updated)
             _state.value = _state.value.copy(notifications = updated)
         } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to delete notification", e)
             _state.value = _state.value.copy(error = "Failed to delete notification: ${e.message}")
         }
     }
@@ -109,11 +176,21 @@ class NotificationsViewModel @Inject constructor(
             val list = _state.value.notifications.toMutableList()
             val idx = list.indexOfFirst { it.id == notificationId }
             if (idx != -1) {
-                list[idx] = list[idx].copy(isEnabled = enabled)
+                val updatedNotification = list[idx].copy(isEnabled = enabled)
+                list[idx] = updatedNotification
                 notificationsStore.saveNotifications(list)
+                
+                // Reschedule notification based on new enabled state
+                if (enabled) {
+                    notificationScheduler.scheduleNotification(updatedNotification, _state.value.settings)
+                } else {
+                    notificationScheduler.cancelNotification(notificationId)
+                }
+                
                 _state.value = _state.value.copy(notifications = list)
             }
         } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to toggle notification", e)
             _state.value = _state.value.copy(error = "Failed to toggle notification: ${e.message}")
         }
     }
@@ -121,9 +198,42 @@ class NotificationsViewModel @Inject constructor(
     fun updateSettings(newSettings: NotificationSettings) = viewModelScope.launch {
         try {
             notificationsStore.saveSettings(newSettings)
+            
+            // Reschedule all notifications with new settings
+            notificationScheduler.rescheduleAllNotifications(
+                _state.value.notifications,
+                newSettings
+            )
+            
             _state.value = _state.value.copy(settings = newSettings)
         } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to update settings", e)
             _state.value = _state.value.copy(error = "Failed to update settings: ${e.message}")
+        }
+    }
+    
+    private fun cleanupNotificationsForHabit(habitId: String) = viewModelScope.launch {
+        try {
+            val current = _state.value.notifications
+            val habit = _state.value.habits.firstOrNull { it.id == habitId }
+            
+            val toRemove = current.filter { 
+                it.habitId == habitId || 
+                (it.habitId.isNullOrBlank() && it.habitName == habit?.name)
+            }
+            
+            if (toRemove.isNotEmpty()) {
+                val updated = current.filter { it !in toRemove }
+                notificationsStore.saveNotifications(updated)
+                
+                // Cancel scheduled notifications
+                toRemove.forEach { notificationScheduler.cancelNotification(it.id) }
+                
+                _state.value = _state.value.copy(notifications = updated)
+                Log.d("NotificationsViewModel", "Cleaned up ${toRemove.size} notification(s) for deleted habit: $habitId")
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationsViewModel", "Failed to cleanup notifications for habit", e)
         }
     }
 
@@ -133,5 +243,10 @@ class NotificationsViewModel @Inject constructor(
         _state.value = _state.value.copy(loading = true)
         // Flows are already hot; just flip the flag. loadData() sets up collectors once.
         _state.value = _state.value.copy(loading = false)
+    }
+    
+    fun refreshHabits() = viewModelScope.launch {
+        // This will trigger the habitsFlow to refresh
+        // The combine flow will automatically update
     }
 }
