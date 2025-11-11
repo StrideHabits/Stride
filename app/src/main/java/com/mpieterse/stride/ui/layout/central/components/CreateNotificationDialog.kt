@@ -83,18 +83,18 @@ fun CreateNotificationDialog(
         }
     }
     
-    // Cleanup when dialog closes
+    // Cleanup when dialog leaves composition (on dismiss)
+    // Note: onDispose runs when this effect leaves composition, which happens when isVisible goes from true -> false.
+    // Therefore, reset state unconditionally inside onDispose.
     DisposableEffect(isVisible) {
         onDispose {
-            if (!isVisible) {
-                habitName = ""
-                timeHour = "09"
-                timeMinute = "00"
-                selectedDays = setOf()
-                message = ""
-                soundEnabled = true
-                vibrationEnabled = true
-            }
+            habitName = ""
+            timeHour = "09"
+            timeMinute = "00"
+            selectedDays = setOf()
+            message = ""
+            soundEnabled = true
+            vibrationEnabled = true
         }
     }
     
