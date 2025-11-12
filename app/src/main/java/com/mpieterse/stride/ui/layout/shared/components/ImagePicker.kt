@@ -1,6 +1,5 @@
 package com.mpieterse.stride.ui.layout.shared.components
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -46,7 +45,7 @@ fun ImagePicker(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var tempSelectedImage by remember { mutableStateOf<Bitmap?>(selectedImage) }
+    var tempSelectedImage by remember(selectedImage) { mutableStateOf<Bitmap?>(selectedImage) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -74,11 +73,11 @@ fun ImagePicker(
             .clip(RoundedCornerShape(8.dp))
             .border(
                 width = 1.dp,
-                color = Color.Gray.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(8.dp)
             )
             .background(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable {
@@ -106,13 +105,13 @@ fun ImagePicker(
                 Icon(
                     painter = painterResource(R.drawable.xic_uic_outline_plus),
                     contentDescription = "Add image",
-                    tint = Color.Gray,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
                     text = "Attach an image",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color.Gray.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         fontSize = 14.sp
                     ),
                     textAlign = TextAlign.Center

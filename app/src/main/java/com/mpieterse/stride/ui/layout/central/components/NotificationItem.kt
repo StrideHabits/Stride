@@ -61,13 +61,13 @@ fun NotificationItem(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
                         ),
-                        color = if (notification.isEnabled) Color.Black else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
                     Text(
-                        text = notification.time.format(DateTimeFormatter.ofPattern("h:mm a")),
+                        text = notification.time.format(DateTimeFormatter.ofPattern("HH:mm")),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (notification.isEnabled) Color(0xFFFF9500) else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -86,7 +86,7 @@ fun NotificationItem(
                 Text(
                     text = "Days:",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 notification.daysOfWeek.forEach { day ->
@@ -103,7 +103,7 @@ fun NotificationItem(
                     Text(
                         text = notification.message,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (notification.isEnabled) Color.Black.copy(alpha = 0.8f) else Color.Gray,
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
                     )
             }
@@ -123,13 +123,13 @@ fun NotificationItem(
                         painter = painterResource(R.drawable.xic_uic_outline_volume_up),
                         contentDescription = "Sound",
                         tint = if (notification.soundEnabled && notification.isEnabled) 
-                            Color(0xFFFF9500) else Color.Gray,
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "Sound",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (notification.isEnabled) Color.Black else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -142,13 +142,13 @@ fun NotificationItem(
                         painter = painterResource(R.drawable.xic_uic_outline_volume_down),
                         contentDescription = "Vibration",
                         tint = if (notification.vibrationEnabled && notification.isEnabled) 
-                            Color(0xFFFF9500) else Color.Gray,
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "Vibration",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (notification.isEnabled) Color.Black else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -165,7 +165,7 @@ fun NotificationItem(
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_edit),
                             contentDescription = "Edit",
-                            tint = Color(0xFFFF9500),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -198,7 +198,7 @@ private fun DayChip(
         style = MaterialTheme.typography.bodySmall.copy(
             fontWeight = FontWeight.Medium
         ),
-        color = if (isEnabled) Color(0xFFFF9500) else Color.Gray,
+        color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
     )
 }
