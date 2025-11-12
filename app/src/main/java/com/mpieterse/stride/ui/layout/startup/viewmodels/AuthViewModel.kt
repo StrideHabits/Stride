@@ -7,6 +7,7 @@ import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.services.GoogleAuthenticationClient
 import com.mpieterse.stride.data.repo.concrete.AuthRepository
+import com.mpieterse.stride.data.store.CredentialsStore
 import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -21,7 +22,8 @@ class AuthViewModel
     private val authService: AuthenticationService,
     private val ssoClient: GoogleAuthenticationClient,
     private val authApi: AuthRepository,
-    private val globalAuthListener: GlobalAuthenticationListener
+    private val globalAuthListener: GlobalAuthenticationListener,
+    private val credentialsStore: CredentialsStore
 ) : ViewModel() {
 
     val signInForm = SignInFormViewModel()
@@ -58,9 +60,12 @@ class AuthViewModel
 
             _isLoading.value = true
             try {
+                val rawPassword = signUpForm.formState.value.passwordDefault.value
+                val trimmedPassword = rawPassword.trim()
+
                 authService.signUpAsync(
                     email = signUpForm.formState.value.identity.value,
-                    password = signUpForm.formState.value.passwordDefault.value
+                    password = rawPassword
                 )
 
                 val user = authService.getCurrentUser() ?: error("No Firebase user found")
@@ -69,23 +74,23 @@ class AuthViewModel
                 }
 
                 val apiRegistrationState = authApi.register(
-                    user.email!!, user.email!!, signUpForm.formState.value.passwordDefault.value
+                    user.email!!,
+                    user.email!!,
+                    trimmedPassword
                 )
 
                 val apiLoginState = when (apiRegistrationState) {
-                    is ApiResult.Ok -> authApi.login(user.email!!, signUpForm.formState.value.passwordDefault.value)
+                    is ApiResult.Ok -> authApi.login(user.email!!, trimmedPassword)
                     is ApiResult.Err -> {
-                        // Check if registration failed due to network or if user already exists
-                        val isNetworkError = apiRegistrationState.code == null || apiRegistrationState.message.contains("timeout", ignoreCase = true) ||
-                                            apiRegistrationState.message.contains("network", ignoreCase = true) ||
-                                            apiRegistrationState.message.contains("connection", ignoreCase = true)
-                        
+                        val isNetworkError = apiRegistrationState.code == null ||
+                            apiRegistrationState.message.contains("timeout", ignoreCase = true) ||
+                            apiRegistrationState.message.contains("network", ignoreCase = true) ||
+                            apiRegistrationState.message.contains("connection", ignoreCase = true)
+
                         if (isNetworkError) {
-                            // If network error during registration, don't try to login
                             apiRegistrationState
                         } else {
-                            // Try to login even if registration fails (user might already exist)
-                            authApi.login(user.email!!, signUpForm.formState.value.passwordDefault.value)
+                            authApi.login(user.email!!, trimmedPassword)
                         }
                     }
                 }
@@ -125,6 +130,7 @@ class AuthViewModel
                 }
 
                 _authState.value = AuthState.Locked
+                credentialsStore.save(user.email!!, trimmedPassword)
             } catch (e: Exception) {
                 // On Firebase auth error, show error message
                 // Don't logout to avoid navigation issues - user can retry
@@ -145,9 +151,12 @@ class AuthViewModel
 
             _isLoading.value = true
             try {
+                val rawPassword = signInForm.formState.value.password.value
+                val trimmedPassword = rawPassword.trim()
+
                 authService.signInAsync(
                     email = signInForm.formState.value.identity.value,
-                    password = signInForm.formState.value.password.value
+                    password = rawPassword
                 )
 
                 val user = authService.getCurrentUser() ?: error("No Firebase user found")
@@ -155,18 +164,23 @@ class AuthViewModel
                     "User email is null"
                 }
 
+                val invalidCredentialMessage = "Invalid credentials. Please check your email and password."
                 var apiLoginState = authApi.login(
-                    user.email!!, signInForm.formState.value.password.value
+                    user.email!!,
+                    trimmedPassword
                 )
 
-                if (apiLoginState is ApiResult.Err && apiLoginState.code == 404) {
-                    val reRegister = authApi.register(
-                        user.email!!, user.email!!, signInForm.formState.value.password.value
-                    )
-                    if (reRegister is ApiResult.Ok) {
-                        apiLoginState = authApi.login(
-                            user.email!!, signInForm.formState.value.password.value
-                        )
+                if (apiLoginState is ApiResult.Err) {
+                    val message = apiLoginState.message.lowercase()
+                    val shouldRetryWithTrimmed = message.contains("invalid credentials") || message.contains("password")
+                    if (shouldRetryWithTrimmed && trimmedPassword != rawPassword) {
+                        apiLoginState = authApi.login(user.email!!, trimmedPassword)
+                    }
+                    if (apiLoginState is ApiResult.Err && apiLoginState.code == 404) {
+                        val reRegister = authApi.register(user.email!!, user.email!!, trimmedPassword)
+                        if (reRegister is ApiResult.Ok) {
+                            apiLoginState = authApi.login(user.email!!, trimmedPassword)
+                        }
                     }
                 }
 
@@ -179,7 +193,7 @@ class AuthViewModel
                     
                     // Set error message first
                     val errorMsg = when {
-                        isAuthError -> apiLoginState.message ?: "Invalid credentials. Please check your email and password."
+                        isAuthError -> invalidCredentialMessage
                         isNetworkError -> "Network error. Please check your internet connection and try again."
                         else -> apiLoginState.message ?: "Failed to authenticate with server. Please try again."
                     }
@@ -205,6 +219,7 @@ class AuthViewModel
                 }
 
                 _authState.value = AuthState.Locked
+                credentialsStore.save(user.email!!, trimmedPassword)
             } catch (e: Exception) {
                 // On Firebase auth error, show error message
                 // Don't logout to avoid navigation issues - user can retry
@@ -274,6 +289,7 @@ class AuthViewModel
                 }
 
                 _authState.value = AuthState.Locked
+                credentialsStore.save(user.email!!, user.uid)
             } catch (e: Exception) {
                 // On Firebase auth error, show error message
                 // Don't logout to avoid navigation issues - user can retry
@@ -292,6 +308,7 @@ class AuthViewModel
 
     fun logout() { //This method handles user logout using Firebase Authentication (Android Developers, 2024).
         authService.logout()
+        credentialsStore.clear()
         _authState.value = AuthState.Unauthenticated
     }
 }

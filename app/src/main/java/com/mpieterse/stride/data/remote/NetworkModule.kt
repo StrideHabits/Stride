@@ -3,6 +3,7 @@ package com.mpieterse.stride.data.remote
 import android.content.Context
 import com.mpieterse.stride.data.local.TokenStore
 import com.mpieterse.stride.data.local.NotificationsStore
+import com.mpieterse.stride.core.services.SessionManager
 import com.google.gson.GsonBuilder
 import com.mpieterse.stride.BuildConfig
 import dagger.Module
@@ -17,6 +18,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Named
 import javax.inject.Singleton
 
 /**
@@ -39,14 +41,60 @@ object NetworkModule {
     @Provides @Singleton fun notificationsStore(@ApplicationContext c: Context) = NotificationsStore(c)
 
     @Provides @Singleton
-    fun authInterceptor(store: TokenStore) = Interceptor { chain ->
+    fun authInterceptor(
+        store: TokenStore,
+        sessionManager: SessionManager
+    ) = Interceptor { chain ->
+        val originalRequest = chain.request()
         val token = runBlocking { store.tokenFlow.first() }
-        val req = if (!token.isNullOrBlank())
-            chain.request().newBuilder()
-                .addHeader("Authorization", "Bearer $token")
+        val requestWithAuth = if (!token.isNullOrBlank()) {
+            originalRequest.newBuilder()
+                .header("Authorization", "Bearer $token")
                 .build()
-        else chain.request()
-        chain.proceed(req)
+        } else {
+            originalRequest
+        }
+
+        val path = originalRequest.url.encodedPath
+        val isAuthEndpoint = path.endsWith("/api/users/login") || path.endsWith("/api/users/register")
+
+        var response = try {
+            chain.proceed(requestWithAuth)
+        } catch (e: Exception) {
+            // Network errors (timeouts, connection issues) should not trigger logout
+            // Only re-throw the exception - don't attempt session restoration on network failures
+            throw e
+        }
+
+        if (!isAuthEndpoint && (response.code == 401 || response.code == 403)) {
+            // Only attempt session restoration for actual auth errors (401/403)
+            when (sessionManager.tryRestoreSession()) {
+                SessionManager.SessionRestoreResult.RESTORED -> {
+                response.close()
+                val refreshedToken = runBlocking { store.tokenFlow.first() }
+                val retryRequest = originalRequest.newBuilder().apply {
+                    if (!refreshedToken.isNullOrBlank()) {
+                        header("Authorization", "Bearer $refreshedToken")
+                    } else {
+                        removeHeader("Authorization")
+                    }
+                }.build()
+                response = chain.proceed(retryRequest)
+                }
+                SessionManager.SessionRestoreResult.INVALID_CREDENTIALS,
+                SessionManager.SessionRestoreResult.NO_CREDENTIALS -> {
+                    // Only logout if we definitively know credentials are invalid or missing
+                    sessionManager.forceLogout()
+                }
+                SessionManager.SessionRestoreResult.NETWORK_ERROR,
+                SessionManager.SessionRestoreResult.SERVER_ERROR,
+                SessionManager.SessionRestoreResult.ALREADY_RESTORING -> {
+                    // Do nothing - keep the user logged in and allow retries
+                }
+            }
+        }
+
+        response
     }
 
     @Provides @Singleton
@@ -77,4 +125,37 @@ object NetworkModule {
     @Provides @Singleton
     fun api(retrofit: Retrofit): SummitApiService =
         retrofit.create(SummitApiService::class.java)
+
+    /**
+     * Provides a Retrofit instance without the auth interceptor for re-authentication.
+     * This breaks the dependency cycle: SessionManager -> SummitApiService -> Retrofit -> OkHttpClient -> Interceptor -> SessionManager
+     */
+    @Provides @Singleton @Named("reauth")
+    fun reauthRetrofit(): Retrofit {
+        val logger = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            else HttpLoggingInterceptor.Level.BASIC
+            redactHeader("Authorization")
+        }
+        val client = OkHttpClient.Builder()
+            .addInterceptor(logger)
+            .callTimeout(java.time.Duration.ofSeconds(30))
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .readTimeout(java.time.Duration.ofSeconds(20))
+            .writeTimeout(java.time.Duration.ofSeconds(20))
+            .build()
+        
+        return Retrofit.Builder()
+            .baseUrl(BuildConfig.API_BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
+            .client(client)
+            .build()
+    }
+
+    /**
+     * Provides a SummitApiService instance without the auth interceptor for re-authentication.
+     */
+    @Provides @Singleton @Named("reauth")
+    fun reauthApi(@Named("reauth") reauthRetrofit: Retrofit): SummitApiService =
+        reauthRetrofit.create(SummitApiService::class.java)
 }
