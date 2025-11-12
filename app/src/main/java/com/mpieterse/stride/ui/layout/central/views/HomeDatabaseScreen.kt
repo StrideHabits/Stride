@@ -164,16 +164,26 @@ private fun DateHeader(
 ) {
     Row(modifier = modifier.padding(horizontal = 12.dp)) {
         days.forEachIndexed { index, day ->
-            Text(
-                text = day,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight(600),
-                    lineHeight = 16.sp
-                ),
-                modifier = Modifier.requiredWidth(24.dp)
-            )
+            val parts = day.split("\n")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.requiredWidth(32.dp)
+            ) {
+                Text(
+                    text = parts.getOrNull(0) ?: "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                )
+                Text(
+                    text = parts.getOrNull(1) ?: "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    )
+                )
+            }
             if (index != days.lastIndex) Spacer(modifier = Modifier.width(8.dp))
         }
     }

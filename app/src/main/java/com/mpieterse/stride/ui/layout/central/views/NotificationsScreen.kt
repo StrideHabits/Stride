@@ -5,6 +5,10 @@ import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -192,7 +196,11 @@ fun NotificationsScreen(
     }
     
     // Permission rationale dialog
-    if (showPermissionRationale) {
+    AnimatedVisibility(
+        visible = showPermissionRationale,
+        enter = fadeIn(animationSpec = tween(durationMillis = 180)),
+        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+    ) {
         AlertDialog(
             onDismissRequest = { showPermissionRationale = false },
             title = {

@@ -20,6 +20,8 @@ import java.io.File
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -97,7 +99,11 @@ class HomeDatabaseViewModel @Inject constructor(
         val habits = try { habitsRepo.observeAll().first() } catch (_: Exception) { emptyList() }
 
         val days = lastThreeDays()
-        val header = days.map { d -> "${d.dayOfWeek.name.take(3)}\n${d.dayOfMonth}" }
+        val header = days.map { d ->
+            val label = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+            val dayNumber = d.dayOfMonth.toString().padStart(2, '0')
+            "$label\n$dayNumber"
+        }
 
         val rows = habits.map { h ->
             val local: List<CheckInDto> =
