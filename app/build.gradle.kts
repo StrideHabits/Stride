@@ -125,6 +125,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.runtime.saveable)
     implementation(libs.googleid)
+    implementation(libs.androidx.security.crypto)
 
     // Lifecycle
     implementation(libs.androidx.room.ktx)
