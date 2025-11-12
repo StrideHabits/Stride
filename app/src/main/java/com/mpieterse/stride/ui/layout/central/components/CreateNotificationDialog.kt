@@ -39,6 +39,7 @@ import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdownStringOnly
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
+import com.mpieterse.stride.ui.layout.shared.components.TimePickerDialog24Hour
 import java.time.LocalTime
 import java.util.UUID
 
@@ -60,11 +61,10 @@ fun CreateNotificationDialog(
         )
     }
     var habitName by remember { mutableStateOf(initialData?.habitName ?: selectedHabit?.name ?: "") }
-    var timeHour by remember { mutableStateOf(initialData?.time?.hour?.let { 
-        if (it == 0) "12" else if (it > 12) (it - 12).toString() else it.toString() 
-    } ?: "9") }
-    var timeMinute by remember { mutableStateOf(initialData?.time?.minute?.toString()?.padStart(2, '0') ?: "00") }
-    var timeAmPm by remember { mutableStateOf(initialData?.time?.hour?.let { if (it >= 12) "PM" else "AM" } ?: "AM") }
+    var selectedTime by remember { 
+        mutableStateOf<LocalTime?>(initialData?.time ?: LocalTime.of(9, 0))
+    }
+    var showTimePicker by remember { mutableStateOf(false) }
     var selectedDays by remember { mutableStateOf<Set<Int>>(initialData?.daysOfWeek?.toSet() ?: setOf()) }
     var message by remember { mutableStateOf(initialData?.message ?: "") }
     var soundEnabled by remember { mutableStateOf(initialData?.soundEnabled ?: true) }
@@ -74,6 +74,13 @@ fun CreateNotificationDialog(
     androidx.compose.runtime.LaunchedEffect(initialData?.daysOfWeek) {
         if (initialData != null) {
             selectedDays = initialData.daysOfWeek.toSet()
+        }
+    }
+    
+    // Reset time picker state when dialog closes
+    androidx.compose.runtime.LaunchedEffect(isVisible) {
+        if (!isVisible) {
+            showTimePicker = false
         }
     }
 
@@ -115,7 +122,7 @@ fun CreateNotificationDialog(
                     }
                 )
 
-                // Time Selection
+                // Time Selection (24-hour format)
                 Column {
                     Text(
                         text = "Time",
@@ -126,53 +133,25 @@ fun CreateNotificationDialog(
                         ),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    Row(
+                    
+                    // Time display button that opens time picker
+                    Button(
+                        onClick = { showTimePicker = true },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedTime != null) Color(0xFFFF9500) else Color(0xFFF5F5F5)
+                        )
                     ) {
-                        LocalOutlinedTextField(
-                            label = "Hour",
-                            value = timeHour,
-                            onValueChange = { newValue ->
-                                if (newValue.all { it.isDigit() } && newValue.toIntOrNull() in 1..12) {
-                                    timeHour = newValue
-                                }
-                            },
-                            modifier = Modifier.weight(1.2f),
-                            fieldType = TextFieldType.Default,
-                            isComponentEnabled = true
-                        )
-                        
                         Text(
-                            text = ":",
+                            text = selectedTime?.let { 
+                                String.format("%02d:%02d", it.hour, it.minute)
+                            } ?: "Select time",
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 18.sp
-                            ),
-                            color = Color.Black,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                        
-                        LocalOutlinedTextField(
-                            label = "Min",
-                            value = timeMinute,
-                            onValueChange = { newValue ->
-                                if (newValue.all { it.isDigit() } && newValue.length <= 2 && newValue.toIntOrNull() in 0..59) {
-                                    timeMinute = newValue.padStart(2, '0')
-                                }
-                            },
-                            modifier = Modifier.weight(1.2f),
-                            fieldType = TextFieldType.Default,
-                            isComponentEnabled = true
-                        )
-                        
-                        LocalOutlinedDropdownStringOnly(
-                            label = "",
-                            value = timeAmPm,
-                            onValueChange = { timeAmPm = it },
-                            items = listOf("AM", "PM"),
-                            modifier = Modifier.weight(1f),
-                            isComponentEnabled = true
+                                fontSize = if (selectedTime != null) 18.sp else 14.sp,
+                                fontWeight = if (selectedTime != null) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTime != null) Color.White else Color.Gray
+                            )
                         )
                     }
                 }
@@ -316,19 +295,14 @@ fun CreateNotificationDialog(
         },
         confirmButton = {
             Button(
-                enabled = selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty(),
+                enabled = selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null,
                 onClick = {
-                    if (selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty()) {
-                        val hour = timeHour.toIntOrNull() ?: 9
-                        val minute = timeMinute.toIntOrNull() ?: 0
-                        val isPM = timeAmPm == "PM"
-                        val adjustedHour = if (isPM && hour != 12) hour + 12 else if (!isPM && hour == 12) 0 else hour
-                        
+                    if (selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null) {
                         val notification = NotificationData(
                             id = initialData?.id ?: UUID.randomUUID().toString(),
                             habitId = selectedHabit?.id,
                             habitName = habitName,
-                            time = LocalTime.of(adjustedHour, minute),
+                            time = selectedTime!!,
                             daysOfWeek = selectedDays.sorted(),
                             isEnabled = initialData?.isEnabled ?: true,
                             message = message,
@@ -380,4 +354,16 @@ fun CreateNotificationDialog(
         ),
         modifier = Modifier.fillMaxWidth(0.95f)
     )
+    
+    // 24-hour time picker dialog
+    if (showTimePicker) {
+        TimePickerDialog24Hour(
+            initialTime = selectedTime,
+            onTimeSelected = { time ->
+                selectedTime = time
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false }
+        )
+    }
 }

@@ -48,11 +48,16 @@ class FcmTokenManager @Inject constructor(
     suspend fun updateToken(token: String) {
         try {
             Clogger.d(TAG, "Updating FCM token on server: ${token.take(20)}...")
-            // TODO: Add API endpoint for updating FCM token
-            // apiService.updateFcmToken(token)
-            Clogger.d(TAG, "FCM token update completed")
+            val request = com.mpieterse.stride.data.dto.auth.FcmTokenUpdateRequest(token = token)
+            val response = apiService.updateFcmToken(request)
+            if (response.isSuccessful) {
+                Clogger.d(TAG, "FCM token updated successfully on server")
+            } else {
+                Clogger.w(TAG, "Failed to update FCM token on server: ${response.code()} ${response.message()}")
+            }
         } catch (e: Exception) {
             Clogger.e(TAG, "Failed to update FCM token on server", e)
+            // Don't throw - token update failure shouldn't break the app
         }
     }
     

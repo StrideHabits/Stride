@@ -71,13 +71,14 @@ fun ImagePicker(
         modifier = modifier
             .fillMaxWidth()
             .height(120.dp)
+            .clip(RoundedCornerShape(8.dp))
             .border(
                 width = 1.dp,
                 color = Color.Gray.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(8.dp)
             )
             .background(
-                color = Color.Gray.copy(alpha = 0.03f),
+                color = Color.White,
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable {

@@ -3,6 +3,7 @@ package com.mpieterse.stride.data.repo.concrete
 
 import android.content.Context
 import androidx.room.withTransaction
+import com.mpieterse.stride.core.utils.Clogger
 import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.local.db.AppDatabase
@@ -15,6 +16,7 @@ import com.mpieterse.stride.data.remote.SummitApiService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,38 +37,52 @@ class HabitRepositoryImpl @Inject constructor(
         db.habits().observeById(id).map { it?.toDto() }
 
     override suspend fun getAll(forceRemote: Boolean): List<HabitDto> {
-        if (forceRemote) pull()
+        if (forceRemote) {
+            // Try to pull from remote, but continue even if it fails
+            pull()
+        }
         return db.habits().list().map { it.toDto() }
     }
 
     override suspend fun getById(id: String, forceRemote: Boolean): HabitDto? {
-        if (forceRemote) pull()
+        if (forceRemote) {
+            // Try to pull from remote, but continue even if it fails
+            pull()
+        }
         return db.habits().getById(id)?.toDto()
     }
 
     // ---- Create (remote -> cache) ----
 
     override suspend fun create(input: HabitCreateDto): HabitDto {
-        // 1) Call API
-        val created: HabitDto = api.createHabit(input)
-        // 2) Cache locally as Synced
-        db.withTransaction {
-            db.habits().upsert(
-                HabitEntity(
-                    id = created.id,
-                    name = created.name,
-                    frequency = created.frequency,
-                    tag = created.tag,
-                    imageUrl = created.imageUrl,
-                    createdAt = created.createdAt,
-                    updatedAt = created.updatedAt,
-                    deleted = false,
-                    rowVersion = "",           // fill if your API returns one
-                    syncState = SyncState.Synced
+        try {
+            // 1) Call API
+            val created: HabitDto = api.createHabit(input)
+            // 2) Cache locally as Synced
+            db.withTransaction {
+                db.habits().upsert(
+                    HabitEntity(
+                        id = created.id,
+                        name = created.name,
+                        frequency = created.frequency,
+                        tag = created.tag,
+                        imageUrl = created.imageUrl,
+                        createdAt = created.createdAt,
+                        updatedAt = created.updatedAt,
+                        deleted = false,
+                        rowVersion = "",           // fill if your API returns one
+                        syncState = SyncState.Synced
+                    )
                 )
-            )
+            }
+            return created
+        } catch (e: HttpException) {
+            Clogger.e("HabitRepository", "Failed to create habit: HTTP ${e.code()} ${e.message()}", e)
+            throw e
+        } catch (e: Exception) {
+            Clogger.e("HabitRepository", "Failed to create habit", e)
+            throw e
         }
-        return created
     }
 
     // ---- Local upsert helper ----
@@ -78,11 +94,25 @@ class HabitRepositoryImpl @Inject constructor(
     // ---- Delete (remote -> cache) ----
 
     override suspend fun delete(id: String) {
-        // remote delete then mark local
-        api.deleteHabit(id)
-        db.habits().markDeleted(id = id)
-        // Emit event for notification cleanup
-        eventBus.emit(com.mpieterse.stride.core.services.AppEventBus.AppEvent.HabitDeleted(id))
+        try {
+            // remote delete then mark local
+            api.deleteHabit(id)
+            db.habits().markDeleted(id = id)
+            // Emit event for notification cleanup
+            eventBus.emit(com.mpieterse.stride.core.services.AppEventBus.AppEvent.HabitDeleted(id))
+        } catch (e: HttpException) {
+            Clogger.e("HabitRepository", "Failed to delete habit: HTTP ${e.code()} ${e.message()}", e)
+            // Still mark as deleted locally even if API call fails
+            db.habits().markDeleted(id = id)
+            eventBus.emit(com.mpieterse.stride.core.services.AppEventBus.AppEvent.HabitDeleted(id))
+            throw e
+        } catch (e: Exception) {
+            Clogger.e("HabitRepository", "Failed to delete habit", e)
+            // Still mark as deleted locally even if API call fails
+            db.habits().markDeleted(id = id)
+            eventBus.emit(com.mpieterse.stride.core.services.AppEventBus.AppEvent.HabitDeleted(id))
+            throw e
+        }
     }
 
     override suspend fun clearLocal() {
@@ -94,11 +124,24 @@ class HabitRepositoryImpl @Inject constructor(
     override suspend fun pushHabitCreates(): Boolean = false
 
     override suspend fun pull(): Boolean {
-        val remote = api.listHabits() // returns List<HabitDto>
-        db.withTransaction {
-            // simple merge: replace snapshot
-            db.habits().replaceAll(remote.map { it.toEntity(syncState = SyncState.Synced) })
+        return try {
+            val remote = api.listHabits() // returns List<HabitDto>
+            db.withTransaction {
+                // simple merge: replace snapshot
+                db.habits().replaceAll(remote.map { it.toEntity(syncState = SyncState.Synced) })
+            }
+            Clogger.d("HabitRepository", "Successfully pulled ${remote.size} habits from server")
+            true
+        } catch (e: HttpException) {
+            // Handle HTTP errors (400, 500, etc.)
+            Clogger.e("HabitRepository", "Failed to pull habits: HTTP ${e.code()} ${e.message()}", e)
+            // Return false to indicate failure, but don't throw - app can continue with cached data
+            false
+        } catch (e: Exception) {
+            // Handle network errors, timeouts, etc.
+            Clogger.e("HabitRepository", "Failed to pull habits", e)
+            // Return false to indicate failure, but don't throw - app can continue with cached data
+            false
         }
-        return true
     }
 }

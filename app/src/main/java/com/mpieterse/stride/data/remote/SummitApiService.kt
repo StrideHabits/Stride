@@ -20,6 +20,9 @@ interface SummitApiService {
 
     @POST("api/users/login")
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
+    
+    @PUT("api/users/fcm-token")
+    suspend fun updateFcmToken(@Body body: com.mpieterse.stride.data.dto.auth.FcmTokenUpdateRequest): Response<Unit>
 
     // Habits (CRUD via /api)
     // FIX: All habit CRUD operations now use the "api/" prefix for consistency.

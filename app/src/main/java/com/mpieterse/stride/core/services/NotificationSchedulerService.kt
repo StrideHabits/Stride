@@ -106,10 +106,10 @@ class NotificationSchedulerService @Inject constructor(
         
         // Schedule the periodic work (weekly recurrence) anchored by the computed delay
         // WorkManager handles background execution automatically, even when app is killed
+        // Minimum repeat interval for PeriodicWorkRequest is 15 minutes
+        // We use 7 days for weekly recurrence
         val periodicRequest = PeriodicWorkRequestBuilder<NotificationWorker>(
             7,
-            TimeUnit.DAYS,
-            1,
             TimeUnit.DAYS
         )
             .setInputData(workData)
@@ -136,19 +136,25 @@ class NotificationSchedulerService @Inject constructor(
     
     /**
      * Calculates the delay in milliseconds until the next occurrence of the specified day and time.
+     * 
+     * This method ensures that the notification is scheduled for the next occurrence of the
+     * specified day and time, even if that occurrence is later in the current week or next week.
      */
     private fun calculateDelayToNextOccurrence(time: LocalTime, dayOfWeek: DayOfWeek): Long {
         val now = Calendar.getInstance()
+        val targetDayOfWeek = dayOfWeekToCalendarDay(dayOfWeek)
+        
         val targetCalendar = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, dayOfWeekToCalendarDay(dayOfWeek))
+            // Set to the target day and time
+            set(Calendar.DAY_OF_WEEK, targetDayOfWeek)
             set(Calendar.HOUR_OF_DAY, time.hour)
             set(Calendar.MINUTE, time.minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
         
-        // If the time has passed today, schedule for next week
-        if (targetCalendar.before(now) || targetCalendar == now) {
+        // If the target time has already passed this week, schedule for next week
+        if (targetCalendar.before(now) || targetCalendar.timeInMillis <= now.timeInMillis) {
             targetCalendar.add(Calendar.DAY_OF_WEEK, 7)
         }
         
