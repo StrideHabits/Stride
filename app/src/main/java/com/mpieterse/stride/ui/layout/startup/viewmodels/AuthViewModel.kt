@@ -74,12 +74,14 @@ class AuthViewModel
                     "User email is null"
                 }
 
+                // Use trimmed password for registration to match login behavior
                 val apiRegistrationState = authApi.register(
                     user.email!!,
                     user.email!!,
                     trimmedPassword
                 )
 
+                // Use trimmed password for login to match registration
                 val apiLoginState = when (apiRegistrationState) {
                     is ApiResult.Ok -> authApi.login(user.email!!, trimmedPassword)
                     is ApiResult.Err -> {
@@ -166,26 +168,29 @@ class AuthViewModel
                 }
 
                 val invalidCredentialMessage = "Invalid credentials. Please check your email and password."
-                // Try raw password first (for users with passwords containing whitespace stored in backend)
+                // Use trimmed password first to match registration behavior (registration always uses trimmed)
                 var apiLoginState = authApi.login(
                     user.email!!,
-                    rawPassword
+                    trimmedPassword
                 )
 
                 if (apiLoginState is ApiResult.Err) {
                     val message = apiLoginState.message.lowercase()
-                    // If login failed and password has whitespace, retry with trimmed version
-                    val shouldRetryWithTrimmed = trimmedPassword != rawPassword &&
-                        (message.contains("invalid credentials") || message.contains("password"))
-                    if (shouldRetryWithTrimmed) {
-                        apiLoginState = authApi.login(user.email!!, trimmedPassword)
+                    // If trimmed password fails and password has whitespace, try raw password
+                    // (for legacy users who might have registered with whitespace)
+                    val shouldRetryWithRaw = (message.contains("invalid credentials") || message.contains("password")) &&
+                        trimmedPassword != rawPassword
+                    if (shouldRetryWithRaw) {
+                        Clogger.d("AuthViewModel", "Retrying login with raw password (trimmed failed, trying raw for legacy users)")
+                        apiLoginState = authApi.login(user.email!!, rawPassword)
                     }
                     // Handle 404 - user might not exist in Summit API, try to register
                     if (apiLoginState is ApiResult.Err && apiLoginState.code == 404) {
                         Clogger.d("AuthViewModel", "User not found in Summit API (404), attempting registration")
+                        // Use trimmed password for registration to match login
                         val reRegister = authApi.register(user.email!!, user.email!!, trimmedPassword)
                         if (reRegister is ApiResult.Ok) {
-                            // Registration successful, try login again with trimmed password
+                            // Registration successful, try login again with trimmed password (same as registration)
                             apiLoginState = authApi.login(user.email!!, trimmedPassword)
                             if (apiLoginState is ApiResult.Err) {
                                 Clogger.e("AuthViewModel", "Login failed after registration: ${apiLoginState.code} ${apiLoginState.message}")
@@ -206,7 +211,7 @@ class AuthViewModel
                                          apiLoginState.message.contains("connection", ignoreCase = true)
                     val is404Error = apiLoginState.code == 404
                     
-                    // Set error message first
+                    // Set error message first (before logout to ensure it's visible)
                     val errorMsg = when {
                         isAuthError -> invalidCredentialMessage
                         is404Error -> "Account not found. Please sign up first or check your email address."
@@ -214,21 +219,22 @@ class AuthViewModel
                         else -> apiLoginState.message ?: "Failed to authenticate with server. Please try again."
                     }
                     
-                    // Set flag BEFORE logging out to prevent navigation loop
+                    Clogger.e("AuthViewModel", "Login failed: ${apiLoginState.code} - $errorMsg")
+                    
+                    // Set flag FIRST to prevent navigation before we do anything else
                     globalAuthListener.setHandlingError(true)
                     
-                    try {
-                        authService.logout()
-                    } catch (e: Exception) {
-                        // Ignore logout errors
-                    }
-                    
-                    // Set UI state
+                    // Set UI state so error message is visible
                     _errorMessage.value = errorMsg
                     _authState.value = AuthState.Unauthenticated
                     
-                    // Reset flag after a longer delay to ensure auth state listener has processed
-                    delay(500)
+                    // DON'T logout - keep Firebase auth active so user can retry without re-entering password
+                    // The error message will be visible and user can try again
+                    // Only logout would be needed if we want to clear Firebase session, but that causes navigation
+                    
+                    // Keep flag set to prevent any navigation
+                    // Reset after delay to allow future navigation if needed
+                    delay(1000)
                     globalAuthListener.setHandlingError(false)
                     
                     return@launch
