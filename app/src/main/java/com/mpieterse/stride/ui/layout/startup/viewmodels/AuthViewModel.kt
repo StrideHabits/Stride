@@ -155,9 +155,20 @@ class AuthViewModel
                     "User email is null"
                 }
 
-                val apiLoginState = authApi.login(
+                var apiLoginState = authApi.login(
                     user.email!!, signInForm.formState.value.password.value
                 )
+
+                if (apiLoginState is ApiResult.Err && apiLoginState.code == 404) {
+                    val reRegister = authApi.register(
+                        user.email!!, user.email!!, signInForm.formState.value.password.value
+                    )
+                    if (reRegister is ApiResult.Ok) {
+                        apiLoginState = authApi.login(
+                            user.email!!, signInForm.formState.value.password.value
+                        )
+                    }
+                }
 
                 if (apiLoginState is ApiResult.Err) {
                     // Check if it's an authentication error (401, 403) or a network error

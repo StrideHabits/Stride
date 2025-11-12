@@ -5,6 +5,10 @@ import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +26,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.size
 import com.mpieterse.stride.R
 import com.mpieterse.stride.core.permissions.NotificationPermissionHelper
 import com.mpieterse.stride.ui.layout.central.components.CreateNotificationDialog
@@ -90,7 +93,7 @@ fun NotificationsScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        Surface(color = Color.White, modifier = Modifier.fillMaxSize()) {
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -104,7 +107,7 @@ fun NotificationsScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp
                     ),
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 // Global Settings Card
@@ -131,7 +134,7 @@ fun NotificationsScreen(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 18.sp
                         ),
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
 
@@ -178,8 +181,8 @@ fun NotificationsScreen(
         // Floating Action Button
         FloatingActionButton(
             onClick = onFabClick,
-            containerColor = Color(0xFFFF9500),
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
@@ -193,7 +196,11 @@ fun NotificationsScreen(
     }
     
     // Permission rationale dialog
-    if (showPermissionRationale) {
+    AnimatedVisibility(
+        visible = showPermissionRationale,
+        enter = fadeIn(animationSpec = tween(durationMillis = 180)),
+        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+    ) {
         AlertDialog(
             onDismissRequest = { showPermissionRationale = false },
             title = {
@@ -269,7 +276,7 @@ private fun NotificationSettingsCard(
             Text(
                 text = "Global Settings",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             // Enable Notifications
@@ -283,7 +290,7 @@ private fun NotificationSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Enable Notifications", color = Color.Black)
+                Text("Enable Notifications", color = MaterialTheme.colorScheme.onBackground)
                 Switch(
                     checked = enableNotifications,
                     onCheckedChange = {
@@ -304,7 +311,7 @@ private fun NotificationSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Default Sound", color = Color.Black)
+                Text("Default Sound", color = MaterialTheme.colorScheme.onBackground)
                 Switch(
                     checked = soundEnabled,
                     onCheckedChange = {
@@ -325,7 +332,7 @@ private fun NotificationSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Default Vibration", color = Color.Black)
+                Text("Default Vibration", color = MaterialTheme.colorScheme.onBackground)
                 Switch(
                     checked = vibrationEnabled,
                     onCheckedChange = {
@@ -357,20 +364,20 @@ private fun EmptyNotificationsState(
             Icon(
                 painter = painterResource(R.drawable.xic_uic_outline_bell),
                 contentDescription = null,
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(8.dp)
             )
 
             Text(
                 text = "No notifications yet",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Text(
                 text = "Add notifications to get reminded about your habits",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -382,7 +389,7 @@ private fun PermissionWarningCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFF3E0)
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
         shape = RoundedCornerShape(12.dp),
         modifier = modifier.padding(vertical = 8.dp)
@@ -397,7 +404,7 @@ private fun PermissionWarningCard(
             Icon(
                 painter = painterResource(R.drawable.xic_uic_outline_bell),
                 contentDescription = null,
-                tint = Color(0xFFFF9500),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Column(
@@ -409,12 +416,12 @@ private fun PermissionWarningCard(
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
                     text = "Enable notifications to receive habit reminders",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
         }

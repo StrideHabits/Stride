@@ -1,5 +1,7 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +23,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,6 +49,7 @@ fun AuthLaunchScreen(
     onNavigateToSignUp: () -> Unit,
     modifier: Modifier,
 ) {
+    val showContent by remember { mutableStateOf(true) }
     val analytics = Firebase.analytics
     LaunchedEffect(Unit) {
         analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW) {
@@ -58,13 +65,15 @@ fun AuthLaunchScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp)
-            ) {
+            Crossfade(targetState = showContent, animationSpec = tween(durationMillis = 500)) { visible ->
+                if (visible) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp)
+                    ) {
                 // App Logo
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_foreground),
@@ -143,7 +152,9 @@ fun AuthLaunchScreen(
                         ),
                         color = MaterialTheme.colorScheme.primary
                     )
+                    }
                 }
+            }
             }
         }
     }

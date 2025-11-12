@@ -1,21 +1,32 @@
 // app/src/main/java/com/mpieterse/stride/ui/layout/central/viewmodels/HomeDatabaseViewModel.kt
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.content.Context
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.services.AppEventBus
 import com.mpieterse.stride.core.services.HabitNameOverrideService
+import com.mpieterse.stride.core.utils.Clogger
+import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.dto.checkins.CheckInDto
 import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.repo.concrete.UploadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class HomeDatabaseViewModel @Inject constructor(
@@ -23,6 +34,8 @@ class HomeDatabaseViewModel @Inject constructor(
     private val checkinsRepo: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
     private val eventBus: AppEventBus,
+    private val uploadRepo: UploadRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     data class HabitRowUi(
@@ -86,7 +99,11 @@ class HomeDatabaseViewModel @Inject constructor(
         val habits = try { habitsRepo.observeAll().first() } catch (_: Exception) { emptyList() }
 
         val days = lastThreeDays()
-        val header = days.map { d -> "${d.dayOfWeek.name.take(3)}\n${d.dayOfMonth}" }
+        val header = days.map { d ->
+            val label = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+            val dayNumber = d.dayOfMonth.toString().padStart(2, '0')
+            "$label\n$dayNumber"
+        }
 
         val rows = habits.map { h ->
             val local: List<CheckInDto> =
@@ -122,16 +139,58 @@ class HomeDatabaseViewModel @Inject constructor(
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toSet()
 
+    private suspend fun uploadImage(base64: String, mimeType: String?): String? = withContext(Dispatchers.IO) {
+        val extension = when (mimeType) {
+            "image/png" -> ".png"
+            else -> ".jpg"
+        }
+        val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
+        return@withContext try {
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            tempFile.writeBytes(bytes)
+            when (val result = uploadRepo.upload(tempFile.path)) {
+                is ApiResult.Ok -> result.data.url ?: result.data.path
+                is ApiResult.Err -> {
+                    Clogger.e("HomeDatabaseViewModel", "Image upload failed: ${result.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Clogger.e("HomeDatabaseViewModel", "Image upload exception", e)
+            null
+        } finally {
+            tempFile.delete()
+        }
+    }
+
     // Queue create locally via repo API
-    fun createHabit(name: String, frequency: Int = 0, tag: String? = null, imageUrl: String? = null, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+    fun createHabit(
+        name: String,
+        frequency: Int = 1,
+        tag: String? = null,
+        imageBase64: String? = null,
+        imageMimeType: String? = null,
+        imageUrl: String? = null,
+        onDone: (Boolean) -> Unit = {}
+    ) = viewModelScope.launch {
         withLoading {
             try {
+                val resolvedImageUrl = when {
+                    !imageBase64.isNullOrBlank() -> uploadImage(imageBase64, imageMimeType)
+                    !imageUrl.isNullOrBlank() -> imageUrl.trim()
+                    else -> null
+                }
+                if (!imageBase64.isNullOrBlank() && resolvedImageUrl.isNullOrBlank()) {
+                    throw IllegalStateException("Image upload failed")
+                }
+                val finalImageUrl = sanitizeImageUrl(resolvedImageUrl)
+
                 habitsRepo.create(
                     HabitCreateDto(
                         name = name.trim(),
-                        frequency = frequency.coerceAtLeast(0),
+                        frequency = frequency.coerceIn(1, 7),
                         tag = tag?.trim().takeUnless { it.isNullOrEmpty() },
-                        imageUrl = imageUrl?.trim().takeUnless { it.isNullOrEmpty() }
+                        imageUrl = finalImageUrl?.takeUnless { it.isEmpty() }
                     )
                 )
                 setStatus("OK • create habit")
@@ -145,6 +204,14 @@ class HomeDatabaseViewModel @Inject constructor(
                 log("create ❌ ${e.message}")
                 onDone(false)
             }
+        }
+    }
+
+    private fun sanitizeImageUrl(url: String?): String? {
+        return url?.let {
+            if (it.startsWith("http://", ignoreCase = true)) {
+                "https://${it.removePrefix("http://")}"
+            } else it
         }
     }
 

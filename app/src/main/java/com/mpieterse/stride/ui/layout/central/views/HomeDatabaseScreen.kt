@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,7 +40,7 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
 
     Box(modifier = modifier.fillMaxSize()) {
         Surface(
-            color = Color(0xFF161620),
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxSize()
         ) {
             Column(
@@ -124,8 +123,8 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         // FAB (stays on top)
         FloatingActionButton(
             onClick = { showCreate = true },
-            containerColor = Color(0xFFFF9500),
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
@@ -144,13 +143,13 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         isVisible = showCreate,
         onDismiss = { showCreate = false },
         onConfirm = { data ->
-            // TODO: Handle image upload - need to upload imageBase64 to server and get imageUrl
-            // For now, pass imageUrl as null if no image is uploaded
             viewModel.createHabit(
                 name = data.name,
                 frequency = data.frequency,
                 tag = data.tag,
-                imageUrl = null // TODO: Upload image and get URL
+                imageBase64 = data.imageBase64,
+                imageMimeType = data.imageMimeType,
+                imageUrl = null
             ) { ok ->
                 if (ok) showCreate = false
             }
@@ -165,16 +164,26 @@ private fun DateHeader(
 ) {
     Row(modifier = modifier.padding(horizontal = 12.dp)) {
         days.forEachIndexed { index, day ->
-            Text(
-                text = day,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight(600),
-                    lineHeight = 16.sp
-                ),
-                modifier = Modifier.requiredWidth(24.dp)
-            )
+            val parts = day.split("\n")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.requiredWidth(32.dp)
+            ) {
+                Text(
+                    text = parts.getOrNull(0) ?: "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                )
+                Text(
+                    text = parts.getOrNull(1) ?: "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    )
+                )
+            }
             if (index != days.lastIndex) Spacer(modifier = Modifier.width(8.dp))
         }
     }

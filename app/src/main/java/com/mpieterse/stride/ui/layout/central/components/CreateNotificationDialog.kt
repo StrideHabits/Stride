@@ -1,6 +1,7 @@
 package com.mpieterse.stride.ui.layout.central.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,8 +52,6 @@ fun CreateNotificationDialog(
     availableHabits: List<HabitDto> = emptyList(),
     initialData: NotificationData? = null
 ) {
-    if (!isVisible) return
-
     var selectedHabit by remember { 
         mutableStateOf<HabitDto?>(
             initialData?.habitId?.let { id -> 
@@ -84,24 +83,29 @@ fun CreateNotificationDialog(
         }
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = if (initialData != null) "Edit Habit Reminder" else "Add Habit Reminder",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                ),
-                color = Color.Black,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(animationSpec = tween(durationMillis = 180)),
+        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    text = if (initialData != null) "Edit Habit Reminder" else "Add Habit Reminder",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                 // Habit Selection
                 LocalOutlinedDropdown(
                     label = "Habit",
@@ -128,7 +132,7 @@ fun CreateNotificationDialog(
                         text = "Time",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 14.sp
                         ),
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -140,7 +144,7 @@ fun CreateNotificationDialog(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedTime != null) Color(0xFFFF9500) else Color(0xFFF5F5F5)
+                            containerColor = if (selectedTime != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
                         Text(
@@ -150,7 +154,7 @@ fun CreateNotificationDialog(
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = if (selectedTime != null) 18.sp else 14.sp,
                                 fontWeight = if (selectedTime != null) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTime != null) Color.White else Color.Gray
+                                color = if (selectedTime != null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
@@ -162,7 +166,7 @@ fun CreateNotificationDialog(
                         text = "Days of Week",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 14.sp
                         ),
                         modifier = Modifier.padding(bottom = 12.dp)
@@ -208,10 +212,10 @@ fun CreateNotificationDialog(
                                     },
                                     modifier = Modifier.weight(1f),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(0xFFFF9500),
-                                        selectedLabelColor = Color.White,
-                                        containerColor = Color(0xFFF5F5F5),
-                                        labelColor = if (isSelected) Color.White else Color.Black
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        labelColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 )
@@ -252,10 +256,10 @@ fun CreateNotificationDialog(
                                     },
                                     modifier = Modifier.weight(1f),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(0xFFFF9500),
-                                        selectedLabelColor = Color.White,
-                                        containerColor = Color(0xFFF5F5F5),
-                                        labelColor = if (isSelected) Color.White else Color.Black
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        labelColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 )
@@ -274,7 +278,7 @@ fun CreateNotificationDialog(
                         Text(
                             text = "Please select at least one day",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color.Red,
+                                color = MaterialTheme.colorScheme.error,
                                 fontSize = 12.sp
                             ),
                             modifier = Modifier.padding(top = 8.dp)
@@ -316,44 +320,45 @@ fun CreateNotificationDialog(
                 },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF9500)
+                    containerColor = MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier.width(130.dp)
             ) {
                 Text(
                     text = if (initialData != null) "Update" else "Add",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
                 )
             }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.Black
-                ),
-                modifier = Modifier.width(90.dp)
-            ) {
-                Text(
-                    text = "Cancel",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onBackground
+                    ),
+                    modifier = Modifier.width(90.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp
+                        )
                     )
-                )
-            }
-        },
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        ),
-        modifier = Modifier.fillMaxWidth(0.95f)
-    )
+                }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            ),
+            modifier = Modifier.fillMaxWidth(0.95f)
+        )
+    }
     
     // 24-hour time picker dialog
     if (showTimePicker) {

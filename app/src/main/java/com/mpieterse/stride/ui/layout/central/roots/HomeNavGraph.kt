@@ -1,5 +1,8 @@
 package com.mpieterse.stride.ui.layout.central.roots
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -21,12 +24,21 @@ fun HomeNavGraph(
     currentDestination: String,
     notificationsViewModel: NotificationsViewModel
 ) {
+    val fadeInSpec = tween<Float>(durationMillis = 220)
+    val fadeOutSpec = tween<Float>(durationMillis = 180)
+
     NavHost(
         navController = controller,
         startDestination = currentDestination
     ) {
         // Database
-        composable(route = HomeScreen.Database.route) {
+        composable(
+            route = HomeScreen.Database.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
+        ) {
             HomeDatabaseScreen(
                 modifier = modifier,
                 onNavigateToHabitViewer = { id ->
@@ -37,7 +49,11 @@ fun HomeNavGraph(
 
         // Notifications
         composable(
-            route = HomeScreen.Notifications.route
+            route = HomeScreen.Notifications.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
         ) {
             NotificationsScreen(
                 modifier = modifier,
@@ -47,7 +63,11 @@ fun HomeNavGraph(
 
         // Settings
         composable(
-            route = HomeScreen.Settings.route
+            route = HomeScreen.Settings.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
         ) {
             HomeSettingsScreen(
                 modifier = modifier,
@@ -60,7 +80,11 @@ fun HomeNavGraph(
         // HabitViewer
         composable(
             route = HomeScreen.HabitViewer.route,  // "habit/{habitId}"
-            arguments = listOf(navArgument("habitId") { type = NavType.StringType })
+            arguments = listOf(navArgument("habitId") { type = NavType.StringType }),
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
         ) { backStackEntry ->
             val habitId = backStackEntry.arguments?.getString("habitId") ?: return@composable
             HabitViewerScreen(
@@ -72,7 +96,11 @@ fun HomeNavGraph(
 
         // Debug
         composable(
-            route = HomeScreen.Debug.route
+            route = HomeScreen.Debug.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
         ) {
             DebugScreen(
                 modifier = modifier

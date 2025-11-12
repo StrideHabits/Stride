@@ -171,8 +171,7 @@ fun HabitViewerScreen(
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
             vm.updateLocalName(updated.name)
-            // TODO: Handle image update if imageBase64 is provided
-            // This would require updating the habit's image via the repository
+            vm.updateHabitDetails(updated)
             showEditDialog = false
         },
         initialData = HabitData(

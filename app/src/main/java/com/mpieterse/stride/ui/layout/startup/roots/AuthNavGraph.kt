@@ -1,5 +1,8 @@
 package com.mpieterse.stride.ui.layout.startup.roots
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -17,20 +20,34 @@ fun AuthNavGraph(
     authViewModel: AuthViewModel
 ) {
     val controller = rememberNavController()
-    
+    val fadeInSpec = tween<Float>(durationMillis = 220)
+    val fadeOutSpec = tween<Float>(durationMillis = 180)
+
     NavHost(
         navController = controller,
         startDestination = AuthScreen.Launch.route,
         modifier = modifier
     ) {
-        composable(route = AuthScreen.Launch.route) {
+        composable(
+            route = AuthScreen.Launch.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
+        ) {
             AuthLaunchScreen(
                 modifier = Modifier,
                 onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
                 onNavigateToSignUp = { controller.navigate(AuthScreen.SignUp.route) }
             )
         }
-        composable(route = AuthScreen.SignIn.route) {
+        composable(
+            route = AuthScreen.SignIn.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
+        ) {
             AuthSignInScreen(
                 modifier = Modifier,
                 onSignIn = { authViewModel.signIn() },
@@ -38,7 +55,13 @@ fun AuthNavGraph(
                 viewModel = authViewModel
             )
         }
-        composable(route = AuthScreen.SignUp.route) {
+        composable(
+            route = AuthScreen.SignUp.route,
+            enterTransition = { fadeIn(fadeInSpec) },
+            exitTransition = { fadeOut(fadeOutSpec) },
+            popEnterTransition = { fadeIn(fadeInSpec) },
+            popExitTransition = { fadeOut(fadeOutSpec) }
+        ) {
             AuthSignUpScreen(
                 modifier = Modifier,
                 onSignUp = { authViewModel.signUp() },

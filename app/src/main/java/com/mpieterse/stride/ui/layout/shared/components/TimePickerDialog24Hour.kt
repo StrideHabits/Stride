@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
+import java.util.Locale
 import java.time.LocalTime
 
 /**
@@ -70,7 +73,7 @@ fun TimePickerDialog24Hour(
             ) {
                 // Large time display
                 Text(
-                    text = String.format("%02d:%02d", selectedHour, selectedMinute),
+                    text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
                     style = MaterialTheme.typography.displayMedium.copy(
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Bold,
@@ -156,6 +159,20 @@ private fun ScrollableNumberPicker(
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex.coerceIn(0, items.size - 1))
     val itemHeight = 48.dp
     
+    // Update selected value when scroll position changes (center item follows scroll)
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.isScrollInProgress) {
+        // Wait for scrolling to stop before updating
+        if (!listState.isScrollInProgress) {
+            delay(100) // Small delay to ensure scroll has settled
+            // Calculate center item: firstVisibleItemIndex + 1 (middle of 3 visible items)
+            val centerIndex = (listState.firstVisibleItemIndex + 1).coerceIn(0, items.size - 1)
+            val centerItem = items[centerIndex]
+            if (centerItem != selectedValue) {
+                onValueSelected(centerItem)
+            }
+        }
+    }
+    
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -195,7 +212,7 @@ private fun ScrollableNumberPicker(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = String.format("%02d", item),
+                            text = String.format(Locale.getDefault(), "%02d", item),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = if (isSelected) 20.sp else 16.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
