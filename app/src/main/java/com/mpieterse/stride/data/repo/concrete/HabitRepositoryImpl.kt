@@ -85,6 +85,40 @@ class HabitRepositoryImpl @Inject constructor(
         }
     }
 
+    // ---- Update (remote -> cache) ----
+
+    override suspend fun update(id: String, input: HabitCreateDto): HabitDto {
+        try {
+            // 1) Call API
+            val updated: HabitDto = api.updateHabit(id, input)
+            // 2) Cache locally as Synced
+            db.withTransaction {
+                db.habits().upsert(
+                    HabitEntity(
+                        id = updated.id,
+                        name = updated.name,
+                        frequency = updated.frequency,
+                        tag = updated.tag,
+                        imageUrl = updated.imageUrl,
+                        createdAt = updated.createdAt,
+                        updatedAt = updated.updatedAt,
+                        deleted = false,
+                        rowVersion = "",           // fill if your API returns one
+                        syncState = SyncState.Synced
+                    )
+                )
+            }
+            Clogger.d("HabitRepository", "Successfully updated habit $id on server and cached locally")
+            return updated
+        } catch (e: HttpException) {
+            Clogger.e("HabitRepository", "Failed to update habit: HTTP ${e.code()} ${e.message()}", e)
+            throw e
+        } catch (e: Exception) {
+            Clogger.e("HabitRepository", "Failed to update habit", e)
+            throw e
+        }
+    }
+
     // ---- Local upsert helper ----
 
     override suspend fun upsertLocal(dto: HabitDto) {

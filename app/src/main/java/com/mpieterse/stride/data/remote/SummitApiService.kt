@@ -22,7 +22,7 @@ interface SummitApiService {
     suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
     
     @PUT("api/users/fcm-token")
-    suspend fun updateFcmToken(@Body body: com.mpieterse.stride.data.dto.auth.FcmTokenUpdateRequest): Response<Unit>
+    suspend fun updateFcmToken(@Body body: FcmTokenUpdateRequest): Response<Unit>
 
     // Habits (CRUD via /api)
     // FIX: All habit CRUD operations now use the "api/" prefix for consistency.
@@ -32,6 +32,9 @@ interface SummitApiService {
 
     @POST("api/habits") // FIXED: Added "api/" <-- This is the 404 fix
     suspend fun createHabit(@Body body: HabitCreateDto): HabitDto
+
+    @PUT("api/habits/{id}")
+    suspend fun updateHabit(@Path("id") id: String, @Body body: HabitCreateDto): HabitDto
 
     @DELETE("api/habits/{id}") // FIXED: Added "api/"
     suspend fun deleteHabit(@Path("id") id: String)

@@ -14,6 +14,7 @@ import com.mpieterse.stride.core.utils.Clogger
 import com.mpieterse.stride.core.utils.checkInId
 import com.mpieterse.stride.data.dto.checkins.CheckInCreateDto
 import com.mpieterse.stride.data.dto.checkins.CheckInDto
+import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
@@ -154,33 +155,65 @@ class HabitViewerViewModel @Inject constructor(
     fun updateHabitDetails(updated: HabitData) = viewModelScope.launch {
         val current = lastHabit ?: return@launch
         try {
-            val uploadedUrl = if (!updated.imageBase64.isNullOrBlank()) {
-                uploadImage(updated.imageBase64!!, updated.imageMimeType)
-            } else {
-                sanitizeImageUrl(current.imageUrl)
+            _state.update { it.copy(loading = true, error = null) }
+            
+            // Upload image if provided - but don't block update if it fails
+            var uploadedUrl: String? = null
+            var imageUploadFailed = false
+            
+            if (!updated.imageBase64.isNullOrBlank()) {
+                try {
+                    uploadedUrl = uploadImage(updated.imageBase64!!, updated.imageMimeType)
+                    if (uploadedUrl.isNullOrBlank()) {
+                        imageUploadFailed = true
+                        Clogger.w("HabitViewerViewModel", "Image upload failed, continuing with existing image or no image")
+                    }
+                } catch (e: Exception) {
+                    imageUploadFailed = true
+                    Clogger.e("HabitViewerViewModel", "Image upload exception, continuing with existing image or no image", e)
+                }
             }
-            if (!updated.imageBase64.isNullOrBlank() && uploadedUrl.isNullOrBlank()) {
-                throw IllegalStateException("Image upload failed")
-            }
-            val dto = current.copy(
-                name = updated.name,
-                frequency = updated.frequency.coerceIn(1, 7),
-                tag = updated.tag,
-                imageUrl = uploadedUrl
+            
+            // If image upload failed, use existing image URL (or null if no existing image)
+            val finalImageUrl = uploadedUrl ?: sanitizeImageUrl(current.imageUrl)
+            
+            // Update via API (which also caches locally) - proceed even if image upload failed
+            val updatedDto = habits.update(
+                id = current.id,
+                input = HabitCreateDto(
+                    name = updated.name.trim(),
+                    frequency = updated.frequency.coerceIn(1, 7),
+                    tag = updated.tag?.trim().takeUnless { it.isNullOrEmpty() },
+                    imageUrl = finalImageUrl?.takeUnless { it.isEmpty() }
+                )
             )
-            habits.upsertLocal(dto)
-            lastHabit = dto
-            lastImageUrl = uploadedUrl
+            
+            // Update local state
+            lastHabit = updatedDto
+            lastImageUrl = finalImageUrl
             val updatedBitmap = when {
-                !updated.imageBase64.isNullOrBlank() -> base64ToBitmap(updated.imageBase64)
-                !uploadedUrl.isNullOrBlank() -> fetchBitmap(uploadedUrl)
+                !updated.imageBase64.isNullOrBlank() && !imageUploadFailed -> base64ToBitmap(updated.imageBase64)
+                !finalImageUrl.isNullOrBlank() -> fetchBitmap(finalImageUrl)
                 else -> null
             } ?: _state.value.habitImage
-            _state.update { it.copy(habitImage = updatedBitmap) }
+            _state.update { 
+                it.copy(
+                    habitImage = updatedBitmap,
+                    loading = false,
+                    displayName = updatedDto.name,
+                    error = if (imageUploadFailed) "Habit updated, but image upload failed. Please try again later." else null
+                ) 
+            }
             eventBus.emit(AppEventBus.AppEvent.HabitUpdated)
+            Clogger.d("HabitViewerViewModel", "Successfully updated habit ${current.id} on server${if (imageUploadFailed) " (image upload failed)" else ""}")
         } catch (e: Exception) {
             Clogger.e("HabitViewerViewModel", "Failed to update habit", e)
-            _state.update { it.copy(error = "Failed to update habit") }
+            _state.update { 
+                it.copy(
+                    loading = false,
+                    error = "Failed to update habit: ${e.message ?: "Unknown error"}"
+                ) 
+            }
         }
     }
 
@@ -190,7 +223,13 @@ class HabitViewerViewModel @Inject constructor(
                 BitmapFactory.decodeStream(input)
             }
         } catch (e: Exception) {
-            Clogger.e("HabitViewerViewModel", "Failed to load image from $url", e)
+            // FileNotFoundException (404) is expected when images don't exist on server
+            // Log as warning instead of error to reduce log noise
+            if (e is java.io.FileNotFoundException) {
+                Clogger.d("HabitViewerViewModel", "Image not found at $url (this is normal if image was deleted)")
+            } else {
+                Clogger.e("HabitViewerViewModel", "Failed to load image from $url", e)
+            }
             null
         }
     }
