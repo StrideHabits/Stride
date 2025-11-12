@@ -6,6 +6,7 @@ import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.GlobalAuthenticationListener
 import com.mpieterse.stride.core.services.GoogleAuthenticationClient
+import com.mpieterse.stride.core.utils.Clogger
 import com.mpieterse.stride.data.repo.concrete.AuthRepository
 import com.mpieterse.stride.data.store.CredentialsStore
 import com.mpieterse.stride.ui.layout.startup.models.AuthState
@@ -165,21 +166,34 @@ class AuthViewModel
                 }
 
                 val invalidCredentialMessage = "Invalid credentials. Please check your email and password."
+                // Try raw password first (for users with passwords containing whitespace stored in backend)
                 var apiLoginState = authApi.login(
                     user.email!!,
-                    trimmedPassword
+                    rawPassword
                 )
 
                 if (apiLoginState is ApiResult.Err) {
                     val message = apiLoginState.message.lowercase()
-                    val shouldRetryWithTrimmed = message.contains("invalid credentials") || message.contains("password")
-                    if (shouldRetryWithTrimmed && trimmedPassword != rawPassword) {
+                    // If login failed and password has whitespace, retry with trimmed version
+                    val shouldRetryWithTrimmed = trimmedPassword != rawPassword &&
+                        (message.contains("invalid credentials") || message.contains("password"))
+                    if (shouldRetryWithTrimmed) {
                         apiLoginState = authApi.login(user.email!!, trimmedPassword)
                     }
+                    // Handle 404 - user might not exist in Summit API, try to register
                     if (apiLoginState is ApiResult.Err && apiLoginState.code == 404) {
+                        Clogger.d("AuthViewModel", "User not found in Summit API (404), attempting registration")
                         val reRegister = authApi.register(user.email!!, user.email!!, trimmedPassword)
                         if (reRegister is ApiResult.Ok) {
+                            // Registration successful, try login again with trimmed password
                             apiLoginState = authApi.login(user.email!!, trimmedPassword)
+                            if (apiLoginState is ApiResult.Err) {
+                                Clogger.e("AuthViewModel", "Login failed after registration: ${apiLoginState.code} ${apiLoginState.message}")
+                            }
+                        } else if (reRegister is ApiResult.Err) {
+                            // Registration failed - create a new error with the same info for login
+                            Clogger.e("AuthViewModel", "Registration failed after 404: ${reRegister.code} ${reRegister.message}")
+                            apiLoginState = ApiResult.Err(reRegister.code, reRegister.message)
                         }
                     }
                 }
@@ -190,10 +204,12 @@ class AuthViewModel
                     val isNetworkError = apiLoginState.code == null || apiLoginState.message.contains("timeout", ignoreCase = true) || 
                                          apiLoginState.message.contains("network", ignoreCase = true) ||
                                          apiLoginState.message.contains("connection", ignoreCase = true)
+                    val is404Error = apiLoginState.code == 404
                     
                     // Set error message first
                     val errorMsg = when {
                         isAuthError -> invalidCredentialMessage
+                        is404Error -> "Account not found. Please sign up first or check your email address."
                         isNetworkError -> "Network error. Please check your internet connection and try again."
                         else -> apiLoginState.message ?: "Failed to authenticate with server. Please try again."
                     }

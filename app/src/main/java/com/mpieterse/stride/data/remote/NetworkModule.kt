@@ -66,20 +66,44 @@ object NetworkModule {
             throw e
         }
 
-        if (!isAuthEndpoint && (response.code == 401 || response.code == 403)) {
-            // Only attempt session restoration for actual auth errors (401/403)
-            when (sessionManager.tryRestoreSession()) {
+        // Handle auth errors (401/403) and potential auth-related 500 errors
+        if (!isAuthEndpoint && (response.code == 401 || response.code == 403 || response.code == 500)) {
+            // Attempt session restoration for auth errors and 500 (which might indicate expired token)
+            val originalToken = token
+            val restoreResult = sessionManager.tryRestoreSession()
+            when (restoreResult) {
                 SessionManager.SessionRestoreResult.RESTORED -> {
-                response.close()
-                val refreshedToken = runBlocking { store.tokenFlow.first() }
-                val retryRequest = originalRequest.newBuilder().apply {
-                    if (!refreshedToken.isNullOrBlank()) {
-                        header("Authorization", "Bearer $refreshedToken")
-                    } else {
-                        removeHeader("Authorization")
+                    // Session restored successfully - retry the original request with new token
+                    response.close()
+                    val refreshedToken = runBlocking { store.tokenFlow.first() }
+                    val retryRequest = originalRequest.newBuilder().apply {
+                        if (!refreshedToken.isNullOrBlank()) {
+                            header("Authorization", "Bearer $refreshedToken")
+                        } else {
+                            removeHeader("Authorization")
+                        }
+                    }.build()
+                    response = chain.proceed(retryRequest)
+                    // If retry still fails with 500, it's a real server error, not auth-related
+                }
+                SessionManager.SessionRestoreResult.ALREADY_RESTORING -> {
+                    // Another request is already restoring the session - wait for it to complete
+                    val restorationSucceeded = sessionManager.waitForRestoration(originalToken)
+                    if (restorationSucceeded) {
+                        // Restoration completed successfully - retry with new token
+                        response.close()
+                        val refreshedToken = runBlocking { store.tokenFlow.first() }
+                        val retryRequest = originalRequest.newBuilder().apply {
+                            if (!refreshedToken.isNullOrBlank()) {
+                                header("Authorization", "Bearer $refreshedToken")
+                            } else {
+                                removeHeader("Authorization")
+                            }
+                        }.build()
+                        response = chain.proceed(retryRequest)
                     }
-                }.build()
-                response = chain.proceed(retryRequest)
+                    // If restoration failed or timed out, return the original error response
+                    // (don't close it - let the caller handle it)
                 }
                 SessionManager.SessionRestoreResult.INVALID_CREDENTIALS,
                 SessionManager.SessionRestoreResult.NO_CREDENTIALS -> {
@@ -87,9 +111,10 @@ object NetworkModule {
                     sessionManager.forceLogout()
                 }
                 SessionManager.SessionRestoreResult.NETWORK_ERROR,
-                SessionManager.SessionRestoreResult.SERVER_ERROR,
-                SessionManager.SessionRestoreResult.ALREADY_RESTORING -> {
-                    // Do nothing - keep the user logged in and allow retries
+                SessionManager.SessionRestoreResult.SERVER_ERROR -> {
+                    // For 500 errors, if session restoration failed, it might be a real server error
+                    // Don't logout - just return the error response
+                    // For 401/403, keep the user logged in and allow retries
                 }
             }
         }

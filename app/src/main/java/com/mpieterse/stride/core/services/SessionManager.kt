@@ -12,8 +12,11 @@ import javax.inject.Named
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.Response
 
 @Singleton
@@ -34,6 +37,27 @@ class SessionManager @Inject constructor(
         SERVER_ERROR,
         NO_CREDENTIALS,
         ALREADY_RESTORING
+    }
+
+    /**
+     * Wait for an in-flight session restoration to complete.
+     * Polls the token store until the token changes or a timeout occurs.
+     *
+     * @param originalToken The token value before restoration started
+     * @param timeoutMs Maximum time to wait in milliseconds (default 10 seconds)
+     * @return true if a new token was detected, false if timeout
+     */
+    fun waitForRestoration(originalToken: String?, timeoutMs: Long = 10000): Boolean {
+        return runBlocking {
+            withTimeoutOrNull(timeoutMs) {
+                var currentToken = runBlocking { tokenStore.tokenFlow.first() }
+                while (currentToken == originalToken && restoringSession.get()) {
+                    delay(100) // Poll every 100ms
+                    currentToken = runBlocking { tokenStore.tokenFlow.first() }
+                }
+                currentToken != originalToken && !currentToken.isNullOrBlank()
+            } ?: false
+        }
     }
 
     /**
