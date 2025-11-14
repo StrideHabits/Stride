@@ -128,25 +128,18 @@ class HabitViewerViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             try {
-                val local = checkins.observeForHabit(habitId).firstOrNull().orEmpty()
-                val existing = local.firstOrNull { it.dayKey == isoDate }
-                if (existing == null) {
-                    // create
-                    checkins.create(
-                        CheckInCreateDto(
-                            habitId = habitId,
-                            dayKey = isoDate,
-                            completedAt = "${isoDate}T00:00:00Z"
-                        )
-                    )
-                } else {
-                    // delete by deterministic id
-                    val id = existing.id.ifEmpty { checkInId(habitId, isoDate) }
-                    checkins.delete(id)
-                }
+                // Get current check-ins for this habit (only active ones from observeForHabit)
+                val activeCheckIns = checkins.observeForHabit(habitId).firstOrNull().orEmpty()
+                val existing = activeCheckIns.firstOrNull { it.dayKey == isoDate }
+                // Toggle: if exists and is active, turn off; if doesn't exist, turn on
+                // The toggle() method handles marking deleted=false when on, deleted=true when off
+                // This preserves check-ins unless user explicitly unchecks them
+                val shouldBeOn = existing == null
+                checkins.toggle(habitId, isoDate, on = shouldBeOn)
                 eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
                 _state.update { it.copy(loading = false) }
             } catch (e: Exception) {
+                Clogger.e("HabitViewerViewModel", "Failed to toggle check-in", e)
                 _state.update { it.copy(loading = false, error = "Write failed") }
             }
         }
@@ -310,15 +303,28 @@ class HabitViewerViewModel @Inject constructor(
     }
 
     private fun computeStreakDays(list: List<CheckInDto>): Int {
+        // The DAO query already filters out deleted check-ins (WHERE deleted=0)
+        // So we don't need to filter here - all items in list are active
         val days = list.asSequence()
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toHashSet()
+        
+        // Count consecutive days from today backwards
+        // If today is checked, start from today. If today is not checked, start from yesterday.
         var d = LocalDate.now(ZoneId.systemDefault())
         var streak = 0
+        
+        // If today is not checked, start counting from yesterday
+        if (!days.contains(d)) {
+            d = d.minusDays(1)
+        }
+        
+        // Count consecutive days backwards from the starting day
         while (days.contains(d)) {
             streak++
             d = d.minusDays(1)
         }
+        
         return streak
     }
 }
