@@ -21,6 +21,7 @@ import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.data.repo.concrete.UploadRepository
 import com.mpieterse.stride.ui.layout.central.components.HabitData
 import com.mpieterse.stride.utils.base64ToBitmap
+import retrofit2.HttpException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -89,13 +90,20 @@ class HabitViewerViewModel @Inject constructor(
                     val (habitName, display, pair) = triple
                     val (days, streak) = pair
                     val sanitizedUrl = habitDto?.imageUrl?.let { sanitizeImageUrl(it) }
+                    // Preserve existing image if URL hasn't changed, otherwise fetch new one
                     val imageBitmap = sanitizedUrl?.takeIf { it.isNotBlank() }?.let { url ->
                         if (url != lastImageUrl || _state.value.habitImage == null) {
                             fetchBitmap(url)?.also { lastImageUrl = url }
                         } else {
+                            // Preserve existing image if URL hasn't changed
                             _state.value.habitImage
                         }
-                    } ?: _state.value.habitImage
+                    } ?: if (sanitizedUrl == null && _state.value.habitImage != null) {
+                        // If URL is null but we have an existing image, preserve it (might have been deleted on server)
+                        _state.value.habitImage
+                    } else {
+                        null
+                    }
 
                     lastHabit = habitDto
                     _state.update {
@@ -174,17 +182,22 @@ class HabitViewerViewModel @Inject constructor(
                 }
             }
             
-            // If image upload failed, use existing image URL (or null if no existing image)
-            val finalImageUrl = uploadedUrl ?: sanitizeImageUrl(current.imageUrl)
+            // If image upload failed or no new image provided, use existing image URL
+            // Only update imageUrl if a new image was uploaded, otherwise preserve existing URL
+            val finalImageUrl = when {
+                !updated.imageBase64.isNullOrBlank() && !imageUploadFailed -> uploadedUrl
+                !updated.imageBase64.isNullOrBlank() && imageUploadFailed -> sanitizeImageUrl(current.imageUrl)
+                else -> sanitizeImageUrl(current.imageUrl) // Preserve existing image when no new image is provided
+            }
             
-            // Update via API (which also caches locally) - proceed even if image upload failed
+            // Update via API (which also caches locally) - always include imageUrl, even if null (to preserve existing)
             val updatedDto = habits.update(
                 id = current.id,
                 input = HabitCreateDto(
                     name = updated.name.trim(),
                     frequency = updated.frequency.coerceIn(1, 7),
                     tag = updated.tag?.trim().takeUnless { it.isNullOrEmpty() },
-                    imageUrl = finalImageUrl?.takeUnless { it.isEmpty() }
+                    imageUrl = finalImageUrl // Include even if null - API should handle this
                 )
             )
             
@@ -206,6 +219,22 @@ class HabitViewerViewModel @Inject constructor(
             }
             eventBus.emit(AppEventBus.AppEvent.HabitUpdated)
             Clogger.d("HabitViewerViewModel", "Successfully updated habit ${current.id} on server${if (imageUploadFailed) " (image upload failed)" else ""}")
+        } catch (e: retrofit2.HttpException) {
+            // Handle HTTP errors more gracefully
+            val errorMessage = when (e.code()) {
+                404 -> "Habit not found on server. It may have been deleted. Please refresh or create a new habit."
+                400 -> "Invalid habit data. Please check your input and try again."
+                401, 403 -> "Authentication error. Please sign in again."
+                500 -> "Server error. Please try again later."
+                else -> "Failed to update habit: ${e.message() ?: "Unknown error"}"
+            }
+            Clogger.e("HabitViewerViewModel", "Failed to update habit: HTTP ${e.code()}", e)
+            _state.update { 
+                it.copy(
+                    loading = false,
+                    error = errorMessage
+                ) 
+            }
         } catch (e: Exception) {
             Clogger.e("HabitViewerViewModel", "Failed to update habit", e)
             _state.update { 

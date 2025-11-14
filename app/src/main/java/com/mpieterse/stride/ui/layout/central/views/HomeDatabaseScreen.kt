@@ -153,7 +153,8 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
             ) { ok ->
                 if (ok) showCreate = false
             }
-        }
+        },
+        isLoading = state.loading
     )
 }
 

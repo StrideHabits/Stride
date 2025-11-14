@@ -39,144 +39,147 @@ fun HomeSettingsScreen(
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val sync by viewModel.sync.collectAsStateWithLifecycle()
 
-    Surface(
-        color = Color(0xFF161620),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
-                )
-                .padding(24.dp)
-                .systemBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .fillMaxSize()
+    Box(modifier = modifier.fillMaxSize()) {
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Header
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight(600),
-                    lineHeight = 24.sp
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top,
+                modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.background,
+                        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
+                    )
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxSize()
+            ) {
+                // Header
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-            )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Application section
-            SectionHeader(
-                iconRes = R.drawable.xic_uic_outline_sync,
-                title = "Application"
-            )
+                // Application section
+                SectionHeader(
+                    iconRes = R.drawable.xic_uic_outline_sync,
+                    title = "Application"
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            LocalOutlinedDropdown(
-                label = "Theme",
-                value = theme,
-                onValueChange = { viewModel.updateTheme(it) },
-                items = AppAppearance.entries,
-                itemLabel = { it.name.replaceFirstChar(Char::uppercase) }
-            )
+                LocalOutlinedDropdown(
+                    label = "Theme",
+                    value = theme,
+                    onValueChange = { viewModel.updateTheme(it) },
+                    items = AppAppearance.entries,
+                    itemLabel = { it.name.replaceFirstChar(Char::uppercase) }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            LocalOutlinedDropdown(
-                label = "Notifications",
-                value = notifications,
-                onValueChange = { viewModel.updateAlerts(it) },
-                items = AlertFrequency.entries,
-                itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
-            )
+                LocalOutlinedDropdown(
+                    label = "Notifications",
+                    value = notifications,
+                    onValueChange = { viewModel.updateAlerts(it) },
+                    items = AlertFrequency.entries,
+                    itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            LocalOutlinedDropdown(
-                label = "Sync Online",
-                value = sync,
-                onValueChange = { viewModel.updateSync(it) },
-                items = SyncFrequency.entries,
-                itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
-            )
+                LocalOutlinedDropdown(
+                    label = "Sync Online",
+                    value = sync,
+                    onValueChange = { viewModel.updateSync(it) },
+                    items = SyncFrequency.entries,
+                    itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
+                )
 
-            Spacer(modifier = Modifier.height(56.dp))
+                Spacer(modifier = Modifier.height(56.dp))
 
-            // Options section
-            SectionHeader(
-                iconRes = R.drawable.xic_uic_outline_external_link_alt,
-                title = "Options"
-            )
+                // Options section
+                SectionHeader(
+                    iconRes = R.drawable.xic_uic_outline_external_link_alt,
+                    title = "Options"
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            val buttonColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
+                val buttonColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
 
-            Button(
-                onClick = {},
-                colors = buttonColor,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier
-                    .height(40.dp)
-                    .fillMaxWidth()
-            ) {
-                Text("Import database", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
-            }
+                Button(
+                    onClick = {},
+                    colors = buttonColor,
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Import database", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = {},
-                colors = buttonColor,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier
-                    .height(40.dp)
-                    .fillMaxWidth()
-            ) {
-                Text("Export database", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
-            }
+                Button(
+                    onClick = {},
+                    colors = buttonColor,
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Export database", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = {},
-                colors = buttonColor,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier
-                    .height(40.dp)
-                    .fillMaxWidth()
-            ) {
-                Text("Help & FAQ", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
-            }
+                Button(
+                    onClick = {},
+                    colors = buttonColor,
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Help & FAQ", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = { onEnterDebug() },
-                colors = buttonColor,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier
-                    .height(40.dp)
-                    .fillMaxWidth()
-            ) {
-                Text("Debug Tools", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
-            }
+                Button(
+                    onClick = { onEnterDebug() },
+                    colors = buttonColor,
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Debug Tools", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                }
 
-            Spacer(modifier = Modifier.height(56.dp))
+                Spacer(modifier = Modifier.height(56.dp))
 
-            Button(
-                onClick = {
-                    viewModel.logout()
-                },
-                colors = buttonColor,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier
-                    .height(40.dp)
-                    .fillMaxWidth()
-            ) {
-                Text("Logout", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                Button(
+                    onClick = {
+                        viewModel.logout()
+                    },
+                    colors = buttonColor,
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Logout", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                }
             }
         }
     }

@@ -1,8 +1,10 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -103,8 +105,8 @@ fun AuthSignUpScreen(
             // Error Message
             AnimatedVisibility(
                 visible = errorMessage != null,
-                enter = fadeIn(),
-                exit = fadeOut()
+                enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+                exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
             ) {
                 errorMessage?.let { error ->
                     Text(

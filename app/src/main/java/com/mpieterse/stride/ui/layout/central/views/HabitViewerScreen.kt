@@ -181,7 +181,8 @@ fun HabitViewerScreen(
             imageBase64 = initialImageBase64,
             imageMimeType = initialImageMime,
             imageFileName = null // File name can be extracted from URL if available
-        )
+        ),
+        isLoading = state.loading
     )
 }
 

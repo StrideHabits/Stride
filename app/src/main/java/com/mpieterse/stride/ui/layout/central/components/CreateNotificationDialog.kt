@@ -6,17 +6,20 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +53,8 @@ fun CreateNotificationDialog(
     onDismiss: () -> Unit,
     onConfirm: (NotificationData) -> Unit,
     availableHabits: List<HabitDto> = emptyList(),
-    initialData: NotificationData? = null
+    initialData: NotificationData? = null,
+    isLoading: Boolean = false
 ) {
     var selectedHabit by remember { 
         mutableStateOf<HabitDto?>(
@@ -85,8 +89,8 @@ fun CreateNotificationDialog(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(animationSpec = tween(durationMillis = 180)),
-        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+        enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+        exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
     ) {
         AlertDialog(
             onDismissRequest = onDismiss,
@@ -272,8 +276,8 @@ fun CreateNotificationDialog(
                     // Show error if no days selected
                     AnimatedVisibility(
                         visible = selectedDays.isEmpty(),
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
+                        enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)) + expandVertically(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION)) + shrinkVertically(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
                     ) {
                         Text(
                             text = "Please select at least one day",
@@ -299,7 +303,7 @@ fun CreateNotificationDialog(
         },
         confirmButton = {
             Button(
-                enabled = selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null,
+                enabled = !isLoading && selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null,
                 onClick = {
                     if (selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null) {
                         val notification = NotificationData(
@@ -324,14 +328,22 @@ fun CreateNotificationDialog(
                 ),
                 modifier = Modifier.width(130.dp)
             ) {
-                Text(
-                    text = if (initialData != null) "Update" else "Add",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
                     )
-                )
+                } else {
+                    Text(
+                        text = if (initialData != null) "Update" else "Add",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    )
+                }
             }
             },
             dismissButton = {

@@ -5,18 +5,22 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -45,7 +49,8 @@ fun UpsertDialog(
     onDismiss: () -> Unit,
     onConfirm: (HabitData) -> Unit,
     modifier: Modifier = Modifier,
-    initialData: HabitData? = null
+    initialData: HabitData? = null,
+    isLoading: Boolean = false
 ) {
     if (!isVisible) return
 
@@ -115,8 +120,8 @@ fun UpsertDialog(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(animationSpec = tween(durationMillis = 180)),
-        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+        enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+        exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
     ) {
         AlertDialog(
             onDismissRequest = onDismiss,
@@ -243,13 +248,22 @@ fun UpsertDialog(
                     )
                     // Do NOT auto-dismiss: mirrors Debug's "press button triggers action" feel.
                 },
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(
-                        text = if (initialData != null) "Update" else "Add to List", 
-                        color = MaterialTheme.colorScheme.onPrimary
-                    ) 
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (initialData != null) "Update" else "Add to List", 
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             },
             dismissButton = {

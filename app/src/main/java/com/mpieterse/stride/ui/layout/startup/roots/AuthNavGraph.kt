@@ -1,8 +1,5 @@
 package com.mpieterse.stride.ui.layout.startup.roots
 
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -12,6 +9,7 @@ import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 import com.mpieterse.stride.ui.layout.startup.views.AuthLaunchScreen
 import com.mpieterse.stride.ui.layout.startup.views.AuthSignInScreen
 import com.mpieterse.stride.ui.layout.startup.views.AuthSignUpScreen
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 
 @Composable
 fun AuthNavGraph(
@@ -20,8 +18,6 @@ fun AuthNavGraph(
     authViewModel: AuthViewModel
 ) {
     val controller = rememberNavController()
-    val fadeInSpec = tween<Float>(durationMillis = 220)
-    val fadeOutSpec = tween<Float>(durationMillis = 180)
 
     NavHost(
         navController = controller,
@@ -30,10 +26,10 @@ fun AuthNavGraph(
     ) {
         composable(
             route = AuthScreen.Launch.route,
-            enterTransition = { fadeIn(fadeInSpec) },
-            exitTransition = { fadeOut(fadeOutSpec) },
-            popEnterTransition = { fadeIn(fadeInSpec) },
-            popExitTransition = { fadeOut(fadeOutSpec) }
+            enterTransition = { TransitionConfig.horizontalFadeTransition() },
+            exitTransition = { TransitionConfig.horizontalFadeExit() },
+            popEnterTransition = { TransitionConfig.horizontalFadeTransition() },
+            popExitTransition = { TransitionConfig.horizontalFadeExit() }
         ) {
             AuthLaunchScreen(
                 modifier = Modifier,
@@ -43,10 +39,10 @@ fun AuthNavGraph(
         }
         composable(
             route = AuthScreen.SignIn.route,
-            enterTransition = { fadeIn(fadeInSpec) },
-            exitTransition = { fadeOut(fadeOutSpec) },
-            popEnterTransition = { fadeIn(fadeInSpec) },
-            popExitTransition = { fadeOut(fadeOutSpec) }
+            enterTransition = { TransitionConfig.forwardSlideTransition() },
+            exitTransition = { TransitionConfig.forwardSlideExit() },
+            popEnterTransition = { TransitionConfig.backwardSlideTransition() },
+            popExitTransition = { TransitionConfig.backwardSlideExit() }
         ) {
             AuthSignInScreen(
                 modifier = Modifier,
@@ -57,10 +53,10 @@ fun AuthNavGraph(
         }
         composable(
             route = AuthScreen.SignUp.route,
-            enterTransition = { fadeIn(fadeInSpec) },
-            exitTransition = { fadeOut(fadeOutSpec) },
-            popEnterTransition = { fadeIn(fadeInSpec) },
-            popExitTransition = { fadeOut(fadeOutSpec) }
+            enterTransition = { TransitionConfig.forwardSlideTransition() },
+            exitTransition = { TransitionConfig.forwardSlideExit() },
+            popEnterTransition = { TransitionConfig.backwardSlideTransition() },
+            popExitTransition = { TransitionConfig.backwardSlideExit() }
         ) {
             AuthSignUpScreen(
                 modifier = Modifier,

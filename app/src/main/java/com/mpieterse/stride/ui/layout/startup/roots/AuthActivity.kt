@@ -6,6 +6,13 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
@@ -16,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.fragment.app.FragmentActivity
 import com.mpieterse.stride.ui.layout.central.roots.HomeActivity
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import com.mpieterse.stride.ui.layout.startup.models.AuthState
 import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 import com.mpieterse.stride.ui.layout.startup.views.AuthLockedScreen
@@ -42,27 +50,57 @@ class AuthActivity : FragmentActivity() {
                 val authState by authViewModel.authState.collectAsState()
 
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    when (authState) {
-                        is AuthState.Unauthenticated -> AuthNavGraph(
-                            onGoToHomeActivity = ::navigateToHomeActivity,
-                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
-                            authViewModel = authViewModel
-                        )
-                        is AuthState.Locked -> AuthLockedScreen(
-                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
-                            onSuccess = {
-                                authViewModel.unlockWithBiometrics(true)
+                    AnimatedContent(
+                        targetState = authState,
+                        transitionSpec = {
+                            // Slide and fade when transitioning between auth states
+                            val slideDirection = when {
+                                targetState is AuthState.Locked && initialState is AuthState.Unauthenticated -> 1
+                                initialState is AuthState.Locked && targetState is AuthState.Unauthenticated -> -1
+                                else -> 0
+                            }
+                            
+                            if (slideDirection != 0) {
+                                slideInHorizontally(
+                                    initialOffsetX = { it * slideDirection },
+                                    animationSpec = TransitionConfig.slideInSpec
+                                ) + fadeIn(TransitionConfig.fadeInSpec) togetherWith
+                                slideOutHorizontally(
+                                    targetOffsetX = { -it * slideDirection },
+                                    animationSpec = TransitionConfig.slideOutSpec
+                                ) + fadeOut(TransitionConfig.fadeOutSpec)
+                            } else {
+                                fadeIn(TransitionConfig.fadeInSpec) togetherWith
+                                fadeOut(TransitionConfig.fadeOutSpec)
+                            }
+                        },
+                        label = "AuthStateTransition"
+                    ) { state ->
+                        when (state) {
+                            is AuthState.Unauthenticated -> AuthNavGraph(
+                                onGoToHomeActivity = ::navigateToHomeActivity,
+                                modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                                authViewModel = authViewModel
+                            )
+                            is AuthState.Locked -> AuthLockedScreen(
+                                modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                                onSuccess = {
+                                    authViewModel.unlockWithBiometrics(true)
+                                    navigateToHomeActivity()
+                                },
+                                model = authViewModel
+                            )
+                            is AuthState.Authenticated -> {
+                                // Navigate immediately, no UI needed
                                 navigateToHomeActivity()
-                            },
-                            model = authViewModel
-                        )
-                        is AuthState.Authenticated -> navigateToHomeActivity()
-                        // Don't navigate on Error - let screens handle it
-                        is AuthState.Error -> AuthNavGraph(
-                            onGoToHomeActivity = ::navigateToHomeActivity,
-                            modifier = Modifier.statusBarsPadding().fillMaxSize(),
-                            authViewModel = authViewModel
-                        )
+                            }
+                            // Don't navigate on Error - let screens handle it
+                            is AuthState.Error -> AuthNavGraph(
+                                onGoToHomeActivity = ::navigateToHomeActivity,
+                                modifier = Modifier.statusBarsPadding().fillMaxSize(),
+                                authViewModel = authViewModel
+                            )
+                        }
                     }
                 }
             }
