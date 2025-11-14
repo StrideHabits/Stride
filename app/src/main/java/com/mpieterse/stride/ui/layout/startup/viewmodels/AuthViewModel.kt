@@ -173,6 +173,8 @@ class AuthViewModel
                     user.email!!,
                     trimmedPassword
                 )
+                var loggedInWithRaw = false
+                var loggedInWithUid = false
 
                 if (apiLoginState is ApiResult.Err) {
                     val message = apiLoginState.message.lowercase()
@@ -184,7 +186,11 @@ class AuthViewModel
                         trimmedPassword != rawPassword && !isAuthError
                     if (shouldRetryWithRaw) {
                         Clogger.d("AuthViewModel", "Retrying login with raw password (trimmed failed, trying raw for legacy users)")
-                        apiLoginState = authApi.login(user.email!!, rawPassword)
+                        val rawLoginState = authApi.login(user.email!!, rawPassword)
+                        apiLoginState = rawLoginState
+                        if (rawLoginState is ApiResult.Ok) {
+                            loggedInWithRaw = true
+                        }
                     }
                     
                     // Handle 401/403 - user might have registered with Google SSO (API password is user.uid)
@@ -207,8 +213,10 @@ class AuthViewModel
                             // Email exists but password doesn't match - might be Google SSO user
                             // Try logging in with Firebase UID (which is what Google SSO users have)
                             Clogger.d("AuthViewModel", "Email exists in API but password doesn't match - trying with Firebase UID (user might have registered with Google SSO)")
-                            apiLoginState = authApi.login(user.email!!, user.uid)
-                            if (apiLoginState is ApiResult.Ok) {
+                            val uidLoginState = authApi.login(user.email!!, user.uid)
+                            apiLoginState = uidLoginState
+                            if (uidLoginState is ApiResult.Ok) {
+                                loggedInWithUid = true
                                 Clogger.d("AuthViewModel", "Login succeeded with Firebase UID - user originally registered with Google SSO")
                                 // Update credentials to use UID for future session restoration
                                 credentialsStore.save(user.email!!, user.uid)
@@ -233,16 +241,6 @@ class AuthViewModel
                             apiLoginState = ApiResult.Err(reRegister.code, reRegister.message)
                         }
                     }
-                }
-
-                // Determine which password/credential was used for successful login
-                val finalPassword = if (apiLoginState is ApiResult.Ok) {
-                    // Check if we logged in with UID (Google SSO user)
-                    // We save UID at line 214 if login with UID succeeds
-                    // Otherwise, we use trimmedPassword
-                    trimmedPassword
-                } else {
-                    trimmedPassword
                 }
 
                 if (apiLoginState is ApiResult.Err) {
@@ -280,6 +278,15 @@ class AuthViewModel
                     globalAuthListener.setHandlingError(false)
                     
                     return@launch
+                }
+
+                // Determine which password/credential was used for successful login
+                // UID-based credentials are already saved earlier (when login with UID succeeds)
+                // We only need to save credentials if we haven't already saved them
+                val finalPassword = when {
+                    loggedInWithUid -> user.uid // Already saved, but for consistency
+                    loggedInWithRaw -> rawPassword // Use raw password for legacy users
+                    else -> trimmedPassword // Normal case
                 }
 
                 _authState.value = AuthState.Locked
