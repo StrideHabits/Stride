@@ -382,6 +382,10 @@ class AuthViewModel
         }
     }
 
+    fun unlockWithAlternativeMethod() { //This method allows unlocking with email/password when biometrics are unavailable.
+        _authState.value = AuthState.Unauthenticated
+    }
+
     fun logout() { //This method handles user logout using Firebase Authentication (Android Developers, 2024).
         authService.logout()
         credentialsStore.clear()

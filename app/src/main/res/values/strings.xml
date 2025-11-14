@@ -12,6 +12,7 @@
     <string name="auth_biometric_prompt_cancel">Cancel</string>
     <string name="auth_locked_tap_to_authenticate">Tap to authenticate</string>
     <string name="auth_biometric_unavailable_error">Biometric authentication is not available. Please use an alternative method to unlock.</string>
+    <string name="auth_locked_use_email_password">Use Email &amp; Password</string>
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
 </resources>

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,24 +74,35 @@ fun AuthLockedScreen(
     var biometricResult by remember {
         mutableStateOf<Final<Unit, BiometricError>?>(null)
     }
-    var errorMessage by remember {
-        mutableStateOf<String?>(null)
-    }
 
-    when (val result = biometricResult) {
-        is Final.Success -> onSuccess()
-        is Final.Failure -> {
-            errorMessage = when (result.problem) {
-                is BiometricError.Dismissed -> null // User cancelled, don't show error
-                is BiometricError.Failed -> "Authentication failed. Please try again."
-                is BiometricError.NoSupport -> context.getString(R.string.auth_biometric_unavailable_error)
-                is BiometricError.RateLimit -> "Too many failed attempts. Please try again later."
-                is BiometricError.Exception -> "System error. Please try again."
-            }
+    // Handle success case separately to avoid side effects in computed value
+    LaunchedEffect(biometricResult) {
+        if (biometricResult is Final.Success) {
+            onSuccess()
         }
-        null -> {
-            // No result yet
+    }
+    
+    // Derive error message directly from biometricResult to avoid stale state
+    val errorMessage = when (val result = biometricResult) {
+        is Final.Success -> null
+        is Final.Failure -> when (result.problem) {
+            is BiometricError.Dismissed -> null // User cancelled, don't show error
+            is BiometricError.Failed -> "Authentication failed. Please try again."
+            is BiometricError.NoSupport -> context.getString(R.string.auth_biometric_unavailable_error)
+            is BiometricError.RateLimit -> "Too many failed attempts. Please try again later."
+            is BiometricError.Exception -> "System error. Please try again."
         }
+        null -> null // No result yet
+    }
+    
+    // Check if biometrics are unavailable (either from service check or from error)
+    val biometricsUnavailable = when {
+        !biometricService.isAvailable() -> true
+        biometricResult is Final.Failure -> {
+            val failure = biometricResult as Final.Failure
+            failure.problem is BiometricError.NoSupport
+        }
+        else -> false
     }
 
 // --- UI
@@ -155,23 +168,18 @@ fun AuthLockedScreen(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .clickable {
-                            errorMessage = null // Clear error when retrying
-                            when (biometricService.isAvailable()) {
-                                true -> {
-                                    val promptBuilder = BiometricPrompt.PromptInfo.Builder()
-                                        .setTitle(context.getString(R.string.auth_biometric_prompt_title))
-                                        .setSubtitle(context.getString(R.string.auth_biometric_prompt_subtitle))
-                                        .setNegativeButtonText(context.getString(R.string.auth_biometric_prompt_cancel))
+                        .clickable(enabled = biometricService.isAvailable()) {
+                            // Reset result when retrying to clear previous error
+                            biometricResult = null
+                            
+                            if (biometricService.isAvailable()) {
+                                val promptBuilder = BiometricPrompt.PromptInfo.Builder()
+                                    .setTitle(context.getString(R.string.auth_biometric_prompt_title))
+                                    .setSubtitle(context.getString(R.string.auth_biometric_prompt_subtitle))
+                                    .setNegativeButtonText(context.getString(R.string.auth_biometric_prompt_cancel))
 
-                                    biometricService.authenticate(activity, promptBuilder) { result ->
-                                        biometricResult = result
-                                    }
-                                }
-
-                                else -> {
-                                    // Don't auto-unlock - show error instead
-                                    errorMessage = context.getString(R.string.auth_biometric_unavailable_error)
+                                biometricService.authenticate(activity, promptBuilder) { result ->
+                                    biometricResult = result
                                 }
                             }
                         }
@@ -180,7 +188,11 @@ fun AuthLockedScreen(
                         painter = painterResource(R.drawable.fingerprint_24px),
                         modifier = Modifier.size(120.dp),
                         contentDescription = stringResource(R.string.content_description_show_biometric_dialog),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = if (biometricService.isAvailable()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        }
                     )
                 }
                 
@@ -194,6 +206,32 @@ fun AuthLockedScreen(
                     ),
                     textAlign = TextAlign.Center
                 )
+                
+                // Fallback unlock button when biometrics are unavailable
+                AnimatedVisibility(
+                    visible = biometricsUnavailable,
+                    enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 32.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TextButton(
+                            onClick = {
+                                model.unlockWithAlternativeMethod()
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.auth_locked_use_email_password),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
             }
         }
     }
