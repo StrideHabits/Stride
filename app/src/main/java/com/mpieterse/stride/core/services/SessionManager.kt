@@ -129,19 +129,39 @@ class SessionManager @Inject constructor(
 
     /**
      * Forcefully logout both Summit and Firebase sessions.
+     * Only clears credentials if Firebase auth is also being cleared,
+     * to prevent losing credentials when Firebase session is still valid.
+     * This is critical for allowing users to re-authenticate when only
+     * the API token expires but Firebase authentication is still valid.
      */
     fun forceLogout() {
         if (!loggingOut.compareAndSet(false, true)) return
 
         scope.launch {
+            // Check if Firebase auth is still active
+            val isFirebaseActive = authenticationService.isUserSignedIn()
+            
+            // Clear the API token first (this should always be cleared on logout)
             runCatching { tokenStore.clear() }
                 .onFailure { Clogger.e(TAG, "Failed to clear Summit token", it) }
 
-            runCatching { credentialsStore.clear() }
-                .onFailure { Clogger.e(TAG, "Failed to clear stored credentials", it) }
-
-            runCatching { authenticationService.logout() }
-                .onFailure { Clogger.e(TAG, "Failed to logout Firebase auth", it) }
+            // Only clear credentials and Firebase auth if Firebase auth is not active
+            // This prevents losing credentials when only the API token expired
+            // but Firebase authentication is still valid
+            if (!isFirebaseActive) {
+                Clogger.d(TAG, "Firebase auth inactive, clearing stored credentials and Firebase session")
+                runCatching { credentialsStore.clear() }
+                    .onFailure { Clogger.e(TAG, "Failed to clear stored credentials", it) }
+                
+                // Clear Firebase auth session (should already be cleared, but be safe)
+                runCatching { authenticationService.logout() }
+                    .onFailure { Clogger.e(TAG, "Failed to logout Firebase auth", it) }
+            } else {
+                Clogger.w(TAG, "Firebase auth still active - preserving credentials and Firebase session to allow re-authentication")
+                // Don't clear credentials or Firebase auth if Firebase is still active
+                // The user should be able to re-authenticate with the API using their existing credentials
+                // Only the API token was cleared above, allowing for automatic re-authentication on next request
+            }
 
             loggingOut.set(false)
         }
