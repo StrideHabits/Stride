@@ -173,17 +173,57 @@ class AuthViewModel
                     user.email!!,
                     trimmedPassword
                 )
+                var loggedInWithRaw = false
+                var loggedInWithUid = false
 
                 if (apiLoginState is ApiResult.Err) {
                     val message = apiLoginState.message.lowercase()
+                    val isAuthError = apiLoginState.code != null && (apiLoginState.code == 401 || apiLoginState.code == 403)
+                    
                     // If trimmed password fails and password has whitespace, try raw password
                     // (for legacy users who might have registered with whitespace)
                     val shouldRetryWithRaw = (message.contains("invalid credentials") || message.contains("password")) &&
-                        trimmedPassword != rawPassword
+                        trimmedPassword != rawPassword && !isAuthError
                     if (shouldRetryWithRaw) {
                         Clogger.d("AuthViewModel", "Retrying login with raw password (trimmed failed, trying raw for legacy users)")
-                        apiLoginState = authApi.login(user.email!!, rawPassword)
+                        val rawLoginState = authApi.login(user.email!!, rawPassword)
+                        apiLoginState = rawLoginState
+                        if (rawLoginState is ApiResult.Ok) {
+                            loggedInWithRaw = true
+                        }
                     }
+                    
+                    // Handle 401/403 - user might have registered with Google SSO (API password is user.uid)
+                    // Try logging in with Firebase UID instead of password
+                    if (apiLoginState is ApiResult.Err && isAuthError) {
+                        Clogger.d("AuthViewModel", "API login failed with auth error (${apiLoginState.code}), checking if user registered with Google SSO")
+                        // Check if user has Google provider (but they logged in with email/password, so this might not work)
+                        // Instead, try to register which will either succeed or return "email exists"
+                        // If email exists, the API might have their account but with a different password scheme
+                        val reRegister = authApi.register(user.email!!, user.email!!, trimmedPassword)
+                        if (reRegister is ApiResult.Ok) {
+                            // Registration succeeded - new account created, try login
+                            Clogger.d("AuthViewModel", "Registration succeeded after auth error, trying login")
+                            apiLoginState = authApi.login(user.email!!, trimmedPassword)
+                            if (apiLoginState is ApiResult.Err) {
+                                Clogger.e("AuthViewModel", "Login failed after registration: ${apiLoginState.code} ${apiLoginState.message}")
+                            }
+                        } else if (reRegister is ApiResult.Err && reRegister.code == 400 && 
+                                   reRegister.message.contains("already exists", ignoreCase = true)) {
+                            // Email exists but password doesn't match - might be Google SSO user
+                            // Try logging in with Firebase UID (which is what Google SSO users have)
+                            Clogger.d("AuthViewModel", "Email exists in API but password doesn't match - trying with Firebase UID (user might have registered with Google SSO)")
+                            val uidLoginState = authApi.login(user.email!!, user.uid)
+                            apiLoginState = uidLoginState
+                            if (uidLoginState is ApiResult.Ok) {
+                                loggedInWithUid = true
+                                Clogger.d("AuthViewModel", "Login succeeded with Firebase UID - user originally registered with Google SSO")
+                                // Update credentials to use UID for future session restoration
+                                credentialsStore.save(user.email!!, user.uid)
+                            }
+                        }
+                    }
+                    
                     // Handle 404 - user might not exist in Summit API, try to register
                     if (apiLoginState is ApiResult.Err && apiLoginState.code == 404) {
                         Clogger.d("AuthViewModel", "User not found in Summit API (404), attempting registration")
@@ -240,8 +280,22 @@ class AuthViewModel
                     return@launch
                 }
 
+                // Determine which password/credential was used for successful login
+                // UID-based credentials are already saved earlier (when login with UID succeeds)
+                // We only need to save credentials if we haven't already saved them
+                val finalPassword = when {
+                    loggedInWithUid -> user.uid // Already saved, but for consistency
+                    loggedInWithRaw -> rawPassword // Use raw password for legacy users
+                    else -> trimmedPassword // Normal case
+                }
+
                 _authState.value = AuthState.Locked
-                credentialsStore.save(user.email!!, trimmedPassword)
+                // Only save credentials if we haven't already saved them (e.g., with UID)
+                // Check if credentials were already saved during the login retry process
+                val existingCredentials = credentialsStore.get()
+                if (existingCredentials == null || existingCredentials.email != user.email) {
+                    credentialsStore.save(user.email!!, finalPassword)
+                }
             } catch (e: Exception) {
                 // On Firebase auth error, show error message
                 // Don't logout to avoid navigation issues - user can retry

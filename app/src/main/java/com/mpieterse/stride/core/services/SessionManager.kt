@@ -128,22 +128,52 @@ class SessionManager @Inject constructor(
     }
 
     /**
-     * Forcefully logout both Summit and Firebase sessions.
+     * Attempts to logout from both Summit API and Firebase sessions.
+     * 
+     * **Behavior:**
+     * - Always clears the API token
+     * - Only clears credentials and Firebase session if Firebase auth is inactive
+     * - Preserves credentials and Firebase session if Firebase auth is still active
+     * 
+     * This conditional behavior is critical for allowing users to re-authenticate
+     * when only the API token expires but Firebase authentication is still valid.
+     * Preserving credentials enables automatic session restoration on the next request.
      */
     fun forceLogout() {
         if (!loggingOut.compareAndSet(false, true)) return
 
         scope.launch {
-            runCatching { tokenStore.clear() }
-                .onFailure { Clogger.e(TAG, "Failed to clear Summit token", it) }
+            try {
+                // Check if Firebase auth is still active (with error handling)
+                val isFirebaseActive = runCatching { authenticationService.isUserSignedIn() }
+                    .onFailure { Clogger.e(TAG, "Failed to check Firebase auth state during logout, defaulting to inactive", it) }
+                    .getOrDefault(false)
+                
+                // Clear the API token first (this should always be cleared on logout)
+                runCatching { tokenStore.clear() }
+                    .onFailure { Clogger.e(TAG, "Failed to clear Summit token", it) }
 
-            runCatching { credentialsStore.clear() }
-                .onFailure { Clogger.e(TAG, "Failed to clear stored credentials", it) }
-
-            runCatching { authenticationService.logout() }
-                .onFailure { Clogger.e(TAG, "Failed to logout Firebase auth", it) }
-
-            loggingOut.set(false)
+                // Only clear credentials and Firebase auth if Firebase auth is not active
+                // This prevents losing credentials when only the API token expired
+                // but Firebase authentication is still valid
+                if (!isFirebaseActive) {
+                    Clogger.d(TAG, "Firebase auth inactive, clearing stored credentials and Firebase session")
+                    runCatching { credentialsStore.clear() }
+                        .onFailure { Clogger.e(TAG, "Failed to clear stored credentials", it) }
+                    
+                    // Clear Firebase auth session (should already be cleared, but be safe)
+                    runCatching { authenticationService.logout() }
+                        .onFailure { Clogger.e(TAG, "Failed to logout Firebase auth", it) }
+                } else {
+                    Clogger.w(TAG, "Firebase auth still active - preserving credentials and Firebase session to allow re-authentication")
+                    // Don't clear credentials or Firebase auth if Firebase is still active
+                    // The user should be able to re-authenticate with the API using their existing credentials
+                    // Only the API token was cleared above, allowing for automatic re-authentication on next request
+                }
+            } finally {
+                // Always reset the flag, even if an exception occurs
+                loggingOut.set(false)
+            }
         }
     }
 

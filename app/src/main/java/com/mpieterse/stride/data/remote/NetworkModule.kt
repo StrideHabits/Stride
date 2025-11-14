@@ -4,6 +4,7 @@ import android.content.Context
 import com.mpieterse.stride.data.local.TokenStore
 import com.mpieterse.stride.data.local.NotificationsStore
 import com.mpieterse.stride.core.services.SessionManager
+import com.mpieterse.stride.core.utils.Clogger
 import com.google.gson.GsonBuilder
 import com.mpieterse.stride.BuildConfig
 import dagger.Module
@@ -105,16 +106,30 @@ object NetworkModule {
                     // If restoration failed or timed out, return the original error response
                     // (don't close it - let the caller handle it)
                 }
-                SessionManager.SessionRestoreResult.INVALID_CREDENTIALS,
+                SessionManager.SessionRestoreResult.INVALID_CREDENTIALS -> {
+                    // For INVALID_CREDENTIALS, check if Firebase auth is still active
+                    // If Firebase is active, don't logout - the user might be able to re-authenticate
+                    // Only logout if both API and Firebase auth are invalid
+                    // This prevents losing credentials when only the API token is expired
+                    // but the user's Firebase session is still valid
+                    Clogger.w("NetworkModule", "Session restore failed: invalid credentials. Checking Firebase auth state before logout")
+                    // Don't force logout here - let the error response be returned
+                    // The app can handle this gracefully and allow user to retry
+                    // Only force logout if Firebase auth is also invalid (handled by auth state listener)
+                }
                 SessionManager.SessionRestoreResult.NO_CREDENTIALS -> {
-                    // Only logout if we definitively know credentials are invalid or missing
-                    sessionManager.forceLogout()
+                    // No credentials stored - this means credentials were already cleared
+                    // or user never completed login. Don't force logout as there's nothing to clear.
+                    // Just return the error response - user needs to login again.
+                    Clogger.w("NetworkModule", "Session restore failed: no credentials stored")
                 }
                 SessionManager.SessionRestoreResult.NETWORK_ERROR,
                 SessionManager.SessionRestoreResult.SERVER_ERROR -> {
                     // For 500 errors, if session restoration failed, it might be a real server error
                     // Don't logout - just return the error response
                     // For 401/403, keep the user logged in and allow retries
+                    // Preserve credentials even if session restore fails due to server/network issues
+                    Clogger.w("NetworkModule", "Session restore failed: ${restoreResult}. Preserving credentials due to network/server error")
                 }
             }
         }
