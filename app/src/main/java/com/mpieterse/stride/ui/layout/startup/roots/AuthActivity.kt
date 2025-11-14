@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
@@ -86,13 +87,14 @@ class AuthActivity : FragmentActivity() {
                                 modifier = Modifier.statusBarsPadding().fillMaxSize(),
                                 onSuccess = {
                                     authViewModel.unlockWithBiometrics(true)
-                                    navigateToHomeActivity()
                                 },
                                 model = authViewModel
                             )
                             is AuthState.Authenticated -> {
-                                // Navigate immediately, no UI needed
-                                navigateToHomeActivity()
+                                // Navigate once when authenticated state is reached
+                                LaunchedEffect(Unit) {
+                                    navigateToHomeActivity()
+                                }
                             }
                             // Don't navigate on Error - let screens handle it
                             is AuthState.Error -> AuthNavGraph(

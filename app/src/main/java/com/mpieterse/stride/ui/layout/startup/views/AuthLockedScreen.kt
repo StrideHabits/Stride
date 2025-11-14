@@ -1,6 +1,10 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.firebase.Firebase
@@ -66,11 +72,23 @@ fun AuthLockedScreen(
     var biometricResult by remember {
         mutableStateOf<Final<Unit, BiometricError>?>(null)
     }
+    var errorMessage by remember {
+        mutableStateOf<String?>(null)
+    }
 
     when (val result = biometricResult) {
         is Final.Success -> onSuccess()
-        else -> {
-            // ...
+        is Final.Failure -> {
+            errorMessage = when (result.problem) {
+                is BiometricError.Dismissed -> null // User cancelled, don't show error
+                is BiometricError.Failed -> "Authentication failed. Please try again."
+                is BiometricError.NoSupport -> context.getString(R.string.auth_biometric_unavailable_error)
+                is BiometricError.RateLimit -> "Too many failed attempts. Please try again later."
+                is BiometricError.Exception -> "System error. Please try again."
+            }
+        }
+        null -> {
+            // No result yet
         }
     }
 
@@ -114,17 +132,37 @@ fun AuthLockedScreen(
                 
                 Spacer(modifier = Modifier.height(64.dp))
                 
+                // Error Message
+                AnimatedVisibility(
+                    visible = errorMessage != null,
+                    enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
+                ) {
+                    errorMessage?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                
                 // Biometric Icon (under the text)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .clickable {
+                            errorMessage = null // Clear error when retrying
                             when (biometricService.isAvailable()) {
                                 true -> {
                                     val promptBuilder = BiometricPrompt.PromptInfo.Builder()
-                                        .setTitle("Login with biometrics")
-                                        .setSubtitle("Authenticate to continue")
-                                        .setNegativeButtonText("Cancel")
+                                        .setTitle(context.getString(R.string.auth_biometric_prompt_title))
+                                        .setSubtitle(context.getString(R.string.auth_biometric_prompt_subtitle))
+                                        .setNegativeButtonText(context.getString(R.string.auth_biometric_prompt_cancel))
 
                                     biometricService.authenticate(activity, promptBuilder) { result ->
                                         biometricResult = result
@@ -132,7 +170,8 @@ fun AuthLockedScreen(
                                 }
 
                                 else -> {
-                                    onSuccess()
+                                    // Don't auto-unlock - show error instead
+                                    errorMessage = context.getString(R.string.auth_biometric_unavailable_error)
                                 }
                             }
                         }
@@ -149,7 +188,7 @@ fun AuthLockedScreen(
                 
                 // Helper text
                 Text(
-                    text = "Tap to authenticate",
+                    text = stringResource(R.string.auth_locked_tap_to_authenticate),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),

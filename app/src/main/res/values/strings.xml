@@ -7,6 +7,11 @@
     <string name="screen_auth_launch_navigate_to_sign_up">Sign Up</string>
     <string name="screen_auth_locked_page_heading">Secured</string>
     <string name="screen_auth_locked_page_content">"We've locked away your habits to keep them safe from prying eyes. Unlock the app with your biometrics to continue</string>
+    <string name="auth_biometric_prompt_title">Login with biometrics</string>
+    <string name="auth_biometric_prompt_subtitle">Authenticate to continue</string>
+    <string name="auth_biometric_prompt_cancel">Cancel</string>
+    <string name="auth_locked_tap_to_authenticate">Tap to authenticate</string>
+    <string name="auth_biometric_unavailable_error">Biometric authentication is not available. Please use an alternative method to unlock.</string>
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
 </resources>
