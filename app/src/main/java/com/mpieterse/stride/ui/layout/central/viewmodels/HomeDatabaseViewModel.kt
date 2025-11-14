@@ -175,14 +175,25 @@ class HomeDatabaseViewModel @Inject constructor(
     ) = viewModelScope.launch {
         withLoading {
             try {
-                val resolvedImageUrl = when {
-                    !imageBase64.isNullOrBlank() -> uploadImage(imageBase64, imageMimeType)
-                    !imageUrl.isNullOrBlank() -> imageUrl.trim()
-                    else -> null
+                // Upload image if provided - but don't block creation if it fails
+                var resolvedImageUrl: String? = null
+                var imageUploadFailed = false
+                
+                if (!imageBase64.isNullOrBlank()) {
+                    try {
+                        resolvedImageUrl = uploadImage(imageBase64, imageMimeType)
+                        if (resolvedImageUrl.isNullOrBlank()) {
+                            imageUploadFailed = true
+                            Clogger.w("HomeDatabaseViewModel", "Image upload failed during habit creation, continuing without image")
+                        }
+                    } catch (e: Exception) {
+                        imageUploadFailed = true
+                        Clogger.e("HomeDatabaseViewModel", "Image upload exception during habit creation, continuing without image", e)
+                    }
+                } else if (!imageUrl.isNullOrBlank()) {
+                    resolvedImageUrl = imageUrl.trim()
                 }
-                if (!imageBase64.isNullOrBlank() && resolvedImageUrl.isNullOrBlank()) {
-                    throw IllegalStateException("Image upload failed")
-                }
+                
                 val finalImageUrl = sanitizeImageUrl(resolvedImageUrl)
 
                 habitsRepo.create(
@@ -193,8 +204,11 @@ class HomeDatabaseViewModel @Inject constructor(
                         imageUrl = finalImageUrl?.takeUnless { it.isEmpty() }
                     )
                 )
-                setStatus("OK • create habit")
-                log("create ✅ $name")
+                setStatus("OK • create habit${if (imageUploadFailed) " (no image)" else ""}")
+                log("create ✅ $name${if (imageUploadFailed) " (image upload failed)" else ""}")
+                if (imageUploadFailed) {
+                    _state.value = _state.value.copy(error = "Habit created, but image upload failed. You can add an image later.")
+                }
                 eventBus.emit(AppEventBus.AppEvent.HabitCreated)
                 refresh()
                 onDone(true)

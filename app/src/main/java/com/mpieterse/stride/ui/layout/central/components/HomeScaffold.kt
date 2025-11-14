@@ -24,7 +24,7 @@ fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This compos
     val destinationDefault = HomeScreen.Database
     var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }
 
-    val currentRoute = controller.currentBackStackEntryAsState().value?.destination?.route
+    controller.currentBackStackEntryAsState().value?.destination?.route
 
     val destinations = listOf(
         BottomNavItem(

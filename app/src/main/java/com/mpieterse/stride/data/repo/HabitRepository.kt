@@ -13,6 +13,7 @@ interface HabitRepository {
     suspend fun getById(id: String, forceRemote: Boolean = false): HabitDto?
 
     suspend fun create(input: HabitCreateDto): HabitDto
+    suspend fun update(id: String, input: HabitCreateDto): HabitDto
     suspend fun upsertLocal(dto: HabitDto)
     suspend fun delete(id: String)
     suspend fun clearLocal()

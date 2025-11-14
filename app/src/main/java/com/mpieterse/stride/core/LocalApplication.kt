@@ -11,7 +11,7 @@ import javax.inject.Inject
 @HiltAndroidApp
 class LocalApplication :
     Application(),
-    androidx.work.Configuration.Provider {
+    Configuration.Provider {
 
     companion object { const val TAG = "LocalApplication" }
 

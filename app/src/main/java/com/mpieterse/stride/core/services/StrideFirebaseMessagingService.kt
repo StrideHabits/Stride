@@ -128,7 +128,7 @@ class StrideFirebaseMessagingService : FirebaseMessagingService() {
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             
             // Check if notifications are enabled
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

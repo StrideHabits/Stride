@@ -341,8 +341,7 @@ class AuthenticationService
      *         Firebase requires re-authentication to verify its validity.
      */
     suspend fun deleteCurrentUserAsync() { //This method deletes the currently authenticated user account using Firebase Authentication (Google Inc., 2024).
-        val user = server.currentUser
-        when (user) {
+        when (val user = server.currentUser) {
             null -> throw IllegalStateException("Could not find authenticated user")
             else -> {
                 Clogger.d(
