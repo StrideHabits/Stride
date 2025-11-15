@@ -2,6 +2,7 @@ package com.mpieterse.stride.ui.layout.startup.views
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -65,7 +66,7 @@ fun AuthLaunchScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Crossfade(targetState = showContent, animationSpec = tween(durationMillis = 500)) { visible ->
+            Crossfade(targetState = showContent, animationSpec = tween(durationMillis = TransitionConfig.SLOW_DURATION)) { visible ->
                 if (visible) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,

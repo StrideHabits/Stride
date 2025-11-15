@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -198,8 +199,8 @@ fun NotificationsScreen(
     // Permission rationale dialog
     AnimatedVisibility(
         visible = showPermissionRationale,
-        enter = fadeIn(animationSpec = tween(durationMillis = 180)),
-        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+        enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+        exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
     ) {
         AlertDialog(
             onDismissRequest = { showPermissionRationale = false },
@@ -234,7 +235,8 @@ fun NotificationsScreen(
             viewModel.addNotification(newNotification)
             showCreateNotificationDialog = false
         },
-        availableHabits = state.habits
+        availableHabits = state.habits,
+        isLoading = state.loading
     )
 
     // Edit Notification Dialog
@@ -250,7 +252,8 @@ fun NotificationsScreen(
             notificationToEdit = null
         },
         availableHabits = state.habits,
-        initialData = notificationToEdit
+        initialData = notificationToEdit,
+        isLoading = state.loading
     )
 }
 

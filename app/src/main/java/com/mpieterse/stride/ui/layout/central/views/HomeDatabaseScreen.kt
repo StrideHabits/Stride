@@ -153,7 +153,8 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
             ) { ok ->
                 if (ok) showCreate = false
             }
-        }
+        },
+        isLoading = state.loading
     )
 }
 
@@ -167,7 +168,7 @@ private fun DateHeader(
             val parts = day.split("\n")
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.requiredWidth(32.dp)
+                modifier = Modifier.width(32.dp) // Changed from requiredWidth to width for proper alignment
             ) {
                 Text(
                     text = parts.getOrNull(0) ?: "",

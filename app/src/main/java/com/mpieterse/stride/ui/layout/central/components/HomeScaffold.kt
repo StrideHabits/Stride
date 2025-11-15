@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.R
@@ -22,9 +23,18 @@ import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This composable creates the main app scaffold with bottom navigation using Jetpack Compose (Android Developers, 2024).
     val controller = rememberNavController()
     val destinationDefault = HomeScreen.Database
-    var destinationCurrent by rememberSaveable { mutableStateOf(destinationDefault.route) }
-
-    controller.currentBackStackEntryAsState().value?.destination?.route
+    
+    // Use back stack entry to track current destination for better state management
+    val navBackStackEntry by controller.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route ?: destinationDefault.route
+    var destinationCurrent by rememberSaveable { mutableStateOf(currentRoute) }
+    
+    // Update destinationCurrent when route changes from back stack
+    LaunchedEffect(currentRoute) {
+        if (currentRoute in listOf(HomeScreen.Database.route, HomeScreen.Notifications.route, HomeScreen.Settings.route)) {
+            destinationCurrent = currentRoute
+        }
+    }
 
     val destinations = listOf(
         BottomNavItem(
@@ -62,12 +72,22 @@ fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This compos
                             )
                         },
                         onClick = {
-                            controller.navigate(destination.alias.route) {
-                                popUpTo(HomeScreen.Database.route) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                            val targetRoute = destination.alias.route
+                            if (destinationCurrent != targetRoute) {
+                                destinationCurrent = targetRoute
+                                // Use popUpTo to maintain clean back stack, but disable restoreState
+                                // to ensure transitions always play
+                                controller.navigate(targetRoute) {
+                                    // Pop up to start destination but keep state saving
+                                    popUpTo(controller.graph.startDestinationId) {
+                                        saveState = true
+                                        inclusive = false  // Don't pop the start destination itself
+                                    }
+                                    // Don't restore state to allow transitions to always play
+                                    launchSingleTop = true
+                                    restoreState = false  // Disable to ensure transitions work
+                                }
                             }
-                            destinationCurrent = destination.alias.route
                         }
                     )
                 }

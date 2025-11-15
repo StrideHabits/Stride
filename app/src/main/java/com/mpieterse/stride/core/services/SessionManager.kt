@@ -138,8 +138,11 @@ class SessionManager @Inject constructor(
      * This conditional behavior is critical for allowing users to re-authenticate
      * when only the API token expires but Firebase authentication is still valid.
      * Preserving credentials enables automatic session restoration on the next request.
+     * 
+     * @param forceFullLogout If true, always fully logout including Firebase and credentials,
+     *                        even if Firebase auth is active. Use this when credentials are invalid.
      */
-    fun forceLogout() {
+    fun forceLogout(forceFullLogout: Boolean = false) {
         if (!loggingOut.compareAndSet(false, true)) return
 
         scope.launch {
@@ -153,15 +156,19 @@ class SessionManager @Inject constructor(
                 runCatching { tokenStore.clear() }
                     .onFailure { Clogger.e(TAG, "Failed to clear Summit token", it) }
 
-                // Only clear credentials and Firebase auth if Firebase auth is not active
-                // This prevents losing credentials when only the API token expired
-                // but Firebase authentication is still valid
-                if (!isFirebaseActive) {
-                    Clogger.d(TAG, "Firebase auth inactive, clearing stored credentials and Firebase session")
+                // If forceFullLogout is true or Firebase is inactive, fully logout
+                val shouldFullLogout = forceFullLogout || !isFirebaseActive
+                
+                if (shouldFullLogout) {
+                    Clogger.d(TAG, if (forceFullLogout) {
+                        "Force full logout requested - clearing credentials and Firebase session"
+                    } else {
+                        "Firebase auth inactive, clearing stored credentials and Firebase session"
+                    })
                     runCatching { credentialsStore.clear() }
                         .onFailure { Clogger.e(TAG, "Failed to clear stored credentials", it) }
                     
-                    // Clear Firebase auth session (should already be cleared, but be safe)
+                    // Clear Firebase auth session
                     runCatching { authenticationService.logout() }
                         .onFailure { Clogger.e(TAG, "Failed to logout Firebase auth", it) }
                 } else {
