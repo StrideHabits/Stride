@@ -125,21 +125,16 @@ object NetworkModule {
                     // (don't close it - let the caller handle it)
                 }
                 SessionManager.SessionRestoreResult.INVALID_CREDENTIALS -> {
-                    // When INVALID_CREDENTIALS occurs for 401/403, the stored credentials are wrong
-                    // We should fully logout (including Firebase) to redirect user to login screen
-                    // Only do this for 401/403, not for 500 (which might be a server error)
-                    if (response.code == 401 || response.code == 403) {
-                        Clogger.w("NetworkModule", "Session restore failed: invalid credentials for 401/403. Fully logging out to redirect to login")
-                        // Clear the invalid token immediately
-                        runBlocking {
-                            store.clear()
-                        }
-                        // Force full logout (including Firebase) to redirect to login screen
-                        // This ensures user goes to Unauthenticated state, not Locked state
-                        sessionManager.forceLogout(forceFullLogout = true)
-                    } else {
-                        Clogger.w("NetworkModule", "Session restore failed: invalid credentials for ${response.code}. Not clearing token (might be server error)")
+                    // INVALID_CREDENTIALS means stored credentials are wrong (line 71 guarantees 401/403)
+                    // Fully logout (including Firebase) to redirect user to login screen
+                    Clogger.w("NetworkModule", "Session restore failed: invalid credentials. Fully logging out to redirect to login")
+                    // Clear the invalid token immediately
+                    runBlocking {
+                        store.clear()
                     }
+                    // Force full logout (including Firebase) to redirect to login screen
+                    // This ensures user goes to Unauthenticated state, not Locked state
+                    sessionManager.forceLogout(forceFullLogout = true)
                     // Return the original error response - caller should handle it
                 }
                 SessionManager.SessionRestoreResult.NO_CREDENTIALS -> {

@@ -333,8 +333,17 @@ class HabitRepositoryImpl @Inject constructor(
                     mergedDto.toEntity(syncState = SyncState.Synced)
                 }
                 
-                // Replace all habits with merged data
-                db.habits().replaceAll(habitsToSave)
+                // Preserve local Pending habits that don't exist on the server yet
+                // This prevents data loss for habits created locally when server was unavailable
+                val pendingLocals = existingHabits.values.filter { local ->
+                    local.syncState == SyncState.Pending &&
+                        habitsToSave.none { remote -> remote.id == local.id }
+                }
+                
+                Clogger.d("HabitRepository", "Preserving ${pendingLocals.size} local Pending habits that don't exist on server")
+                
+                // Replace server-backed habits, but keep local pending ones
+                db.habits().replaceAll(habitsToSave + pendingLocals)
             }
             Clogger.d("HabitRepository", "Successfully pulled ${remote.size} habits from server")
             true
