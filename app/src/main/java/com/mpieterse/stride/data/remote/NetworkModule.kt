@@ -67,9 +67,9 @@ object NetworkModule {
             throw e
         }
 
-        // Handle auth errors (401/403) and potential auth-related 500 errors
-        if (!isAuthEndpoint && (response.code == 401 || response.code == 403 || response.code == 500)) {
-            // Attempt session restoration for auth errors and 500 (which might indicate expired token)
+        // Handle auth errors (401/403) only - 500 errors are server errors, not auth errors
+        if (!isAuthEndpoint && (response.code == 401 || response.code == 403)) {
+            // Attempt session restoration for auth errors only
             val originalToken = token
             val restoreResult = sessionManager.tryRestoreSession()
             when (restoreResult) {
@@ -85,6 +85,15 @@ object NetworkModule {
                         }
                     }.build()
                     response = chain.proceed(retryRequest)
+                    // If retry still fails with 401/403 after restoration, credentials are invalid
+                    if (response.code == 401 || response.code == 403) {
+                        Clogger.w("NetworkModule", "Retry after session restoration still failed with ${response.code}. Fully logging out to redirect to login")
+                        runBlocking {
+                            store.clear()
+                        }
+                        // Force full logout to ensure user goes to login screen, not locked screen
+                        sessionManager.forceLogout(forceFullLogout = true)
+                    }
                     // If retry still fails with 500, it's a real server error, not auth-related
                 }
                 SessionManager.SessionRestoreResult.ALREADY_RESTORING -> {
@@ -102,20 +111,36 @@ object NetworkModule {
                             }
                         }.build()
                         response = chain.proceed(retryRequest)
+                        // If retry still fails with 401/403 after restoration, credentials are invalid
+                        if (response.code == 401 || response.code == 403) {
+                            Clogger.w("NetworkModule", "Retry after session restoration (waited) still failed with ${response.code}. Fully logging out to redirect to login")
+                            runBlocking {
+                                store.clear()
+                            }
+                            // Force full logout to ensure user goes to login screen, not locked screen
+                            sessionManager.forceLogout(forceFullLogout = true)
+                        }
                     }
                     // If restoration failed or timed out, return the original error response
                     // (don't close it - let the caller handle it)
                 }
                 SessionManager.SessionRestoreResult.INVALID_CREDENTIALS -> {
-                    // For INVALID_CREDENTIALS, check if Firebase auth is still active
-                    // If Firebase is active, don't logout - the user might be able to re-authenticate
-                    // Only logout if both API and Firebase auth are invalid
-                    // This prevents losing credentials when only the API token is expired
-                    // but the user's Firebase session is still valid
-                    Clogger.w("NetworkModule", "Session restore failed: invalid credentials. Checking Firebase auth state before logout")
-                    // Don't force logout here - let the error response be returned
-                    // The app can handle this gracefully and allow user to retry
-                    // Only force logout if Firebase auth is also invalid (handled by auth state listener)
+                    // When INVALID_CREDENTIALS occurs for 401/403, the stored credentials are wrong
+                    // We should fully logout (including Firebase) to redirect user to login screen
+                    // Only do this for 401/403, not for 500 (which might be a server error)
+                    if (response.code == 401 || response.code == 403) {
+                        Clogger.w("NetworkModule", "Session restore failed: invalid credentials for 401/403. Fully logging out to redirect to login")
+                        // Clear the invalid token immediately
+                        runBlocking {
+                            store.clear()
+                        }
+                        // Force full logout (including Firebase) to redirect to login screen
+                        // This ensures user goes to Unauthenticated state, not Locked state
+                        sessionManager.forceLogout(forceFullLogout = true)
+                    } else {
+                        Clogger.w("NetworkModule", "Session restore failed: invalid credentials for ${response.code}. Not clearing token (might be server error)")
+                    }
+                    // Return the original error response - caller should handle it
                 }
                 SessionManager.SessionRestoreResult.NO_CREDENTIALS -> {
                     // No credentials stored - this means credentials were already cleared

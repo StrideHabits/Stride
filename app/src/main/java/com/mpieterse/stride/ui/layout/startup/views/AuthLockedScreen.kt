@@ -54,6 +54,7 @@ import com.mpieterse.stride.core.models.results.BiometricError
 import com.mpieterse.stride.core.models.results.Final
 import com.mpieterse.stride.core.services.BiometricService
 import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AuthLockedScreen(
@@ -73,6 +74,15 @@ fun AuthLockedScreen(
     val biometricService = BiometricService(context)
     var biometricResult by remember {
         mutableStateOf<Final<Unit, BiometricError>?>(null)
+    }
+    
+    // Check if Firebase auth is still active - if not, redirect to login
+    LaunchedEffect(Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            // Auth session is no longer active, redirect to login
+            model.unlockWithAlternativeMethod()
+        }
     }
 
     // Handle success case separately to avoid side effects in computed value
@@ -164,7 +174,7 @@ fun AuthLockedScreen(
                     }
                 }
                 
-                // Biometric Icon (under the text)
+                // Biometric Icon (lower, under the text)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier

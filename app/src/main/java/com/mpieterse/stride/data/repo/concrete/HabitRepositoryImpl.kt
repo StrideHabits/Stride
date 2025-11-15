@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import retrofit2.HttpException
 import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,6 +62,9 @@ class HabitRepositoryImpl @Inject constructor(
             val created: HabitDto = api.createHabit(input)
             // 2) Cache locally as Synced - preserve imageUrl from input if API response doesn't include it
             val finalImageUrl = created.imageUrl?.takeIf { it.isNotBlank() } ?: input.imageUrl?.takeIf { it.isNotBlank() }
+            
+            Clogger.d("HabitRepository", "Creating habit ${created.id}: input imageUrl='${input.imageUrl}', API response imageUrl='${created.imageUrl}', final='$finalImageUrl'")
+            
             db.withTransaction {
                 db.habits().upsert(
                     HabitEntity(
@@ -77,14 +81,75 @@ class HabitRepositoryImpl @Inject constructor(
                     )
                 )
             }
-            Clogger.d("HabitRepository", "Successfully created habit ${created.id} on server and cached locally${if (finalImageUrl != null) " with image" else ""}")
+            Clogger.d("HabitRepository", "Successfully created habit ${created.id} on server and cached locally${if (finalImageUrl != null) " with image $finalImageUrl" else " (no image)"}")
             return created.copy(imageUrl = finalImageUrl)
         } catch (e: HttpException) {
+            // For server errors (500, 502, 503, 504), save locally with Pending sync state
+            // This allows the habit to be visible immediately and synced later
+            if (e.code() == 500 || e.code() == 502 || e.code() == 503 || e.code() == 504) {
+                Clogger.w("HabitRepository", "Server error (${e.code()}) when creating habit, saving locally with Pending sync state")
+                
+                // Generate a local ID if server didn't return one
+                val habitId = UUID.randomUUID().toString()
+                val now = Instant.now().toString()
+                val finalImageUrl = input.imageUrl?.takeIf { it.isNotBlank() }
+                
+                val localEntity = HabitEntity(
+                    id = habitId,
+                    name = input.name.trim(),
+                    frequency = input.frequency.coerceIn(1, 7),
+                    tag = input.tag?.trim().takeUnless { it.isNullOrEmpty() },
+                    imageUrl = finalImageUrl,
+                    createdAt = now,
+                    updatedAt = now,
+                    deleted = false,
+                    rowVersion = "",
+                    syncState = SyncState.Pending // Mark for future sync
+                )
+                
+                db.withTransaction {
+                    db.habits().upsert(localEntity)
+                }
+                
+                Clogger.d("HabitRepository", "Saved habit $habitId locally with Pending sync state${if (finalImageUrl != null) " with image $finalImageUrl" else " (no image)"}")
+                return localEntity.toDto()
+            }
+            // For other HTTP errors (400, 401, 403, 404), throw the exception
             Clogger.e("HabitRepository", "Failed to create habit: HTTP ${e.code()} ${e.message()}", e)
             throw e
         } catch (e: Exception) {
-            Clogger.e("HabitRepository", "Failed to create habit", e)
-            throw e
+            // For network errors or other exceptions, also save locally if possible
+            Clogger.e("HabitRepository", "Failed to create habit (network/exception), saving locally with Pending sync state", e)
+            
+            // Generate a local ID
+            val habitId = UUID.randomUUID().toString()
+            val now = Instant.now().toString()
+            val finalImageUrl = input.imageUrl?.takeIf { it.isNotBlank() }
+            
+            val localEntity = HabitEntity(
+                id = habitId,
+                name = input.name.trim(),
+                frequency = input.frequency.coerceIn(1, 7),
+                tag = input.tag?.trim().takeUnless { it.isNullOrEmpty() },
+                imageUrl = finalImageUrl,
+                createdAt = now,
+                updatedAt = now,
+                deleted = false,
+                rowVersion = "",
+                syncState = SyncState.Pending // Mark for future sync
+            )
+            
+            try {
+                db.withTransaction {
+                    db.habits().upsert(localEntity)
+                }
+                Clogger.d("HabitRepository", "Saved habit $habitId locally with Pending sync state after network/exception${if (finalImageUrl != null) " with image $finalImageUrl" else " (no image)"}")
+                return localEntity.toDto()
+            } catch (dbException: Exception) {
+                // If we can't save to DB, throw the original exception
+                Clogger.e("HabitRepository", "Failed to save habit locally, throwing original exception", dbException)
+                throw e
+            }
         }
     }
 
@@ -100,6 +165,9 @@ class HabitRepositoryImpl @Inject constructor(
             val finalImageUrl = updated.imageUrl?.takeIf { it.isNotBlank() } 
                 ?: input.imageUrl?.takeIf { it.isNotBlank() } 
                 ?: existingHabit?.imageUrl?.takeIf { it.isNotBlank() }
+            
+            Clogger.d("HabitRepository", "Updating habit $id: input imageUrl='${input.imageUrl}', existing imageUrl='${existingHabit?.imageUrl}', API response imageUrl='${updated.imageUrl}', final='$finalImageUrl'")
+            
             db.withTransaction {
                 db.habits().upsert(
                     HabitEntity(
@@ -116,7 +184,7 @@ class HabitRepositoryImpl @Inject constructor(
                     )
                 )
             }
-            Clogger.d("HabitRepository", "Successfully updated habit $id on server and cached locally${if (finalImageUrl != null) " with image" else ""}")
+            Clogger.d("HabitRepository", "Successfully updated habit $id on server and cached locally${if (finalImageUrl != null) " with image $finalImageUrl" else " (no image)"}")
             return updated.copy(imageUrl = finalImageUrl)
         } catch (e: HttpException) {
             // If habit doesn't exist on server (404), try to create it instead
@@ -161,12 +229,15 @@ class HabitRepositoryImpl @Inject constructor(
                         val localHabit = db.habits().getById(id)
                         if (localHabit != null) {
                             val updatedAt = Instant.now().toString()
+                            // Preserve imageUrl from input, or fall back to existing local imageUrl
+                            val preservedImageUrl = input.imageUrl?.takeIf { it.isNotBlank() } 
+                                ?: localHabit.imageUrl?.takeIf { it.isNotBlank() }
                             val updatedEntity = HabitEntity(
                                 id = localHabit.id,
                                 name = input.name,
                                 frequency = input.frequency,
                                 tag = input.tag,
-                                imageUrl = input.imageUrl,
+                                imageUrl = preservedImageUrl,
                                 createdAt = localHabit.createdAt,
                                 updatedAt = updatedAt,
                                 deleted = false,
@@ -239,8 +310,31 @@ class HabitRepositoryImpl @Inject constructor(
         return try {
             val remote = api.listHabits() // returns List<HabitDto>
             db.withTransaction {
-                // simple merge: replace snapshot
-                db.habits().replaceAll(remote.map { it.toEntity(syncState = SyncState.Synced) })
+                // Get existing habits to preserve imageUrl when remote doesn't have it
+                val existingHabits = db.habits().list().associateBy { it.id }
+                
+                // Merge remote data with local, preserving imageUrl from local if remote doesn't have it
+                val habitsToSave = remote.map { remoteDto ->
+                    val existing = existingHabits[remoteDto.id]
+                    // Preserve local imageUrl if remote doesn't have a valid (non-blank) one
+                    // Only use remote imageUrl if it's not null and not blank
+                    val finalImageUrl = when {
+                        // Remote has a valid imageUrl - use it
+                        !remoteDto.imageUrl.isNullOrBlank() -> remoteDto.imageUrl
+                        // Remote doesn't have one, but local does - preserve local
+                        existing?.imageUrl?.isNotBlank() == true -> existing.imageUrl
+                        // Neither has one - use null
+                        else -> null
+                    }
+                    
+                    Clogger.d("HabitRepository", "Merging habit ${remoteDto.id}: remote imageUrl='${remoteDto.imageUrl}', local imageUrl='${existing?.imageUrl}', final='$finalImageUrl'")
+                    
+                    val mergedDto = remoteDto.copy(imageUrl = finalImageUrl)
+                    mergedDto.toEntity(syncState = SyncState.Synced)
+                }
+                
+                // Replace all habits with merged data
+                db.habits().replaceAll(habitsToSave)
             }
             Clogger.d("HabitRepository", "Successfully pulled ${remote.size} habits from server")
             true
