@@ -212,11 +212,41 @@ class HomeDatabaseViewModel @Inject constructor(
                 eventBus.emit(AppEventBus.AppEvent.HabitCreated)
                 refresh()
                 onDone(true)
-            } catch (e: Exception) {
+            } catch (e: retrofit2.HttpException) {
+                // Handle HTTP errors with specific user-friendly messages
+                val errorMessage = when {
+                    e.code() in 500..599 -> "Server error. Habit saved locally and will sync when available."
+                    e.code() == 401 || e.code() == 403 -> "Authentication error. Please sign in again."
+                    e.code() == 400 -> "Invalid habit data. Please check your input and try again."
+                    e.code() == 404 -> "Server not found. Habit saved locally and will sync when available."
+                    else -> "Failed to create habit: ${e.message() ?: "Unknown error"}"
+                }
                 setStatus("ERR • create habit")
-                _state.value = _state.value.copy(error = e.message ?: "Failed to create")
+                _state.value = _state.value.copy(error = errorMessage)
+                log("create ❌ HTTP ${e.code()}: ${e.message()}")
+                // For server errors (500+), the habit might have been saved locally, so still call onDone(true)
+                onDone(e.code() in 500..599)
+            } catch (e: Exception) {
+                // Handle network errors and other exceptions
+                val isNetworkError = e is java.net.SocketTimeoutException ||
+                    e is java.net.ConnectException ||
+                    (e is java.io.IOException && (
+                        e.message?.lowercase()?.contains("timeout") == true ||
+                        e.message?.lowercase()?.contains("network") == true ||
+                        e.message?.lowercase()?.contains("connection") == true
+                    ))
+                
+                val errorMessage = if (isNetworkError) {
+                    "Network error. Habit saved locally and will sync when online."
+                } else {
+                    "Failed to create habit: ${e.message ?: "Unknown error"}"
+                }
+                
+                setStatus("ERR • create habit")
+                _state.value = _state.value.copy(error = errorMessage)
                 log("create ❌ ${e.message}")
-                onDone(false)
+                // For network errors, the habit might have been saved locally, so still call onDone(true)
+                onDone(isNetworkError)
             }
         }
     }

@@ -32,6 +32,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -161,16 +162,34 @@ class HabitViewerViewModel @Inject constructor(
             // Upload image if provided - but don't block update if it fails
             var uploadedUrl: String? = null
             var imageUploadFailed = false
+            var imageUploadError: String? = null
             
             if (!updated.imageBase64.isNullOrBlank()) {
                 try {
-                    uploadedUrl = uploadImage(updated.imageBase64!!, updated.imageMimeType)
+                    // Safe to use imageBase64 here - already checked with isNullOrBlank()
+                    val imageBase64 = updated.imageBase64
+                    if (imageBase64 != null) {
+                        uploadedUrl = uploadImage(imageBase64, updated.imageMimeType)
+                    }
                     if (uploadedUrl.isNullOrBlank()) {
                         imageUploadFailed = true
+                        imageUploadError = "Image upload failed. Please try again later or use a different image."
                         Clogger.w("HabitViewerViewModel", "Image upload failed, continuing with existing image or no image")
                     }
                 } catch (e: Exception) {
                     imageUploadFailed = true
+                    val isNetworkError = e is java.net.SocketTimeoutException ||
+                        e is java.net.ConnectException ||
+                        (e is java.io.IOException && (
+                            e.message?.lowercase()?.contains("timeout") == true ||
+                            e.message?.lowercase()?.contains("network") == true ||
+                            e.message?.lowercase()?.contains("connection") == true
+                        ))
+                    imageUploadError = if (isNetworkError) {
+                        "Network error. Image upload failed. Please try again when online."
+                    } else {
+                        "Image upload failed: ${e.message ?: "Unknown error"}. Please try again."
+                    }
                     Clogger.e("HabitViewerViewModel", "Image upload exception, continuing with existing image or no image", e)
                 }
             }
@@ -207,12 +226,27 @@ class HabitViewerViewModel @Inject constructor(
                     habitImage = updatedBitmap,
                     loading = false,
                     displayName = updatedDto.name,
-                    error = if (imageUploadFailed) "Habit updated, but image upload failed. Please try again later." else null
+                    error = if (imageUploadFailed && imageUploadError != null) imageUploadError else null
                 ) 
             }
             eventBus.emit(AppEventBus.AppEvent.HabitUpdated)
             Clogger.d("HabitViewerViewModel", "Successfully updated habit ${current.id} on server${if (imageUploadFailed) " (image upload failed)" else ""}")
-        } catch (e: retrofit2.HttpException) {
+            
+            // Show image upload error if it occurred (update state with specific error message)
+            if (imageUploadFailed && imageUploadError != null) {
+                _state.update { 
+                    it.copy(
+                        error = imageUploadError,
+                        loading = false
+                    ) 
+                }
+                // Clear error after a delay
+                launch {
+                    delay(5000)
+                    _state.update { it.copy(error = null) }
+                }
+            }
+        } catch (e: HttpException) {
             // Handle HTTP errors more gracefully
             val errorMessage = when (e.code()) {
                 404 -> "Habit not found on server. It may have been deleted. Please refresh or create a new habit."

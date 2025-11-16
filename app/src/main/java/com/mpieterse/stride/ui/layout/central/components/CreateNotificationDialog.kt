@@ -305,12 +305,13 @@ fun CreateNotificationDialog(
             Button(
                 enabled = !isLoading && selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null,
                 onClick = {
-                    if (selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && selectedTime != null) {
+                    val time = selectedTime
+                    if (selectedHabit != null && habitName.isNotBlank() && selectedDays.isNotEmpty() && time != null) {
                         val notification = NotificationData(
                             id = initialData?.id ?: UUID.randomUUID().toString(),
                             habitId = selectedHabit?.id,
                             habitName = habitName,
-                            time = selectedTime!!,
+                            time = time,
                             daysOfWeek = selectedDays.sorted(),
                             isEnabled = initialData?.isEnabled ?: true,
                             message = message,

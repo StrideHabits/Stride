@@ -82,6 +82,14 @@ fun AuthLockedScreen(
         if (currentUser == null) {
             // Auth session is no longer active, redirect to login
             model.unlockWithAlternativeMethod()
+            return@LaunchedEffect
+        }
+        
+        // If biometrics are not available, automatically bypass and continue with the flow
+        if (!biometricService.isAvailable()) {
+            // Biometrics not available - bypass authentication and proceed
+            onSuccess()
+            return@LaunchedEffect
         }
     }
 

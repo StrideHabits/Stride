@@ -84,9 +84,9 @@ fun ImagePicker(
                 imagePickerLauncher.launch("image/*")
             }
     ) {
-        if (tempSelectedImage != null) {
+        tempSelectedImage?.let { bitmap ->
             Image(
-                bitmap = tempSelectedImage!!.asImageBitmap(),
+                bitmap = bitmap.asImageBitmap(),
                 contentDescription = "Selected habit image",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -94,7 +94,7 @@ fun ImagePicker(
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
-        } else {
+        } ?: run {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
