@@ -219,9 +219,9 @@ fun UpsertDialog(
                 )
                 
                 // Error message
-                if (errorText != null) {
+                errorText?.let { error ->
                     Text(
-                        text = errorText!!,
+                        text = error,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )

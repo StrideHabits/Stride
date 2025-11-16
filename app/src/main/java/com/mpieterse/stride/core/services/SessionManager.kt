@@ -50,10 +50,12 @@ class SessionManager @Inject constructor(
     fun waitForRestoration(originalToken: String?, timeoutMs: Long = 10000): Boolean {
         return runBlocking {
             withTimeoutOrNull(timeoutMs) {
-                var currentToken = runBlocking { tokenStore.tokenFlow.first() }
+                // Get initial token without nested runBlocking
+                var currentToken = tokenStore.tokenFlow.first()
+                // Poll until token changes or restoration completes
                 while (currentToken == originalToken && restoringSession.get()) {
                     delay(100) // Poll every 100ms
-                    currentToken = runBlocking { tokenStore.tokenFlow.first() }
+                    currentToken = tokenStore.tokenFlow.first() // This is now a suspend call, not runBlocking
                 }
                 currentToken != originalToken && !currentToken.isNullOrBlank()
             } ?: false

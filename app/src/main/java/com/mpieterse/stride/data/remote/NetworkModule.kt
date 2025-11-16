@@ -12,8 +12,14 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -41,13 +47,33 @@ object NetworkModule {
     @Provides @Singleton fun tokenStore(@ApplicationContext c: Context) = TokenStore(c)
     @Provides @Singleton fun notificationsStore(@ApplicationContext c: Context) = NotificationsStore(c)
 
+    /**
+     * Thread-safe token cache to avoid blocking in OkHttp interceptor.
+     * The token is cached in memory and updated asynchronously from the flow.
+     */
+    private val tokenCache = java.util.concurrent.atomic.AtomicReference<String?>()
+
     @Provides @Singleton
     fun authInterceptor(
         store: TokenStore,
         sessionManager: SessionManager
-    ) = Interceptor { chain ->
-        val originalRequest = chain.request()
-        val token = runBlocking { store.tokenFlow.first() }
+    ): Interceptor {
+        // Initialize cache and start collecting token updates asynchronously
+        runBlocking {
+            tokenCache.set(store.tokenFlow.first())
+        }
+        
+        // Start a coroutine to keep the cache updated
+        CoroutineScope(Dispatchers.IO).launch {
+            store.tokenFlow.collect { token ->
+                tokenCache.set(token)
+            }
+        }
+        
+        return Interceptor { chain ->
+            val originalRequest = chain.request()
+            // Use cached token value (non-blocking)
+            val token = tokenCache.get()
         val requestWithAuth = if (!token.isNullOrBlank()) {
             originalRequest.newBuilder()
                 .header("Authorization", "Bearer $token")
@@ -71,12 +97,31 @@ object NetworkModule {
         if (!isAuthEndpoint && (response.code == 401 || response.code == 403)) {
             // Attempt session restoration for auth errors only
             val originalToken = token
-            val restoreResult = sessionManager.tryRestoreSession()
-            when (restoreResult) {
+            when (val restoreResult = sessionManager.tryRestoreSession()) {
                 SessionManager.SessionRestoreResult.RESTORED -> {
                     // Session restored successfully - retry the original request with new token
                     response.close()
-                    val refreshedToken = runBlocking { store.tokenFlow.first() }
+                    // Use cached token (should be updated by now via flow)
+                    // Small delay to ensure cache is updated after tokenStore.set() in tryRestoreSession
+                    var refreshedToken = tokenCache.get()
+                    if (refreshedToken == originalToken) {
+                        // Cache might not be updated yet, wait briefly
+                        try {
+                            refreshedToken = runBlocking {
+                                withTimeout(400) {
+                                    var current = tokenCache.get()
+                                    while (current == originalToken && current != null) {
+                                        delay(50)
+                                        current = tokenCache.get()
+                                    }
+                                    current
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Timeout - use cache value anyway
+                            refreshedToken = tokenCache.get()
+                        }
+                    }
                     val retryRequest = originalRequest.newBuilder().apply {
                         if (!refreshedToken.isNullOrBlank()) {
                             header("Authorization", "Bearer $refreshedToken")
@@ -88,7 +133,9 @@ object NetworkModule {
                     // If retry still fails with 401/403 after restoration, credentials are invalid
                     if (response.code == 401 || response.code == 403) {
                         Clogger.w("NetworkModule", "Retry after session restoration still failed with ${response.code}. Fully logging out to redirect to login")
-                        runBlocking {
+                        tokenCache.set(null) // Clear cache
+                        // Clear token store asynchronously (don't block)
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                             store.clear()
                         }
                         // Force full logout to ensure user goes to login screen, not locked screen
@@ -102,7 +149,25 @@ object NetworkModule {
                     if (restorationSucceeded) {
                         // Restoration completed successfully - retry with new token
                         response.close()
-                        val refreshedToken = runBlocking { store.tokenFlow.first() }
+                        // Use cached token (should be updated by now)
+                        var refreshedToken = tokenCache.get()
+                        if (refreshedToken == originalToken) {
+                            // Cache might not be updated yet, wait briefly
+                            try {
+                                refreshedToken = runBlocking {
+                                    withTimeout(400) {
+                                        var current = tokenCache.get()
+                                        while (current == originalToken && current != null) {
+                                            delay(50)
+                                            current = tokenCache.get()
+                                        }
+                                        current
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                refreshedToken = tokenCache.get()
+                            }
+                        }
                         val retryRequest = originalRequest.newBuilder().apply {
                             if (!refreshedToken.isNullOrBlank()) {
                                 header("Authorization", "Bearer $refreshedToken")
@@ -114,7 +179,9 @@ object NetworkModule {
                         // If retry still fails with 401/403 after restoration, credentials are invalid
                         if (response.code == 401 || response.code == 403) {
                             Clogger.w("NetworkModule", "Retry after session restoration (waited) still failed with ${response.code}. Fully logging out to redirect to login")
-                            runBlocking {
+                            tokenCache.set(null) // Clear cache
+                            // Clear token store asynchronously (don't block)
+                            CoroutineScope(Dispatchers.IO).launch {
                                 store.clear()
                             }
                             // Force full logout to ensure user goes to login screen, not locked screen
@@ -125,11 +192,13 @@ object NetworkModule {
                     // (don't close it - let the caller handle it)
                 }
                 SessionManager.SessionRestoreResult.INVALID_CREDENTIALS -> {
-                    // INVALID_CREDENTIALS means stored credentials are wrong (line 71 guarantees 401/403)
+                    // INVALID_CREDENTIALS means stored credentials are wrong (line 91 guarantees 401/403)
                     // Fully logout (including Firebase) to redirect user to login screen
                     Clogger.w("NetworkModule", "Session restore failed: invalid credentials. Fully logging out to redirect to login")
-                    // Clear the invalid token immediately
-                    runBlocking {
+                    // Clear the invalid token from cache immediately
+                    tokenCache.set(null)
+                    // Clear token store asynchronously (don't block interceptor)
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                         store.clear()
                     }
                     // Force full logout (including Firebase) to redirect to login screen
@@ -155,6 +224,7 @@ object NetworkModule {
         }
 
         response
+        }
     }
 
     @Provides @Singleton
