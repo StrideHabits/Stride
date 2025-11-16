@@ -56,7 +56,9 @@ class HabitViewerViewModel @Inject constructor(
         val tag: String? = null,
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
-        val completedDates: List<Int> = emptyList()
+        val completedDates: List<Int> = emptyList(),
+        val selectedYear: Int = LocalDate.now().year,
+        val selectedMonth: Int = LocalDate.now().monthValue
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -68,7 +70,15 @@ class HabitViewerViewModel @Inject constructor(
     private var observeJob: Job? = null
 
     fun load(habitId: String) {
-        _state.update { it.copy(loading = true, error = null, habitId = habitId) }
+        _state.update { 
+            it.copy(
+                loading = true, 
+                error = null, 
+                habitId = habitId,
+                selectedYear = LocalDate.now().year,
+                selectedMonth = LocalDate.now().monthValue
+            ) 
+        }
 
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
@@ -78,11 +88,14 @@ class HabitViewerViewModel @Inject constructor(
                 checkins.observeForHabit(habitId)
                     .map { list -> list } // DTOs already
                     .onStart { emit(emptyList()) }
-                    .catch { emit(emptyList()) }
-            ) { habitDto, localCheckins ->
+                    .catch { emit(emptyList()) },
+                _state.map { Pair(it.selectedYear, it.selectedMonth) }
+                    .distinctUntilChanged()
+            ) { habitDto, localCheckins, selectedMonthYear ->
                 val habitName = habitDto?.name ?: "(Unknown habit)"
                 val display = nameOverrideService.getDisplayName(habitId, habitName)
-                val completedThisMonth = monthDays(localCheckins)
+                val (selectedYear, selectedMonth) = selectedMonthYear
+                val completedThisMonth = monthDays(localCheckins, selectedYear, selectedMonth)
                 val streak = computeStreakDays(localCheckins)
                 Pair(habitDto, Triple(habitName, display, Pair(completedThisMonth, streak)))
             }
@@ -120,6 +133,29 @@ class HabitViewerViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    fun navigateMonth(forward: Boolean) {
+        val current = LocalDate.of(_state.value.selectedYear, _state.value.selectedMonth, 1)
+        val newDate = if (forward) current.plusMonths(1) else current.minusMonths(1)
+        _state.update {
+            it.copy(selectedYear = newDate.year, selectedMonth = newDate.monthValue)
+        }
+    }
+
+    fun navigateYear(forward: Boolean) {
+        val current = LocalDate.of(_state.value.selectedYear, _state.value.selectedMonth, 1)
+        val newDate = if (forward) current.plusYears(1) else current.minusYears(1)
+        _state.update {
+            it.copy(selectedYear = newDate.year, selectedMonth = newDate.monthValue)
+        }
+    }
+
+    fun goToToday() {
+        val today = LocalDate.now()
+        _state.update {
+            it.copy(selectedYear = today.year, selectedMonth = today.monthValue)
         }
     }
 
@@ -324,9 +360,8 @@ class HabitViewerViewModel @Inject constructor(
 
     // Helpers
 
-    private fun monthDays(list: List<CheckInDto>): List<Int> {
-        val today = LocalDate.now()
-        val monthStart = today.withDayOfMonth(1)
+    private fun monthDays(list: List<CheckInDto>, year: Int, month: Int): List<Int> {
+        val monthStart = LocalDate.of(year, month, 1)
         return list.asSequence()
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .filter { it.year == monthStart.year && it.month == monthStart.month }
