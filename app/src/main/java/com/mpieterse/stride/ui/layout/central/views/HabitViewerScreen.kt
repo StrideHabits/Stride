@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
@@ -79,12 +80,12 @@ fun HabitViewerScreen(
                     IconButton(onClick = onBackClick, modifier = Modifier.size(24.dp)) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_arrow_left),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.content_description_back),
                             tint = onBg
                         )
                     }
                     Text(
-                        text = if (state.loading) "Loading…" else state.displayName,
+                        text = if (state.loading) stringResource(R.string.habit_viewer_loading) else state.displayName,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -100,7 +101,7 @@ fun HabitViewerScreen(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_check),
-                            contentDescription = "Complete Today",
+                            contentDescription = stringResource(R.string.content_description_complete_today),
                             tint = brand
                         )
                     }
@@ -208,14 +209,14 @@ fun HabitViewerScreen(
         ) {
             Icon(
                 painter = painterResource(R.drawable.xic_uic_outline_edit),
-                contentDescription = "Edit Habit",
+                contentDescription = stringResource(R.string.content_description_edit_habit),
                 modifier = Modifier.size(24.dp)
             )
         }
     }
 
     UpsertDialog(
-        title = "Edit Habit",
+        title = stringResource(R.string.habit_viewer_edit_dialog_title),
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
@@ -251,14 +252,14 @@ private fun HabitImageViewer(
         if (habitImage != null) {
             Image(
                 bitmap = habitImage.asImageBitmap(),
-                contentDescription = "Habit image",
+                contentDescription = stringResource(R.string.content_description_habit_image),
                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "(IMAGE)",
+                    text = stringResource(R.string.habit_viewer_image_placeholder),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         fontSize = 16.sp
@@ -280,7 +281,7 @@ private fun StreakBanner(
         modifier = modifier
     ) {
         Text(
-            text = "$streakDays Day Streak",
+            text = stringResource(R.string.habit_viewer_streak_days, streakDays),
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -327,7 +328,15 @@ private fun CalendarView(
 
 @Composable
 private fun DaysOfWeekHeader(modifier: Modifier = Modifier) {
-    val daysOfWeek = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+    val daysOfWeek = listOf(
+        stringResource(R.string.day_monday),
+        stringResource(R.string.day_tuesday),
+        stringResource(R.string.day_wednesday),
+        stringResource(R.string.day_thursday),
+        stringResource(R.string.day_friday),
+        stringResource(R.string.day_saturday),
+        stringResource(R.string.day_sunday)
+    )
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         daysOfWeek.forEach { day ->
             Text(
@@ -372,18 +381,18 @@ private fun MonthYearHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Previous month arrow (left side)
-        IconButton(
-            onClick = { onNavigateMonth(false) },
-            enabled = enabled,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.xic_uic_outline_arrow_left),
-                contentDescription = "Previous Month",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-            )
-        }
+            IconButton(
+                onClick = { onNavigateMonth(false) },
+                enabled = enabled,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.xic_uic_outline_arrow_left),
+                    contentDescription = stringResource(R.string.content_description_previous_month),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
         // Combined month and year label (center) - clickable to go to today
         Text(
@@ -407,7 +416,7 @@ private fun MonthYearHeader(
         ) {
             Icon(
                 painter = painterResource(R.drawable.xic_uic_outline_arrow_right),
-                contentDescription = "Next Month",
+                contentDescription = stringResource(R.string.content_description_next_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )

@@ -36,7 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
+import com.mpieterse.stride.R
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
@@ -96,7 +98,7 @@ fun CreateNotificationDialog(
             onDismissRequest = onDismiss,
             title = {
                 Text(
-                    text = if (initialData != null) "Edit Habit Reminder" else "Add Habit Reminder",
+                    text = if (initialData != null) stringResource(R.string.notification_dialog_edit_title) else stringResource(R.string.notification_dialog_add_title),
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
@@ -112,7 +114,7 @@ fun CreateNotificationDialog(
                 ) {
                 // Habit Selection
                 LocalOutlinedDropdown(
-                    label = "Habit",
+                    label = stringResource(R.string.notification_dialog_habit_label),
                     value = selectedHabit,
                     onValueChange = { habit ->
                         selectedHabit = habit
@@ -133,7 +135,7 @@ fun CreateNotificationDialog(
                 // Time Selection (24-hour format)
                 Column {
                     Text(
-                        text = "Time",
+                        text = stringResource(R.string.notification_dialog_time_label),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onBackground,
@@ -154,7 +156,7 @@ fun CreateNotificationDialog(
                         Text(
                             text = selectedTime?.let { 
                                 String.format("%02d:%02d", it.hour, it.minute)
-                            } ?: "Select time",
+                            } ?: stringResource(R.string.notification_dialog_select_time),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = if (selectedTime != null) 18.sp else 14.sp,
                                 fontWeight = if (selectedTime != null) FontWeight.Bold else FontWeight.Normal,
@@ -167,7 +169,7 @@ fun CreateNotificationDialog(
                 // Days Selection
                 Column {
                     Text(
-                        text = "Days of Week",
+                        text = stringResource(R.string.notification_dialog_days_label),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onBackground,
@@ -187,10 +189,10 @@ fun CreateNotificationDialog(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             val firstRow = listOf(
-                                1 to "Mon",
-                                2 to "Tue",
-                                3 to "Wed",
-                                4 to "Thu"
+                                1 to stringResource(R.string.day_monday),
+                                2 to stringResource(R.string.day_tuesday),
+                                3 to stringResource(R.string.day_wednesday),
+                                4 to stringResource(R.string.day_thursday)
                             )
                             
                             firstRow.forEach { (dayNumber, dayLabel) ->
@@ -232,9 +234,9 @@ fun CreateNotificationDialog(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             val secondRow = listOf(
-                                5 to "Fri",
-                                6 to "Sat",
-                                7 to "Sun"
+                                5 to stringResource(R.string.day_friday),
+                                6 to stringResource(R.string.day_saturday),
+                                7 to stringResource(R.string.day_sunday)
                             )
                             
                             secondRow.forEach { (dayNumber, dayLabel) ->
@@ -280,7 +282,7 @@ fun CreateNotificationDialog(
                         exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION)) + shrinkVertically(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
                     ) {
                         Text(
-                            text = "Please select at least one day",
+                            text = stringResource(R.string.notification_dialog_select_day_error),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.error,
                                 fontSize = 12.sp
@@ -292,7 +294,7 @@ fun CreateNotificationDialog(
 
                 // Message
                 LocalOutlinedTextField(
-                    label = "Message (Optional)",
+                    label = stringResource(R.string.notification_dialog_message_label),
                     value = message,
                     onValueChange = { message = it },
                     modifier = Modifier.fillMaxWidth(),
@@ -337,7 +339,7 @@ fun CreateNotificationDialog(
                     )
                 } else {
                     Text(
-                        text = if (initialData != null) "Update" else "Add",
+                        text = if (initialData != null) stringResource(R.string.notification_dialog_update_button) else stringResource(R.string.notification_dialog_add_button),
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.SemiBold,
@@ -357,7 +359,7 @@ fun CreateNotificationDialog(
                     modifier = Modifier.width(90.dp)
                 ) {
                     Text(
-                        text = "Cancel",
+                        text = stringResource(R.string.notification_dialog_cancel_button),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium,
                             fontSize = 12.sp

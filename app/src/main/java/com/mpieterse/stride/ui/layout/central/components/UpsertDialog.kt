@@ -34,7 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
+import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.shared.components.ImagePicker
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdownStringOnly
 import com.mpieterse.stride.utils.bitmapToBase64
@@ -44,7 +46,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun UpsertDialog(
-    title: String = "Create a Habit",
+    title: String = stringResource(R.string.upsert_dialog_create_title),
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (HabitData) -> Unit,
@@ -55,18 +57,31 @@ fun UpsertDialog(
     if (!isVisible) return
 
     // Common tag options - include current tag if it exists and isn't in the list
-    val baseTagOptions = listOf(
-        "Health & Fitness",
-        "Productivity",
-        "Learning",
-        "Mindfulness",
-        "Social",
-        "Finance",
-        "Creative",
-        "Personal Care",
-        "Relationships",
-        "Hobbies"
-    )
+    val tagHealthFitness = stringResource(R.string.tag_health_fitness)
+    val tagProductivity = stringResource(R.string.tag_productivity)
+    val tagLearning = stringResource(R.string.tag_learning)
+    val tagMindfulness = stringResource(R.string.tag_mindfulness)
+    val tagSocial = stringResource(R.string.tag_social)
+    val tagFinance = stringResource(R.string.tag_finance)
+    val tagCreative = stringResource(R.string.tag_creative)
+    val tagPersonalCare = stringResource(R.string.tag_personal_care)
+    val tagRelationships = stringResource(R.string.tag_relationships)
+    val tagHobbies = stringResource(R.string.tag_hobbies)
+    
+    val baseTagOptions = remember {
+        listOf(
+            tagHealthFitness,
+            tagProductivity,
+            tagLearning,
+            tagMindfulness,
+            tagSocial,
+            tagFinance,
+            tagCreative,
+            tagPersonalCare,
+            tagRelationships,
+            tagHobbies
+        )
+    }
     val currentTag = initialData?.tag
     val tagOptions = remember(currentTag) {
         if (currentTag != null && currentTag !in baseTagOptions) {
@@ -80,6 +95,7 @@ fun UpsertDialog(
     var frequency by remember { mutableStateOf(initialData?.frequency?.takeIf { it > 0 }?.toString() ?: "1") }
     var selectedTag by remember { mutableStateOf(initialData?.tag ?: "") }
     var errorText by remember { mutableStateOf<String?>(null) }
+    val nameErrorText = stringResource(R.string.upsert_dialog_name_error)
     var selectedImage by remember { mutableStateOf<Bitmap?>(null) }
     var imageBase64 by remember { mutableStateOf<String?>(initialData?.imageBase64) }
     var imageMimeType by remember { mutableStateOf<String?>(initialData?.imageMimeType) }
@@ -150,8 +166,8 @@ fun UpsertDialog(
                         name = it
                         if (errorText != null) errorText = null
                     },
-                    label = { Text("Name") },
-                    placeholder = { Text("Name") },
+                    label = { Text(stringResource(R.string.upsert_dialog_name_label)) },
+                    placeholder = { Text(stringResource(R.string.upsert_dialog_name_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = errorText != null && name.isBlank(),
@@ -177,8 +193,8 @@ fun UpsertDialog(
                             if (errorText != null) errorText = null
                         }
                     },
-                    label = { Text("Frequency (days/week)") },
-                    placeholder = { Text("Frequency (days/week)") },
+                    label = { Text(stringResource(R.string.upsert_dialog_frequency_label)) },
+                    placeholder = { Text(stringResource(R.string.upsert_dialog_frequency_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -195,7 +211,7 @@ fun UpsertDialog(
                 
                 // Tag Dropdown
                 LocalOutlinedDropdownStringOnly(
-                    label = "Tag",
+                    label = stringResource(R.string.upsert_dialog_tag_label),
                     value = selectedTag,
                     onValueChange = { selectedTag = it },
                     items = tagOptions,
@@ -203,7 +219,7 @@ fun UpsertDialog(
                     isComponentEnabled = true,
                     textPlaceholder = {
                         Text(
-                            text = "Select a tag",
+                            text = stringResource(R.string.upsert_dialog_select_tag),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -232,7 +248,7 @@ fun UpsertDialog(
             Button(
                 onClick = {
                     if (name.isBlank()) {
-                        errorText = "Please enter a name."
+                        errorText = nameErrorText
                         return@Button
                     }
                     val frequencyValue = frequency.toIntOrNull()?.coerceIn(1, 7) ?: 1
@@ -260,7 +276,7 @@ fun UpsertDialog(
                         )
                     } else {
                         Text(
-                            text = if (initialData != null) "Update" else "Add to List", 
+                            text = if (initialData != null) stringResource(R.string.upsert_dialog_update_button) else stringResource(R.string.upsert_dialog_add_button), 
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -273,7 +289,7 @@ fun UpsertDialog(
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.onBackground
                     )
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.upsert_dialog_cancel_button)) }
             },
             properties = DialogProperties(
                 dismissOnBackPress = true,

@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -87,7 +88,7 @@ fun ImagePicker(
         tempSelectedImage?.let { bitmap ->
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Selected habit image",
+                contentDescription = stringResource(R.string.content_description_selected_habit_image),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
@@ -104,12 +105,12 @@ fun ImagePicker(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.xic_uic_outline_plus),
-                    contentDescription = "Add image",
+                    contentDescription = stringResource(R.string.content_description_add_image),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
-                    text = "Attach an image",
+                    text = stringResource(R.string.image_picker_attach),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         fontSize = 14.sp

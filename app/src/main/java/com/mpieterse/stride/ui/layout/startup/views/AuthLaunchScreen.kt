@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -78,7 +79,7 @@ fun AuthLaunchScreen(
                 // App Logo
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Stride Logo",
+                    contentDescription = stringResource(R.string.content_description_stride_logo),
                     modifier = Modifier.size(120.dp),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                 )
@@ -87,7 +88,7 @@ fun AuthLaunchScreen(
                 
                 // Welcome Message
                 Text(
-                    text = "Welcome to Stride",
+                    text = stringResource(R.string.screen_auth_launch_welcome),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -98,7 +99,7 @@ fun AuthLaunchScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Text(
-                    text = "Build better habits, one stride at a time",
+                    text = stringResource(R.string.screen_auth_launch_subtitle),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     ),
@@ -119,7 +120,7 @@ fun AuthLaunchScreen(
                     )
                 ) {
                     Text(
-                        text = "Sign In",
+                        text = stringResource(R.string.screen_auth_launch_navigate_to_sign_in),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
@@ -146,7 +147,7 @@ fun AuthLaunchScreen(
                     )
                 ) {
                     Text(
-                        text = "Sign Up",
+                        text = stringResource(R.string.screen_auth_launch_navigate_to_sign_up),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
