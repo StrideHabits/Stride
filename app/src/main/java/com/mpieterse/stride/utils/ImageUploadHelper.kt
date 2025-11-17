@@ -5,6 +5,7 @@ import android.util.Base64
 import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.utils.Clogger
 import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -43,8 +44,10 @@ class ImageUploadHelper @Inject constructor(
             "image/png" -> ".png"
             else -> ".jpg"
         }
-        val tempFile = File.createTempFile("habit-", extension, context.cacheDir)
+        var tempFile: File? = null
         return@withContext try {
+            // Create temp file inside try block to handle creation errors consistently
+            tempFile = File.createTempFile("habit-", extension, context.cacheDir)
             val bytes = Base64.decode(base64, Base64.DEFAULT)
             tempFile.writeBytes(bytes)
             when (val result = uploadRepo.upload(tempFile.path)) {
@@ -55,12 +58,15 @@ class ImageUploadHelper @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            // Re-throw CancellationException to respect coroutine cancellation
+            if (e is CancellationException) throw e
             // Image upload failures should not block habit creation/update
             // Log the error but return null to allow operation to continue
             Clogger.e(TAG, "Image upload exception", e)
             null
         } finally {
-            tempFile.delete()
+            // Safely delete temp file if it was created
+            tempFile?.delete()
         }
     }
 

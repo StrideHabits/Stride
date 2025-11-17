@@ -18,6 +18,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -146,11 +147,14 @@ class HomeDatabaseViewModel @Inject constructor(
      * Creates a habit with optional image upload.
      * 
      * @param onDone Callback invoked when habit creation completes.
-     *   - `true`: Habit was successfully created (may include image upload failure - check `state.error` for details)
-     *   - `false`: Habit creation failed (network/server error, but may have been saved locally)
+     *   - `true`: Habit is at least saved locally (may include image upload failure or server/network errors - check `state.error` for details)
+     *   - `false`: Habit creation completely failed (authentication errors, invalid data, etc.)
      * 
      * Note: Image upload failures are non-blocking. If image upload fails, `onDone(true)` is still
      * called, but `state.error` will contain `IMAGE_UPLOAD_WARNING` to inform the user.
+     * 
+     * Server errors (5xx) and network errors result in local save and `onDone(true)` since the
+     * repository saves locally when remote operations fail, allowing sync when connectivity is restored.
      */
     fun createHabit(
         name: String,
@@ -183,6 +187,8 @@ class HomeDatabaseViewModel @Inject constructor(
             } catch (e: HttpException) {
                 handleCreateHabitHttpError(e, onDone)
             } catch (e: Exception) {
+                // Re-throw CancellationException to respect coroutine cancellation
+                if (e is CancellationException) throw e
                 handleCreateHabitGenericError(e, onDone)
             }
         }
@@ -199,6 +205,8 @@ class HomeDatabaseViewModel @Inject constructor(
             eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
             refresh()
         } catch (e: Exception) {
+            // Re-throw CancellationException to respect coroutine cancellation
+            if (e is CancellationException) throw e
             _state.value = _state.value.copy(error = "Failed to queue check-in")
             setStatus("ERR • check-in enqueue")
         }
@@ -211,7 +219,6 @@ class HomeDatabaseViewModel @Inject constructor(
      * without images, and users can add images later. This method never throws
      * exceptions to ensure habit creation always proceeds.
      */
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun resolveImageForCreate(
         imageBase64: String?,
         imageMimeType: String?,
