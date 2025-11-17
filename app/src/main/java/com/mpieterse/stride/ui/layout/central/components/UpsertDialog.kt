@@ -68,27 +68,23 @@ fun UpsertDialog(
     val tagRelationships = stringResource(R.string.tag_relationships)
     val tagHobbies = stringResource(R.string.tag_hobbies)
     
-    val baseTagOptions = remember {
-        listOf(
-            tagHealthFitness,
-            tagProductivity,
-            tagLearning,
-            tagMindfulness,
-            tagSocial,
-            tagFinance,
-            tagCreative,
-            tagPersonalCare,
-            tagRelationships,
-            tagHobbies
-        )
-    }
+    val baseTagOptions = listOf(
+        tagHealthFitness,
+        tagProductivity,
+        tagLearning,
+        tagMindfulness,
+        tagSocial,
+        tagFinance,
+        tagCreative,
+        tagPersonalCare,
+        tagRelationships,
+        tagHobbies
+    )
     val currentTag = initialData?.tag
-    val tagOptions = remember(currentTag) {
-        if (currentTag != null && currentTag !in baseTagOptions) {
-            baseTagOptions + currentTag
-        } else {
-            baseTagOptions
-        }
+    val tagOptions = if (currentTag != null && currentTag !in baseTagOptions) {
+        baseTagOptions + currentTag
+    } else {
+        baseTagOptions
     }
     
     var name by remember { mutableStateOf(initialData?.name ?: "") }

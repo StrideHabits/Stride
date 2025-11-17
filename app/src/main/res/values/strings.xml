@@ -29,7 +29,7 @@
     <!-- Auth Locked Screen -->
     <string name="screen_auth_locked_page_heading">Secured</string>
     <string name="screen_auth_locked_page_content">We\'ve locked away your habits to keep them safe from prying eyes. Unlock the app with your biometrics to continue</string>
-    <string name="auth_biometric_prompt_title">Login with biometrics</string>
+    <string name="auth_biometric_prompt_title">Sign in with biometrics</string>
     <string name="auth_biometric_prompt_subtitle">Authenticate to continue</string>
     <string name="auth_biometric_prompt_cancel">Cancel</string>
     <string name="auth_locked_tap_to_authenticate">Tap to authenticate</string>
@@ -40,7 +40,7 @@
     <string name="auth_locked_use_email_password">Use Email &amp; Password</string>
     
     <!-- Auth Sign In Screen -->
-    <string name="auth_sign_in_title">Login</string>
+    <string name="auth_sign_in_title">Sign In</string>
     <string name="auth_sign_in_button">Sign In</string>
     <string name="auth_sign_in_forgot_password">Forgot your password?</string>
     <string name="auth_sign_in_email_label">Email Address</string>
@@ -49,7 +49,7 @@
     <!-- Auth Sign Up Screen -->
     <string name="auth_sign_up_title">Sign Up</string>
     <string name="auth_sign_up_button">Sign Up</string>
-    <string name="auth_sign_up_have_account">Have an account? Login</string>
+    <string name="auth_sign_up_have_account">Have an account? Sign in</string>
     <string name="auth_sign_up_help_faq">Help + FAQ</string>
     <string name="auth_sign_up_account_section">Account</string>
     <string name="auth_sign_up_security_section">Security</string>
@@ -59,8 +59,11 @@
     
     <!-- Habit Viewer Screen -->
     <string name="habit_viewer_loading">Loading…</string>
-    <string name="habit_viewer_image_placeholder">(IMAGE)</string>
-    <string name="habit_viewer_streak_days">%1$d Day Streak</string>
+    <string name="habit_viewer_image_placeholder">No image selected</string>
+    <plurals name="habit_viewer_streak_days">
+        <item quantity="one">%1$d day streak</item>
+        <item quantity="other">%1$d day streak</item>
+    </plurals>
     <string name="habit_viewer_edit_dialog_title">Edit Habit</string>
     <string name="habit_viewer_unknown_habit">Unknown habit</string>
     
@@ -203,7 +206,7 @@
     <string name="nav_notifications">Notifications</string>
     <string name="nav_settings">Settings</string>
     
-    <!-- Placeholder/Unused -->
+    <!-- Placeholder labels (navigation graph legacy) -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
 </resources>

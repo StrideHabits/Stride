@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +36,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.abs
 
 @Composable
 fun HabitViewerScreen(
@@ -51,6 +53,11 @@ fun HabitViewerScreen(
     val bg = MaterialTheme.colorScheme.background
     val onBg = MaterialTheme.colorScheme.onBackground
     val brand = MaterialTheme.colorScheme.primary
+    val fallbackHabitName = if (state.displayName.isBlank()) {
+        stringResource(R.string.habit_viewer_unknown_habit)
+    } else {
+        state.displayName
+    }
     
     // Convert habit image to Base64 when editing dialog opens
     LaunchedEffect(showEditDialog, state.habitImage) {
@@ -85,7 +92,7 @@ fun HabitViewerScreen(
                         )
                     }
                     Text(
-                        text = if (state.loading) stringResource(R.string.habit_viewer_loading) else state.displayName,
+                        text = if (state.loading) stringResource(R.string.habit_viewer_loading) else fallbackHabitName,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -136,38 +143,43 @@ fun HabitViewerScreen(
                             }
                         }
                         
+                        val calendarModifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInput(state.selectedYear, state.selectedMonth, state.loading) {
+                                if (state.loading) return@pointerInput
+                                var totalDrag = 0f
+                                val threshold = 48.dp.toPx()
+                                detectDragGestures(
+                                    onDragStart = {
+                                        totalDrag = 0f
+                                        swipeHandled = false
+                                    },
+                                    onDragEnd = {
+                                        swipeHandled = false
+                                        totalDrag = 0f
+                                    },
+                                    onDragCancel = {
+                                        swipeHandled = false
+                                        totalDrag = 0f
+                                    },
+                                    onDrag = { change: PointerInputChange, dragAmount: Offset ->
+                                        totalDrag += dragAmount.x
+                                        if (!swipeHandled && abs(totalDrag) > threshold) {
+                                            swipeHandled = true
+                                            if (totalDrag > 0) {
+                                                vm.navigateMonth(forward = false)
+                                            } else {
+                                                vm.navigateMonth(forward = true)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
                         CalendarView(
                             completedDates = state.completedDates,
                             selectedYear = state.selectedYear,
                             selectedMonth = state.selectedMonth,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(state.selectedYear, state.selectedMonth) {
-                                    var totalDrag = 0f
-                                    detectDragGestures(
-                                        onDragStart = { totalDrag = 0f },
-                                        onDragEnd = { 
-                                            swipeHandled = false
-                                            totalDrag = 0f
-                                        },
-                                        onDrag = { change: PointerInputChange, dragAmount: Offset ->
-                                            // Only track horizontal drag
-                                            val horizontalDrag = dragAmount.x
-                                            totalDrag += horizontalDrag
-                                            
-                                            // Only trigger navigation on significant drag (threshold: 100px)
-                                            // and only once per swipe gesture
-                                            if (!swipeHandled && kotlin.math.abs(totalDrag) > 100f) {
-                                                swipeHandled = true
-                                                if (totalDrag > 0) {
-                                                    vm.navigateMonth(forward = false) // Swipe right = previous month
-                                                } else {
-                                                    vm.navigateMonth(forward = true) // Swipe left = next month
-                                                }
-                                            }
-                                        }
-                                    )
-                                },
+                            modifier = calendarModifier,
                             enabled = !state.loading,
                             onDateClick = { day ->
                                 val date = LocalDate.of(state.selectedYear, state.selectedMonth, day)
@@ -225,7 +237,7 @@ fun HabitViewerScreen(
             showEditDialog = false
         },
         initialData = HabitData(
-            name = state.displayName,
+            name = fallbackHabitName,
             frequency = state.frequency,
             tag = state.tag,
             imageBase64 = initialImageBase64,
@@ -281,7 +293,7 @@ private fun StreakBanner(
         modifier = modifier
     ) {
         Text(
-            text = stringResource(R.string.habit_viewer_streak_days, streakDays),
+            text = pluralStringResource(R.plurals.habit_viewer_streak_days, streakDays, streakDays),
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
