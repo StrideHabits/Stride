@@ -1,7 +1,6 @@
 # ---
 # This script requires PS-7+
 # ---
-
 param(
     [Parameter(Mandatory = $true)]
     [string]$InputDir,
@@ -10,78 +9,105 @@ param(
     [string]$OutputCsv = ".\output\localization-export.csv"
 )
 
-Write-Host "Scanning for strings.xml files in '$InputDir'..."
+#region Internals
 
-# Find all strings.xml files recursively
-$xmlFiles = Get-ChildItem -Path $InputDir -Recurse -Filter "strings.xml"
-
-if ($xmlFiles.Count -eq 0)
+function Fetch-StringsXmlFile
 {
-    Write-Warning "No strings.xml files found."
-    exit
+    param(
+        [string]$Directory
+    )
+
+    Write-Host "Scanning for strings.xml files in '$Directory'..."
+    $files = Get-ChildItem -Path $Directory -Recurse -Filter "strings.xml" -ErrorAction SilentlyContinue
+
+    if (-not $files)
+    {
+        Write-Warning "No strings.xml files found in '$Directory'"
+        return @()
+    }
+
+    Write-Host "Found $( $files.Count ) strings.xml file(s)."
+    return $files
 }
 
-Write-Host "Found $( $xmlFiles.Count ) strings.xml file(s)."
-
-$allStrings = @()
-
-foreach ($file in $xmlFiles)
+function Parse-StringsXmlFile
 {
-    Write-Host "Parsing file: $( $file.FullName )"
+    param(
+        [string]$FilePath
+    )
+
+    Write-Host "Parsing file: $FilePath"
     try
     {
-        [xml]$xmlDoc = Get-Content $file.FullName
+        [xml]$xmlDocument = Get-Content -Path $FilePath -ErrorAction Stop
     }
     catch
     {
-        Write-Warning "Failed to load XML from $( $file.FullName ): $_"
-        continue
+        Write-Warning "Failed to load XML from $FilePath : $_"
+        return @()
     }
 
-    # Get all <string> elements
-    $nodes = $xmlDoc.SelectNodes("//string")
-
-    if ($nodes.Count -eq 0)
+    $xmlNodes = $xmlDocument.SelectNodes("//string")
+    if (-not $xmlNodes -or $xmlNodes.Count -eq 0)
     {
-        Write-Warning "No <string> nodes found in $( $file.FullName )."
-        continue
+        Write-Warning "No <string> nodes found in $FilePath."
+        return @()
     }
 
-    foreach ($node in $nodes)
-    {
-        $name = $node.GetAttribute("name")
-        $value = $node.InnerText
-        $translatable = if ($node.Attributes["translatable"])
-        {
-            $node.Attributes["translatable"].Value
-        }
-        else
-        {
-            "true"
-        }
-
-        $allStrings += [PSCustomObject]@{
-            Name = $name
-            Value = $value
-            Translatable = $translatable
+    return $xmlNodes | ForEach-Object {
+        [PSCustomObject]@{
+            Name = $_.GetAttribute("name")
+            Value = $_.InnerText
+            Translatable = if ($_.Attributes["translatable"])
+            {
+                $_.Attributes["translatable"].Value
+            }
+            else
+            {
+                "true"
+            }
         }
     }
 }
 
-if ($allStrings.Count -eq 0)
+
+function Build-ExportCsv
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$StringNodes,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CsvDirectory
+    )
+
+    $outputDir = Split-Path -Path $CsvDirectory -Parent
+    if (-not (Test-Path $outputDir))
+    {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    }
+
+    Write-Host "Exporting $( $StringNodes.Count ) strings to '$CsvDirectory'..."
+    $StringNodes | Export-Csv -Path $CsvDirectory -NoTypeInformation -Encoding UTF8
+    Write-Host "Export complete: $CsvDirectory"
+}
+
+#endregion
+#region Execution
+
+$strings = @()
+$targets = Fetch-StringsXmlFile -Directory $InputDir
+foreach ($file in $targets)
+{
+    $strings += Parse-StringsXmlFile -FilePath $file.FullName
+}
+
+if ($strings.Count -eq 0)
 {
     Write-Warning "No strings were parsed from XML files."
     exit
 }
 
-# Export to CSV
+Build-ExportCsv -StringNodes $strings -CsvDirectory $OutputCsv
 
-$outputDir = Split-Path -Path $OutputCsv -Parent
-if (-not (Test-Path $outputDir))
-{
-    New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-}
-
-Write-Host "Exporting $( $allStrings.Count ) strings to '$OutputCsv'..."
-$allStrings | Export-Csv -Path $OutputCsv -NoTypeInformation -Encoding UTF8
-Write-Host "Export complete: $OutputCsv"
+#endregion
