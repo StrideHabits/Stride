@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,7 +91,9 @@ fun HomeSettingsScreen(
 
                 // Notifications Switch
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -109,7 +110,14 @@ fun HomeSettingsScreen(
                                     globalNotificationsEnabled = enabled
                                 )
                             )
-                        }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     )
                 }
 
@@ -133,7 +141,7 @@ fun HomeSettingsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                val buttonColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
+                val buttonColor = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
 
                 Button(
                     onClick = {},

@@ -141,6 +141,7 @@ fun UpsertDialog(
     ) {
         AlertDialog(
             onDismissRequest = onDismiss,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     text = title,

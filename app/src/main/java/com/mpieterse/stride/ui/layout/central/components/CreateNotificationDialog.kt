@@ -96,6 +96,7 @@ fun CreateNotificationDialog(
     ) {
         AlertDialog(
             onDismissRequest = onDismiss,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     text = if (initialData != null) stringResource(R.string.notification_dialog_edit_title) else stringResource(R.string.notification_dialog_add_title),
