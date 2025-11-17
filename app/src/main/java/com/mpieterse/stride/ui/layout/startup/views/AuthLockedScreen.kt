@@ -105,10 +105,10 @@ fun AuthLockedScreen(
         is Final.Success -> null
         is Final.Failure -> when (result.problem) {
             is BiometricError.Dismissed -> null // User cancelled, don't show error
-            is BiometricError.Failed -> "Authentication failed. Please try again."
+            is BiometricError.Failed -> context.getString(R.string.auth_biometric_failed)
             is BiometricError.NoSupport -> context.getString(R.string.auth_biometric_unavailable_error)
-            is BiometricError.RateLimit -> "Too many failed attempts. Please try again later."
-            is BiometricError.Exception -> "System error. Please try again."
+            is BiometricError.RateLimit -> context.getString(R.string.auth_biometric_rate_limit)
+            is BiometricError.Exception -> context.getString(R.string.auth_biometric_system_error)
         }
         null -> null // No result yet
     }

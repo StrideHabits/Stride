@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -12,12 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
@@ -28,6 +33,8 @@ import com.mpieterse.stride.utils.bitmapToBase64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun HabitViewerScreen(
@@ -73,12 +80,12 @@ fun HabitViewerScreen(
                     IconButton(onClick = onBackClick, modifier = Modifier.size(24.dp)) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_arrow_left),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.content_description_back),
                             tint = onBg
                         )
                     }
                     Text(
-                        text = if (state.loading) "Loading…" else state.displayName,
+                        text = if (state.loading) stringResource(R.string.habit_viewer_loading) else state.displayName,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -94,7 +101,7 @@ fun HabitViewerScreen(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_check),
-                            contentDescription = "Complete Today",
+                            contentDescription = stringResource(R.string.content_description_complete_today),
                             tint = brand
                         )
                     }
@@ -118,14 +125,57 @@ fun HabitViewerScreen(
                     )
 
                     Box(modifier = Modifier.fillMaxWidth()) {
+                        var lastSwipeMonth by remember { mutableStateOf(Pair(state.selectedYear, state.selectedMonth)) }
+                        var swipeHandled by remember { mutableStateOf(false) }
+                        
+                        // Reset swipe handling when month changes
+                        LaunchedEffect(state.selectedYear, state.selectedMonth) {
+                            if (lastSwipeMonth != Pair(state.selectedYear, state.selectedMonth)) {
+                                lastSwipeMonth = Pair(state.selectedYear, state.selectedMonth)
+                                swipeHandled = false
+                            }
+                        }
+                        
                         CalendarView(
                             completedDates = state.completedDates,
-                            modifier = Modifier.fillMaxWidth(),
+                            selectedYear = state.selectedYear,
+                            selectedMonth = state.selectedMonth,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(state.selectedYear, state.selectedMonth) {
+                                    var totalDrag = 0f
+                                    detectDragGestures(
+                                        onDragStart = { totalDrag = 0f },
+                                        onDragEnd = { 
+                                            swipeHandled = false
+                                            totalDrag = 0f
+                                        },
+                                        onDrag = { change: PointerInputChange, dragAmount: Offset ->
+                                            // Only track horizontal drag
+                                            val horizontalDrag = dragAmount.x
+                                            totalDrag += horizontalDrag
+                                            
+                                            // Only trigger navigation on significant drag (threshold: 100px)
+                                            // and only once per swipe gesture
+                                            if (!swipeHandled && kotlin.math.abs(totalDrag) > 100f) {
+                                                swipeHandled = true
+                                                if (totalDrag > 0) {
+                                                    vm.navigateMonth(forward = false) // Swipe right = previous month
+                                                } else {
+                                                    vm.navigateMonth(forward = true) // Swipe left = next month
+                                                }
+                                            }
+                                        }
+                                    )
+                                },
                             enabled = !state.loading,
                             onDateClick = { day ->
-                                val date = LocalDate.now().withDayOfMonth(day)
+                                val date = LocalDate.of(state.selectedYear, state.selectedMonth, day)
                                 vm.toggleCheckIn(habitId, date.toString())
-                            }
+                            },
+                            onNavigateMonth = { forward -> vm.navigateMonth(forward) },
+                            onNavigateYear = { forward -> vm.navigateYear(forward) },
+                            onGoToToday = { vm.goToToday() }
                         )
                         if (state.loading) {
                             Box(
@@ -159,14 +209,14 @@ fun HabitViewerScreen(
         ) {
             Icon(
                 painter = painterResource(R.drawable.xic_uic_outline_edit),
-                contentDescription = "Edit Habit",
+                contentDescription = stringResource(R.string.content_description_edit_habit),
                 modifier = Modifier.size(24.dp)
             )
         }
     }
 
     UpsertDialog(
-        title = "Edit Habit",
+        title = stringResource(R.string.habit_viewer_edit_dialog_title),
         isVisible = showEditDialog,
         onDismiss = { showEditDialog = false },
         onConfirm = { updated ->
@@ -202,14 +252,14 @@ private fun HabitImageViewer(
         if (habitImage != null) {
             Image(
                 bitmap = habitImage.asImageBitmap(),
-                contentDescription = "Habit image",
+                contentDescription = stringResource(R.string.content_description_habit_image),
                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "(IMAGE)",
+                    text = stringResource(R.string.habit_viewer_image_placeholder),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         fontSize = 16.sp
@@ -231,7 +281,7 @@ private fun StreakBanner(
         modifier = modifier
     ) {
         Text(
-            text = "$streakDays Day Streak",
+            text = stringResource(R.string.habit_viewer_streak_days, streakDays),
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -246,19 +296,47 @@ private fun StreakBanner(
 @Composable
 private fun CalendarView(
     completedDates: List<Int>,
+    selectedYear: Int,
+    selectedMonth: Int,
     enabled: Boolean,
     onDateClick: (Int) -> Unit,
+    onNavigateMonth: (Boolean) -> Unit,
+    onNavigateYear: (Boolean) -> Unit,
+    onGoToToday: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Month/Year header with navigation
+        MonthYearHeader(
+            year = selectedYear,
+            month = selectedMonth,
+            onNavigateMonth = onNavigateMonth,
+            onNavigateYear = onNavigateYear,
+            onGoToToday = onGoToToday,
+            enabled = enabled
+        )
         DaysOfWeekHeader()
-        CalendarGrid(completedDates = completedDates, enabled = enabled, onDateClick = onDateClick)
+        CalendarGrid(
+            completedDates = completedDates,
+            selectedYear = selectedYear,
+            selectedMonth = selectedMonth,
+            enabled = enabled,
+            onDateClick = onDateClick
+        )
     }
 }
 
 @Composable
 private fun DaysOfWeekHeader(modifier: Modifier = Modifier) {
-    val daysOfWeek = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+    val daysOfWeek = listOf(
+        stringResource(R.string.day_monday),
+        stringResource(R.string.day_tuesday),
+        stringResource(R.string.day_wednesday),
+        stringResource(R.string.day_thursday),
+        stringResource(R.string.day_friday),
+        stringResource(R.string.day_saturday),
+        stringResource(R.string.day_sunday)
+    )
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         daysOfWeek.forEach { day ->
             Text(
@@ -276,14 +354,89 @@ private fun DaysOfWeekHeader(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun MonthYearHeader(
+    year: Int,
+    month: Int,
+    onNavigateMonth: (Boolean) -> Unit,
+    onNavigateYear: (Boolean) -> Unit,
+    onGoToToday: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val monthYearLabel = remember(year, month) {
+        val monthName = LocalDate.of(year, month, 1)
+            .month
+            .getDisplayName(TextStyle.FULL, Locale.getDefault())
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        "$monthName $year"
+    }
+    val isCurrentMonth = remember(year, month) {
+        val today = LocalDate.now()
+        year == today.year && month == today.monthValue
+    }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Previous month arrow (left side)
+            IconButton(
+                onClick = { onNavigateMonth(false) },
+                enabled = enabled,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.xic_uic_outline_arrow_left),
+                    contentDescription = stringResource(R.string.content_description_previous_month),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+        // Combined month and year label (center) - clickable to go to today
+        Text(
+            text = monthYearLabel,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            ),
+            color = if (isCurrentMonth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .clickable(enabled = enabled && !isCurrentMonth) { onGoToToday() }
+                .padding(horizontal = 16.dp),
+            textAlign = TextAlign.Center
+        )
+
+        // Next month arrow (right side)
+        IconButton(
+            onClick = { onNavigateMonth(true) },
+            enabled = enabled,
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.xic_uic_outline_arrow_right),
+                contentDescription = stringResource(R.string.content_description_next_month),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun CalendarGrid(
     completedDates: List<Int>,
+    selectedYear: Int,
+    selectedMonth: Int,
     enabled: Boolean,
     onDateClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Monday-first offset: (value 1..7) -> 0..6 with Monday=0
-    val currentMonth = remember { LocalDate.now().withDayOfMonth(1) }
+    val currentMonth = remember(selectedYear, selectedMonth) {
+        LocalDate.of(selectedYear, selectedMonth, 1)
+    }
     val firstDayOfMonth = remember(currentMonth) { (currentMonth.dayOfWeek.value + 6) % 7 }
     val daysInMonth = remember(currentMonth) { currentMonth.lengthOfMonth() }
 

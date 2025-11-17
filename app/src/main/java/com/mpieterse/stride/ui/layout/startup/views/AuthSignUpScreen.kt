@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -92,7 +93,7 @@ fun AuthSignUpScreen(
                 .fillMaxSize()
         ) {
             Text(
-                text = "Sign Up",
+                text = stringResource(R.string.auth_sign_up_title),
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.displaySmall,
                 textAlign = TextAlign.Center,
@@ -134,7 +135,7 @@ fun AuthSignUpScreen(
                         Modifier.width(12.dp)
                     )
                     Text(
-                        text = "Account",
+                        text = stringResource(R.string.auth_sign_up_account_section),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
                     )
                 }
@@ -142,7 +143,7 @@ fun AuthSignUpScreen(
                     Modifier.height(12.dp)
                 )
                 LocalOutlinedTextField(
-                    label = "Email address",
+                    label = stringResource(R.string.auth_sign_up_email_label),
                     value = formState.identity.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onIdentityChanged(value)
@@ -174,7 +175,7 @@ fun AuthSignUpScreen(
                         Modifier.width(12.dp)
                     )
                     Text(
-                        text = "Security",
+                        text = stringResource(R.string.auth_sign_up_security_section),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
                     )
                 }
@@ -183,7 +184,7 @@ fun AuthSignUpScreen(
                     Modifier.height(12.dp)
                 )
                 LocalOutlinedTextField(
-                    label = "Create a strong password",
+                    label = stringResource(R.string.auth_sign_up_password_label),
                     value = formState.passwordDefault.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onPasswordDefaultChanged(value)
@@ -201,7 +202,7 @@ fun AuthSignUpScreen(
                 )
 
                 LocalOutlinedTextField(
-                    label = "Confirm your password",
+                    label = stringResource(R.string.auth_sign_up_password_confirm_label),
                     value = formState.passwordConfirm.value,
                     onValueChange = { value ->
                         viewModel.signUpForm.onPasswordConfirmChanged(value)
@@ -237,7 +238,7 @@ fun AuthSignUpScreen(
                         )
                     } else {
                         Text(
-                            text = "Sign Up",
+                            text = stringResource(R.string.auth_sign_up_button),
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight(600)
                             )
@@ -249,7 +250,7 @@ fun AuthSignUpScreen(
                     Modifier.height(24.dp)
                 )
                 Text(
-                    text = "Have an account? Login",
+                    text = stringResource(R.string.auth_sign_up_have_account),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
                     color = Color(0xFF_161620),
                     modifier = Modifier
@@ -268,7 +269,7 @@ fun AuthSignUpScreen(
                     Modifier.height(12.dp)
                 )
                 Text(
-                    text = "Help + FAQ",
+                    text = stringResource(R.string.auth_sign_up_help_faq),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
                     color = Color(0xFF_161620),
                     modifier = Modifier

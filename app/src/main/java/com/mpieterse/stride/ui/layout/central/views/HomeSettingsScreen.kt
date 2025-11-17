@@ -1,6 +1,7 @@
 package com.mpieterse.stride.ui.layout.central.views
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,8 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -19,10 +20,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.R
-import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
 import com.mpieterse.stride.core.models.configuration.options.AppAppearance
 import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.ui.layout.central.viewmodels.HomeSettingsViewModel
+import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
 
 @Preview(name = "Orientation H (21:9)", showBackground = true, widthDp = 1400, heightDp = 600)
@@ -32,12 +33,14 @@ import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedDropdown
 fun HomeSettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: HomeSettingsViewModel = hiltViewModel(),
+    notificationsViewModel: NotificationsViewModel = hiltViewModel(),
     onEnterDebug: () -> Unit = {}
 ) {
     // ✅ Collect state flows as Compose states
     val theme by viewModel.theme.collectAsStateWithLifecycle()
-    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val sync by viewModel.sync.collectAsStateWithLifecycle()
+    val notificationSettings by notificationsViewModel.state.collectAsStateWithLifecycle()
+    val notificationsEnabled = notificationSettings.settings.globalNotificationsEnabled
 
     Box(modifier = modifier.fillMaxSize()) {
         Surface(
@@ -58,7 +61,7 @@ fun HomeSettingsScreen(
             ) {
                 // Header
                 Text(
-                    text = "Settings",
+                    text = stringResource(R.string.home_settings_title),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp
@@ -71,13 +74,13 @@ fun HomeSettingsScreen(
                 // Application section
                 SectionHeader(
                     iconRes = R.drawable.xic_uic_outline_sync,
-                    title = "Application"
+                    title = stringResource(R.string.home_settings_application_section)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 LocalOutlinedDropdown(
-                    label = "Theme",
+                    label = stringResource(R.string.home_settings_theme_label),
                     value = theme,
                     onValueChange = { viewModel.updateTheme(it) },
                     items = AppAppearance.entries,
@@ -86,18 +89,42 @@ fun HomeSettingsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                LocalOutlinedDropdown(
-                    label = "Notifications",
-                    value = notifications,
-                    onValueChange = { viewModel.updateAlerts(it) },
-                    items = AlertFrequency.entries,
-                    itemLabel = { it.name.replace("_", " ").lowercase().replaceFirstChar(Char::uppercase) }
-                )
+                // Notifications Switch
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_settings_notifications_label),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Switch(
+                        checked = notificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            notificationsViewModel.updateSettings(
+                                notificationSettings.settings.copy(
+                                    globalNotificationsEnabled = enabled
+                                )
+                            )
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 LocalOutlinedDropdown(
-                    label = "Sync Online",
+                    label = stringResource(R.string.home_settings_sync_label),
                     value = sync,
                     onValueChange = { viewModel.updateSync(it) },
                     items = SyncFrequency.entries,
@@ -109,12 +136,12 @@ fun HomeSettingsScreen(
                 // Options section
                 SectionHeader(
                     iconRes = R.drawable.xic_uic_outline_external_link_alt,
-                    title = "Options"
+                    title = stringResource(R.string.home_settings_options_section)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                val buttonColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
+                val buttonColor = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
 
                 Button(
                     onClick = {},
@@ -124,7 +151,7 @@ fun HomeSettingsScreen(
                         .height(40.dp)
                         .fillMaxWidth()
                 ) {
-                    Text("Import database", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                    Text(stringResource(R.string.home_settings_import_database), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -137,7 +164,7 @@ fun HomeSettingsScreen(
                         .height(40.dp)
                         .fillMaxWidth()
                 ) {
-                    Text("Export database", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                    Text(stringResource(R.string.home_settings_export_database), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -150,7 +177,7 @@ fun HomeSettingsScreen(
                         .height(40.dp)
                         .fillMaxWidth()
                 ) {
-                    Text("Help & FAQ", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                    Text(stringResource(R.string.home_settings_help_faq), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -163,7 +190,7 @@ fun HomeSettingsScreen(
                         .height(40.dp)
                         .fillMaxWidth()
                 ) {
-                    Text("Debug Tools", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                    Text(stringResource(R.string.home_settings_debug_tools), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
                 }
 
                 Spacer(modifier = Modifier.height(56.dp))
@@ -178,7 +205,7 @@ fun HomeSettingsScreen(
                         .height(40.dp)
                         .fillMaxWidth()
                 ) {
-                    Text("Logout", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
+                    Text(stringResource(R.string.home_settings_logout), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
                 }
             }
         }

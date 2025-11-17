@@ -19,6 +19,7 @@ import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.HabitData
 import com.mpieterse.stride.utils.base64ToBitmap
 import retrofit2.HttpException
@@ -56,7 +57,9 @@ class HabitViewerViewModel @Inject constructor(
         val tag: String? = null,
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
-        val completedDates: List<Int> = emptyList()
+        val completedDates: List<Int> = emptyList(),
+        val selectedYear: Int = LocalDate.now().year,
+        val selectedMonth: Int = LocalDate.now().monthValue
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -68,7 +71,15 @@ class HabitViewerViewModel @Inject constructor(
     private var observeJob: Job? = null
 
     fun load(habitId: String) {
-        _state.update { it.copy(loading = true, error = null, habitId = habitId) }
+        _state.update { 
+            it.copy(
+                loading = true, 
+                error = null, 
+                habitId = habitId,
+                selectedYear = LocalDate.now().year,
+                selectedMonth = LocalDate.now().monthValue
+            ) 
+        }
 
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
@@ -78,11 +89,14 @@ class HabitViewerViewModel @Inject constructor(
                 checkins.observeForHabit(habitId)
                     .map { list -> list } // DTOs already
                     .onStart { emit(emptyList()) }
-                    .catch { emit(emptyList()) }
-            ) { habitDto, localCheckins ->
-                val habitName = habitDto?.name ?: "(Unknown habit)"
+                    .catch { emit(emptyList()) },
+                _state.map { Pair(it.selectedYear, it.selectedMonth) }
+                    .distinctUntilChanged()
+            ) { habitDto, localCheckins, selectedMonthYear ->
+                val habitName = habitDto?.name ?: appContext.getString(R.string.habit_viewer_unknown_habit)
                 val display = nameOverrideService.getDisplayName(habitId, habitName)
-                val completedThisMonth = monthDays(localCheckins)
+                val (selectedYear, selectedMonth) = selectedMonthYear
+                val completedThisMonth = monthDays(localCheckins, selectedYear, selectedMonth)
                 val streak = computeStreakDays(localCheckins)
                 Pair(habitDto, Triple(habitName, display, Pair(completedThisMonth, streak)))
             }
@@ -123,6 +137,29 @@ class HabitViewerViewModel @Inject constructor(
         }
     }
 
+    fun navigateMonth(forward: Boolean) {
+        val current = LocalDate.of(_state.value.selectedYear, _state.value.selectedMonth, 1)
+        val newDate = if (forward) current.plusMonths(1) else current.minusMonths(1)
+        _state.update {
+            it.copy(selectedYear = newDate.year, selectedMonth = newDate.monthValue)
+        }
+    }
+
+    fun navigateYear(forward: Boolean) {
+        val current = LocalDate.of(_state.value.selectedYear, _state.value.selectedMonth, 1)
+        val newDate = if (forward) current.plusYears(1) else current.minusYears(1)
+        _state.update {
+            it.copy(selectedYear = newDate.year, selectedMonth = newDate.monthValue)
+        }
+    }
+
+    fun goToToday() {
+        val today = LocalDate.now()
+        _state.update {
+            it.copy(selectedYear = today.year, selectedMonth = today.monthValue)
+        }
+    }
+
     fun completeToday(habitId: String) = toggleCheckIn(habitId, LocalDate.now().toString())
 
     fun toggleCheckIn(habitId: String, isoDate: String) {
@@ -141,7 +178,7 @@ class HabitViewerViewModel @Inject constructor(
                 _state.update { it.copy(loading = false) }
             } catch (e: Exception) {
                 Clogger.e("HabitViewerViewModel", "Failed to toggle check-in", e)
-                _state.update { it.copy(loading = false, error = "Write failed") }
+                _state.update { it.copy(loading = false, error = appContext.getString(R.string.error_write_failed)) }
             }
         }
     }
@@ -173,7 +210,7 @@ class HabitViewerViewModel @Inject constructor(
                     }
                     if (uploadedUrl.isNullOrBlank()) {
                         imageUploadFailed = true
-                        imageUploadError = "Image upload failed. Please try again later or use a different image."
+                        imageUploadError = appContext.getString(R.string.error_image_upload_failed)
                         Clogger.w("HabitViewerViewModel", "Image upload failed, continuing with existing image or no image")
                     }
                 } catch (e: Exception) {
@@ -186,9 +223,9 @@ class HabitViewerViewModel @Inject constructor(
                             e.message?.lowercase()?.contains("connection") == true
                         ))
                     imageUploadError = if (isNetworkError) {
-                        "Network error. Image upload failed. Please try again when online."
+                        appContext.getString(R.string.error_image_upload_network)
                     } else {
-                        "Image upload failed: ${e.message ?: "Unknown error"}. Please try again."
+                        appContext.getString(R.string.error_image_upload_generic, e.message ?: appContext.getString(R.string.error_unknown))
                     }
                     Clogger.e("HabitViewerViewModel", "Image upload exception, continuing with existing image or no image", e)
                 }
@@ -249,11 +286,11 @@ class HabitViewerViewModel @Inject constructor(
         } catch (e: HttpException) {
             // Handle HTTP errors more gracefully
             val errorMessage = when (e.code()) {
-                404 -> "Habit not found on server. It may have been deleted. Please refresh or create a new habit."
-                400 -> "Invalid habit data. Please check your input and try again."
-                401, 403 -> "Authentication error. Please sign in again."
-                500 -> "Server error. Please try again later."
-                else -> "Failed to update habit: ${e.message() ?: "Unknown error"}"
+                404 -> appContext.getString(R.string.error_habit_not_found)
+                400 -> appContext.getString(R.string.error_habit_invalid_data)
+                401, 403 -> appContext.getString(R.string.error_sign_in_again)
+                500 -> appContext.getString(R.string.error_server_error)
+                else -> appContext.getString(R.string.error_habit_update_failed, e.message() ?: appContext.getString(R.string.error_unknown))
             }
             Clogger.e("HabitViewerViewModel", "Failed to update habit: HTTP ${e.code()}", e)
             _state.update { 
@@ -267,7 +304,7 @@ class HabitViewerViewModel @Inject constructor(
             _state.update { 
                 it.copy(
                     loading = false,
-                    error = "Failed to update habit: ${e.message ?: "Unknown error"}"
+                    error = appContext.getString(R.string.error_habit_update_failed, e.message ?: appContext.getString(R.string.error_unknown))
                 ) 
             }
         }
@@ -324,9 +361,8 @@ class HabitViewerViewModel @Inject constructor(
 
     // Helpers
 
-    private fun monthDays(list: List<CheckInDto>): List<Int> {
-        val today = LocalDate.now()
-        val monthStart = today.withDayOfMonth(1)
+    private fun monthDays(list: List<CheckInDto>, year: Int, month: Int): List<Int> {
+        val monthStart = LocalDate.of(year, month, 1)
         return list.asSequence()
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .filter { it.year == monthStart.year && it.month == monthStart.month }
@@ -343,20 +379,23 @@ class HabitViewerViewModel @Inject constructor(
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toHashSet()
         
-        // Count consecutive days from today backwards
-        // If today is checked, start from today. If today is not checked, start from yesterday.
-        var d = LocalDate.now(ZoneId.systemDefault())
+        if (days.isEmpty()) return 0
+        
+        // Get today's date in the system timezone
+        val today = LocalDate.now(ZoneId.systemDefault())
+        
+        // Count consecutive days backwards from today
+        // If today is checked, include it. If not, start from yesterday.
+        var currentDate = if (days.contains(today)) today else today.minusDays(1)
         var streak = 0
         
-        // If today is not checked, start counting from yesterday
-        if (!days.contains(d)) {
-            d = d.minusDays(1)
-        }
-        
-        // Count consecutive days backwards from the starting day
-        while (days.contains(d)) {
+        // Count consecutive days backwards until we find a gap
+        // This ensures streaks are persistent and only break when user explicitly unchecks
+        while (days.contains(currentDate)) {
             streak++
-            d = d.minusDays(1)
+            currentDate = currentDate.minusDays(1)
+            // Prevent infinite loop (safety check - shouldn't happen in practice)
+            if (streak > 10000) break
         }
         
         return streak

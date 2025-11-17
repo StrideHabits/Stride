@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -38,17 +39,17 @@ fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This compos
 
     val destinations = listOf(
         BottomNavItem(
-            label = "Home",
+            label = stringResource(R.string.nav_home),
             alias = HomeScreen.Database,
             icon = painterResource(R.drawable.xic_uic_outline_check_circle)
         ),
         BottomNavItem(
-            label = "Notifications",
+            label = stringResource(R.string.nav_notifications),
             alias = HomeScreen.Notifications,
             icon = painterResource(R.drawable.xic_uic_outline_bell)
         ),
         BottomNavItem(
-            label = "Settings",
+            label = stringResource(R.string.nav_settings),
             alias = HomeScreen.Settings,
             icon = painterResource(R.drawable.xic_uic_outline_setting)
         ),

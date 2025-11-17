@@ -94,7 +94,7 @@ fun AuthSignInScreen(
                 .fillMaxSize()
         ) {
             Text(
-                text = "Login",
+                text = stringResource(R.string.auth_sign_in_title),
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.displaySmall,
                 textAlign = TextAlign.Center,
@@ -124,7 +124,7 @@ fun AuthSignInScreen(
             }
 
             LocalOutlinedTextField(
-                label = "Email Address",
+                label = stringResource(R.string.auth_sign_in_email_label),
                 value = formState.identity.value,
                 onValueChange = { value ->
                     viewModel.signInForm.onIdentityChanged(value)
@@ -142,7 +142,7 @@ fun AuthSignInScreen(
                 Modifier.height(12.dp)
             )
             LocalOutlinedTextField(
-                label = "Password",
+                label = stringResource(R.string.auth_sign_in_password_label),
                 value = formState.password.value,
                 onValueChange = { value ->
                     viewModel.signInForm.onPasswordChanged(value)
@@ -168,7 +168,7 @@ fun AuthSignInScreen(
                 enabled = !isLoading
             ) {
                 Text(
-                    text = "Forgot your password?",
+                    text = stringResource(R.string.auth_sign_in_forgot_password),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
                     color = Color(0xFF_161620),
                 )
@@ -195,7 +195,7 @@ fun AuthSignInScreen(
                     )
                 } else {
                     Text(
-                        text = "Sign In",
+                        text = stringResource(R.string.auth_sign_in_button),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600))
                     )
                 }

@@ -17,8 +17,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.mpieterse.stride.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.ui.layout.central.components.HabitItem
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
@@ -66,7 +68,7 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
                         leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) }
                     )
                     TextButton(onClick = { viewModel.refresh() }) {
-                        Text("Refresh")
+                        Text(stringResource(R.string.home_database_refresh))
                     }
                 }
 
@@ -85,12 +87,12 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                            Text("Loading…", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.home_database_loading), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     state.error != null -> {
                         Text(
-                            text = "Error: ${state.error}",
+                            text = stringResource(R.string.home_database_error, state.error ?: ""),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(12.dp)
@@ -132,14 +134,14 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Create Habit"
+                contentDescription = stringResource(R.string.content_description_create_habit)
             )
         }
     }
 
     // Dialog (root level = guaranteed visible)
     UpsertDialog(
-        title = "Create a Habit",
+        title = stringResource(R.string.upsert_dialog_create_title),
         isVisible = showCreate,
         onDismiss = { showCreate = false },
         onConfirm = { data ->

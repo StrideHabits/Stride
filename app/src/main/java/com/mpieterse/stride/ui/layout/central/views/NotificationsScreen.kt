@@ -1,7 +1,6 @@
 package com.mpieterse.stride.ui.layout.central.views
 
 import android.Manifest
-import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -10,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,8 +22,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,29 +94,34 @@ fun NotificationsScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
             Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Top,
                 modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.background,
+                        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
+                    )
+                    .padding(16.dp)
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header (no refresh button)
                 Text(
-                    text = "Notifications",
+                    text = stringResource(R.string.notifications_habit_reminders),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp
                     ),
                     color = MaterialTheme.colorScheme.onBackground
                 )
-
-                // Global Settings Card
-                NotificationSettingsCard(
-                    settings = state.settings,
-                    onSettingsChange = { viewModel.updateSettings(it) }
+                Text(
+                    text = stringResource(R.string.notifications_reminders_description),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
-                
+
                 // Show permission warning if permission not granted (Android 13+)
                 if (NotificationPermissionHelper.shouldRequestPermission() && !hasNotificationPermission) {
                     PermissionWarningCard(
@@ -129,22 +134,12 @@ fun NotificationsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = "Habit Reminders",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-
                     if (state.loading) {
                         Box(
                             modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Loading notifications...")
+                            Text(stringResource(R.string.notifications_loading))
                         }
                     } else if (state.notifications.isEmpty()) {
                         EmptyNotificationsState(
@@ -190,7 +185,7 @@ fun NotificationsScreen(
         ) {
             Icon(
                 painter = painterResource(R.drawable.xic_uic_outline_plus),
-                contentDescription = "Add Notification",
+                contentDescription = stringResource(R.string.content_description_add_notification),
                 modifier = Modifier.padding(4.dp)
             )
         }
@@ -206,14 +201,14 @@ fun NotificationsScreen(
             onDismissRequest = { showPermissionRationale = false },
             title = {
                 Text(
-                    text = "Notification Permission Required",
+                    text = stringResource(R.string.notifications_permission_required_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "To receive habit reminders, please enable notification permission in your device settings.",
+                    text = stringResource(R.string.notifications_permission_required_message),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -221,7 +216,7 @@ fun NotificationsScreen(
                 TextButton(
                     onClick = { showPermissionRationale = false }
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.notifications_permission_ok))
                 }
             }
         )
@@ -268,7 +263,7 @@ private fun NotificationSettingsCard(
     var vibrationEnabled by remember { mutableStateOf(settings.defaultVibrationEnabled) }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -277,7 +272,7 @@ private fun NotificationSettingsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Global Settings",
+                text = stringResource(R.string.notifications_global_settings),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -293,7 +288,7 @@ private fun NotificationSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Enable Notifications", color = MaterialTheme.colorScheme.onBackground)
+                Text(stringResource(R.string.notifications_enable_notifications), color = MaterialTheme.colorScheme.onBackground)
                 Switch(
                     checked = enableNotifications,
                     onCheckedChange = {
@@ -314,7 +309,7 @@ private fun NotificationSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Default Sound", color = MaterialTheme.colorScheme.onBackground)
+                Text(stringResource(R.string.notifications_default_sound), color = MaterialTheme.colorScheme.onBackground)
                 Switch(
                     checked = soundEnabled,
                     onCheckedChange = {
@@ -335,7 +330,7 @@ private fun NotificationSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Default Vibration", color = MaterialTheme.colorScheme.onBackground)
+                Text(stringResource(R.string.notifications_default_vibration), color = MaterialTheme.colorScheme.onBackground)
                 Switch(
                     checked = vibrationEnabled,
                     onCheckedChange = {
@@ -353,7 +348,7 @@ private fun EmptyNotificationsState(
     modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp),
         modifier = modifier
     ) {
@@ -372,13 +367,13 @@ private fun EmptyNotificationsState(
             )
 
             Text(
-                text = "No notifications yet",
+                text = stringResource(R.string.notifications_empty_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onBackground
             )
 
             Text(
-                text = "Add notifications to get reminded about your habits",
+                text = stringResource(R.string.notifications_empty_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -415,14 +410,14 @@ private fun PermissionWarningCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Notification Permission Required",
+                    text = stringResource(R.string.notifications_enable_permission_title),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "Enable notifications to receive habit reminders",
+                    text = stringResource(R.string.notifications_enable_permission_message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )

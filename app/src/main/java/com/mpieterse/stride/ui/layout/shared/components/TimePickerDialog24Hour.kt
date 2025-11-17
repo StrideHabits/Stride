@@ -23,7 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
+import com.mpieterse.stride.R
 import kotlinx.coroutines.delay
 import java.util.Locale
 import java.time.LocalTime
@@ -57,7 +59,7 @@ fun TimePickerDialog24Hour(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Select Time",
+                text = stringResource(R.string.time_picker_title),
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
@@ -94,12 +96,12 @@ fun TimePickerDialog24Hour(
                         selectedValue = selectedHour,
                         onValueSelected = { selectedHour = it },
                         initialIndex = initialHour,
-                        label = "Hour",
+                        label = stringResource(R.string.time_picker_hour_label),
                         modifier = Modifier.weight(1f)
                     )
                     
                     Text(
-                        text = ":",
+                        text = stringResource(R.string.time_picker_separator),
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
@@ -113,7 +115,7 @@ fun TimePickerDialog24Hour(
                         selectedValue = selectedMinute,
                         onValueSelected = { selectedMinute = it },
                         initialIndex = initialMinute,
-                        label = "Min",
+                        label = stringResource(R.string.time_picker_minute_label),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -129,7 +131,7 @@ fun TimePickerDialog24Hour(
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("OK", color = Color.White)
+                Text(stringResource(R.string.time_picker_ok), color = Color.White)
             }
         },
         dismissButton = {
@@ -137,7 +139,7 @@ fun TimePickerDialog24Hour(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.time_picker_cancel))
             }
         },
         properties = DialogProperties(
