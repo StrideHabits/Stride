@@ -140,13 +140,14 @@ class CheckInRepositoryImpl @Inject constructor(
         if (checkins.isEmpty()) return false
 
         val mutationsByTargetId = checkins.associateBy { it.targetId }
+        // Filter ensures these fields are non-null (lines 134-139), but use requireNotNull for safety
         val payload = checkins.map { mutation ->
             PushItem(
                 requestId   = mutation.requestId,
                 id          = mutation.targetId,
-                habitId     = mutation.habitId!!,
-                dayKey      = mutation.dayKey!!,
-                completedAt = mutation.completedAt!!,
+                habitId     = requireNotNull(mutation.habitId) { "habitId must not be null (filtered at line 136)" },
+                dayKey      = requireNotNull(mutation.dayKey) { "dayKey must not be null (filtered at line 137)" },
+                completedAt = requireNotNull(mutation.completedAt) { "completedAt must not be null (filtered at line 138)" },
                 deleted     = mutation.deleted,
                 baseVersion = mutation.baseVersion
             )

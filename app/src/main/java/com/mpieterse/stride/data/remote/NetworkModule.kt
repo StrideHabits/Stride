@@ -55,6 +55,7 @@ object NetworkModule {
      */
     private val tokenCache = java.util.concurrent.atomic.AtomicReference<String?>()
     private val tokenCollectorStarted = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val tokenInitializing = java.util.concurrent.atomic.AtomicBoolean(false)
     private val tokenScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Provides @Singleton
@@ -63,21 +64,34 @@ object NetworkModule {
         sessionManager: SessionManager
     ): Interceptor {
         fun ensureTokenCacheInitialized() {
-            if (tokenCache.get() == null) {
-                runBlocking {
-                    val initialToken = store.tokenFlow.first()
-                    tokenCache.compareAndSet(null, initialToken)
+            // Initialize token cache with concurrency guard to prevent duplicate blocking work
+            if (tokenCache.get() == null && tokenInitializing.compareAndSet(false, true)) {
+                try {
+                    runBlocking {
+                        val initialToken = withTimeout(500) {
+                            store.tokenFlow.first()
+                        }
+                        tokenCache.compareAndSet(null, initialToken)
+                    }
+                } catch (e: Exception) {
+                    // Token initialization failure should not crash requests
+                    // Allow graceful degradation (unauthenticated request)
+                    Clogger.e("NetworkModule", "Failed to initialize token cache", e)
+                } finally {
+                    tokenInitializing.set(false)
                 }
             }
+            // Start async token collector if not already started
             if (tokenCollectorStarted.compareAndSet(false, true)) {
                 tokenScope.launch {
                     try {
                         store.tokenFlow.collect { token ->
                             tokenCache.set(token)
                         }
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        Clogger.e("NetworkModule", "Token flow collection failed", t)
+                    } catch (e: Exception) {
+                        // Re-throw CancellationException to respect coroutine cancellation
+                        if (e is CancellationException) throw e
+                        Clogger.e("NetworkModule", "Token flow collection failed", e)
                         tokenCollectorStarted.set(false)
                     }
                 }

@@ -2,31 +2,26 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.content.Context
-import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.services.AppEventBus
 import com.mpieterse.stride.core.services.HabitNameOverrideService
 import com.mpieterse.stride.core.utils.Clogger
-import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.dto.checkins.CheckInDto
 import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
-import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.utils.ImageUploadHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
 @HiltViewModel
@@ -35,7 +30,7 @@ class HomeDatabaseViewModel @Inject constructor(
     private val checkinsRepo: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
     private val eventBus: AppEventBus,
-    private val uploadRepo: UploadRepository,
+    private val imageUploadHelper: ImageUploadHelper,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -145,33 +140,18 @@ class HomeDatabaseViewModel @Inject constructor(
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toSet()
 
-    private suspend fun uploadImage(base64: String, mimeType: String?): String? =
-        withContext(Dispatchers.IO) {
-            val extension = when (mimeType) {
-                "image/png" -> ".png"
-                else -> ".jpg"
-            }
-            val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
-            return@withContext try {
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                tempFile.writeBytes(bytes)
-                when (val result = uploadRepo.upload(tempFile.path)) {
-                    is ApiResult.Ok -> result.data.localPath   // LOCAL PATH NOW
-                    is ApiResult.Err -> {
-                        Clogger.e("HomeDatabaseViewModel", "Image save failed: ${result.message}")
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                Clogger.e("HomeDatabaseViewModel", "Image save exception", e)
-                null
-            } finally {
-                tempFile.delete()
-            }
-        }
 
 
-    // Queue create locally via repo API
+    /**
+     * Creates a habit with optional image upload.
+     * 
+     * @param onDone Callback invoked when habit creation completes.
+     *   - `true`: Habit was successfully created (may include image upload failure - check `state.error` for details)
+     *   - `false`: Habit creation failed (network/server error, but may have been saved locally)
+     * 
+     * Note: Image upload failures are non-blocking. If image upload fails, `onDone(true)` is still
+     * called, but `state.error` will contain `IMAGE_UPLOAD_WARNING` to inform the user.
+     */
     fun createHabit(
         name: String,
         frequency: Int = 1,
@@ -208,13 +188,6 @@ class HomeDatabaseViewModel @Inject constructor(
         }
     }
 
-    private fun sanitizeImageUrl(url: String?): String? {
-        return url?.let {
-            if (it.startsWith("http://", ignoreCase = true)) {
-                "https://${it.removePrefix("http://")}"
-            } else it
-        }
-    }
 
     fun checkInHabit(habitId: String, dayIndex: Int) = viewModelScope.launch {
         val days = lastThreeDays()
@@ -231,27 +204,31 @@ class HomeDatabaseViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resolves image URL for habit creation.
+     * 
+     * Image upload failures are intentionally non-blocking - habits can be created
+     * without images, and users can add images later. This method never throws
+     * exceptions to ensure habit creation always proceeds.
+     */
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun resolveImageForCreate(
         imageBase64: String?,
         imageMimeType: String?,
         imageUrl: String?
     ): ImageResolutionResult {
         if (!imageBase64.isNullOrBlank()) {
-            return try {
-                val uploadedUrl = uploadImage(imageBase64, imageMimeType)
-                if (uploadedUrl.isNullOrBlank()) {
-                    Clogger.w("HomeDatabaseViewModel", "Image upload failed during habit creation, continuing without image")
-                    ImageResolutionResult(null, true)
-                } else {
-                    ImageResolutionResult(sanitizeImageUrl(uploadedUrl), false)
-                }
-            } catch (e: Exception) {
-                Clogger.e("HomeDatabaseViewModel", "Image upload exception during habit creation, continuing without image", e)
-                ImageResolutionResult(null, true)
+            // Image failures should not prevent habit creation; we log and continue without an image
+            val uploadedUrl = imageUploadHelper.uploadImage(appContext, imageBase64, imageMimeType)
+            if (uploadedUrl.isNullOrBlank()) {
+                Clogger.w("HomeDatabaseViewModel", "Image upload failed during habit creation, continuing without image")
+                return ImageResolutionResult(null, true)
+            } else {
+                return ImageResolutionResult(imageUploadHelper.sanitizeImageUrl(uploadedUrl), false)
             }
         }
         if (!imageUrl.isNullOrBlank()) {
-            return ImageResolutionResult(sanitizeImageUrl(imageUrl.trim()), false)
+            return ImageResolutionResult(imageUploadHelper.sanitizeImageUrl(imageUrl.trim()), false)
         }
         return ImageResolutionResult(null, false)
     }

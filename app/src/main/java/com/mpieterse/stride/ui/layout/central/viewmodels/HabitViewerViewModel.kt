@@ -20,7 +20,7 @@ import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
-import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.utils.ImageUploadHelper
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.HabitData
 import com.mpieterse.stride.utils.base64ToBitmap
@@ -53,7 +53,7 @@ class HabitViewerViewModel @Inject constructor(
     private val checkins: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
     private val eventBus: AppEventBus,
-    private val uploadRepo: UploadRepository,
+    private val imageUploadHelper: ImageUploadHelper,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -115,7 +115,7 @@ class HabitViewerViewModel @Inject constructor(
                 .collect { (habitDto, triple) ->
                     val (habitName, display, pair) = triple
                     val (days, streak) = pair
-                    val sanitizedUrl = habitDto?.imageUrl?.let { sanitizeImageUrl(it) }
+                    val sanitizedUrl = habitDto?.imageUrl?.let { imageUploadHelper.sanitizeImageUrl(it) }
                     // Preserve existing image if URL hasn't changed, otherwise fetch new one
                     val imageBitmap = sanitizedUrl?.takeIf { it.isNotBlank() }?.let { url ->
                         if (url != lastImageUrl || _state.value.habitImage == null) {
@@ -217,7 +217,7 @@ class HabitViewerViewModel @Inject constructor(
                     // Safe to use imageBase64 here - already checked with isNullOrBlank()
                     val imageBase64 = updated.imageBase64
                     if (imageBase64 != null) {
-                        uploadedUrl = uploadImage(imageBase64, updated.imageMimeType)
+                        uploadedUrl = imageUploadHelper.uploadImage(appContext, imageBase64, updated.imageMimeType)
                     }
                     if (uploadedUrl.isNullOrBlank()) {
                         imageUploadFailed = true
@@ -246,8 +246,8 @@ class HabitViewerViewModel @Inject constructor(
             // Only update imageUrl if a new image was uploaded, otherwise preserve existing URL
             val finalImageUrl = when {
                 !updated.imageBase64.isNullOrBlank() && !imageUploadFailed -> uploadedUrl
-                !updated.imageBase64.isNullOrBlank() && imageUploadFailed -> sanitizeImageUrl(current.imageUrl)
-                else -> sanitizeImageUrl(current.imageUrl) // Preserve existing image when no new image is provided
+                !updated.imageBase64.isNullOrBlank() && imageUploadFailed -> imageUploadHelper.sanitizeImageUrl(current.imageUrl)
+                else -> imageUploadHelper.sanitizeImageUrl(current.imageUrl) // Preserve existing image when no new image is provided
             }
             
             // Update via API (which also caches locally) - always include imageUrl, even if null (to preserve existing)
@@ -345,40 +345,6 @@ class HabitViewerViewModel @Inject constructor(
         }
 
 
-    private suspend fun uploadImage(base64: String, mimeType: String?): String? =
-        withContext(Dispatchers.IO) {
-            val extension = when (mimeType) {
-                "image/png" -> ".png"
-                else -> ".jpg"
-            }
-            val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
-            return@withContext try {
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                tempFile.writeBytes(bytes)
-                when (val result = uploadRepo.upload(tempFile.path)) {
-                    is ApiResult.Ok -> result.data.localPath   // LOCAL PATH NOW
-                    is ApiResult.Err -> {
-                        Clogger.e("HabitViewerViewModel", "Image save failed: ${result.message}")
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                Clogger.e("HabitViewerViewModel", "Image save exception", e)
-                null
-            } finally {
-                tempFile.delete()
-            }
-        }
-
-
-
-    private fun sanitizeImageUrl(url: String?): String? {
-        return url?.let {
-            if (it.startsWith("http://", ignoreCase = true)) {
-                "https://${it.removePrefix("http://")}"
-            } else it
-        }
-    }
 
     // Helpers
 
