@@ -3,8 +3,10 @@ package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Base64
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.FutureTarget
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
@@ -26,14 +28,22 @@ import retrofit2.HttpException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.net.URL
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -309,22 +319,19 @@ class HabitViewerViewModel @Inject constructor(
 
     private suspend fun fetchBitmap(location: String): Bitmap? =
         withContext(Dispatchers.IO) {
-            return@withContext try {
-                if (location.startsWith("http", ignoreCase = true)) {
-                    // Remote HTTP/HTTPS image (legacy / old data)
-                    (URL(location).openConnection()).getInputStream().use { input ->
-                        BitmapFactory.decodeStream(input)
-                    }
-                } else {
-                    // Local file path
-                    val file = File(location)
-                    if (file.exists()) {
-                        BitmapFactory.decodeFile(file.absolutePath)
-                    } else {
-                        Clogger.d("HabitViewerViewModel", "Local image not found at $location")
-                        null
-                    }
-                }
+            var target: FutureTarget<Bitmap>? = null
+            try {
+                target = Glide.with(appContext)
+                    .asBitmap()
+                    .load(location)
+                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                    .submit()
+
+                val loaded = target.get()
+                // Make a defensive copy because Glide may recycle the bitmap after clear()
+                loaded.copy(loaded.config ?: Bitmap.Config.ARGB_8888, false)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (location.startsWith("http", ignoreCase = true) && e is java.io.FileNotFoundException) {
                     Clogger.d("HabitViewerViewModel", "Remote image not found at $location (likely deleted)")
@@ -332,6 +339,8 @@ class HabitViewerViewModel @Inject constructor(
                     Clogger.e("HabitViewerViewModel", "Failed to load image from $location", e)
                 }
                 null
+            } finally {
+                target?.let { Glide.with(appContext).clear(it) }
             }
         }
 

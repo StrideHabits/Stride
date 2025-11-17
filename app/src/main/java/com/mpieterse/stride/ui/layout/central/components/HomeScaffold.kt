@@ -18,10 +18,14 @@ import androidx.navigation.compose.rememberNavController
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.roots.HomeNavGraph
 import com.mpieterse.stride.ui.layout.central.roots.HomeScreen
+import com.mpieterse.stride.ui.layout.central.viewmodels.HomeSettingsViewModel
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 
 @Composable
-fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This composable creates the main app scaffold with bottom navigation using Jetpack Compose (Android Developers, 2024).
+fun HomeScaffold(
+    settingsViewModel: HomeSettingsViewModel,
+    notificationsViewModel: NotificationsViewModel
+) { //This composable creates the main app scaffold with bottom navigation using Jetpack Compose (Android Developers, 2024).
     val controller = rememberNavController()
     val destinationDefault = HomeScreen.Database
     
@@ -58,7 +62,7 @@ fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This compos
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 windowInsets = NavigationBarDefaults.windowInsets,
                 modifier = Modifier.shadow(8.dp)
@@ -95,14 +99,15 @@ fun HomeScaffold(notificationsViewModel: NotificationsViewModel) { //This compos
             }
         }
     ) { insets ->
-        Surface(color = Color(0xFF161620)) {
+        Surface(color = MaterialTheme.colorScheme.background) {
             HomeNavGraph(
                 controller = controller,
                 currentDestination = destinationCurrent,
                 modifier = Modifier
                     .padding(insets)
                     .fillMaxSize(),
-                notificationsViewModel = notificationsViewModel
+                notificationsViewModel = notificationsViewModel,
+                homeSettingsViewModel = settingsViewModel
             )
         }
     }

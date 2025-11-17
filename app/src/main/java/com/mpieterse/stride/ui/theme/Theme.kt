@@ -252,11 +252,7 @@ fun AppTheme(
             }
         }
 
-        darkTheme -> {
-            // Temporarily disabled
-            mediumContrastDarkColorScheme
-            //lightScheme
-        }
+        darkTheme -> darkScheme
 
         else -> {
             lightScheme

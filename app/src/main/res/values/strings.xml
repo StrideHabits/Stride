@@ -120,8 +120,6 @@
     <string name="home_settings_notifications_label">Notifications</string>
     <string name="home_settings_sync_label">Sync Online</string>
     <string name="home_settings_options_section">Options</string>
-    <string name="home_settings_import_database">Import database</string>
-    <string name="home_settings_export_database">Export database</string>
     <string name="home_settings_help_faq">Help &amp; FAQ</string>
     <string name="home_settings_debug_tools">Debug Tools</string>
     <string name="home_settings_logout">Logout</string>

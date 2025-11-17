@@ -75,14 +75,14 @@ fun AuthSignInScreen(
 // --- UI
 
     Surface(
-        color = Color(0xFF_161620),
+        color = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .background(
-                    color = MaterialTheme.colorScheme.background,
+                    color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(
                         topStart = 40.dp,
                         topEnd = 40.dp
@@ -170,7 +170,7 @@ fun AuthSignInScreen(
                 Text(
                     text = stringResource(R.string.auth_sign_in_forgot_password),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
-                    color = Color(0xFF_161620),
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -190,7 +190,7 @@ fun AuthSignInScreen(
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                 } else {

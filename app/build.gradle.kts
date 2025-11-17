@@ -188,4 +188,8 @@ dependencies {
     // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
     // See Add the KSP plugin to your project
     ksp("androidx.room:room-compiler:$room_version")
+
+    // Image loading
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    ksp("com.github.bumptech.glide:compiler:4.16.0")
 }

@@ -74,14 +74,14 @@ fun AuthSignUpScreen(
 // --- UI
 
     Surface(
-        color = Color(0xFF_161620),
+        color = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .background(
-                    color = MaterialTheme.colorScheme.background,
+                    color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(
                         topStart = 40.dp,
                         topEnd = 40.dp
@@ -126,7 +126,7 @@ fun AuthSignUpScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        tint = Color(0xFF_161620),
+                        tint = MaterialTheme.colorScheme.primary,
                         painter = painterResource(R.drawable.xic_uic_outline_user_plus),
                         contentDescription = "",
                         modifier = Modifier.requiredSize(16.dp)
@@ -166,7 +166,7 @@ fun AuthSignUpScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        tint = Color(0xFF_161620),
+                        tint = MaterialTheme.colorScheme.primary,
                         painter = painterResource(R.drawable.xic_uic_outline_shield),
                         contentDescription = "",
                         modifier = Modifier.requiredSize(16.dp)
@@ -233,7 +233,7 @@ fun AuthSignUpScreen(
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp
                         )
                     } else {
@@ -252,7 +252,7 @@ fun AuthSignUpScreen(
                 Text(
                     text = stringResource(R.string.auth_sign_up_have_account),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
-                    color = Color(0xFF_161620),
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
                         .clickable(enabled = !isLoading) {
@@ -271,7 +271,7 @@ fun AuthSignUpScreen(
                 Text(
                     text = stringResource(R.string.auth_sign_up_help_faq),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight(600)),
-                    color = Color(0xFF_161620),
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
                         .clickable { /* ... */ }
