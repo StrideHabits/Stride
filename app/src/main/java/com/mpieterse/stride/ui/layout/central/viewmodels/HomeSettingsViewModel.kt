@@ -1,5 +1,6 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.models.configuration.options.AlertFrequency
@@ -8,6 +9,7 @@ import com.mpieterse.stride.core.models.configuration.options.SyncFrequency
 import com.mpieterse.stride.core.models.configuration.schema.ConfigurationSchema
 import com.mpieterse.stride.core.services.AuthenticationService
 import com.mpieterse.stride.core.services.ConfigurationService
+import com.mpieterse.stride.core.services.LocalizationService
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,12 +19,20 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeSettingsViewModel @Inject constructor(
+    application: Application,
     private val configService: ConfigurationService,
+    private val localizationService: LocalizationService,
     private val authService: AuthenticationService
 ) : ViewModel() {
     companion object {
         private const val TAG = "HomeSettingsViewModel"
     }
+
+    val locales: List<String> = localizationService.getSupportedLanguages()
+
+    private val _locale = MutableStateFlow(localizationService.getCurrentUiCulture())
+    val locale: StateFlow<String> = _locale
+
 
     private val _theme = MutableStateFlow(AppAppearance.LIGHT)
     val theme: StateFlow<AppAppearance> = _theme
@@ -43,19 +53,26 @@ class HomeSettingsViewModel @Inject constructor(
 
     fun updateTheme(value: AppAppearance) { //This method updates the app theme setting using ViewModel lifecycle management (Android Developers, 2024).
         _theme.value = value
-        viewModelScope.launch { configService.put(ConfigurationSchema.appAppearance, value) }
+        viewModelScope.launch {
+            configService.put(ConfigurationSchema.appAppearance, value)
+        }
         Clogger.i(TAG, "Theme updated locally: $value")
     }
 
-    fun updateAlerts(value: AlertFrequency) { //This method updates the alert frequency setting using ViewModel lifecycle management (Android Developers, 2024).
-        _notifications.value = value
-        viewModelScope.launch { configService.put(ConfigurationSchema.alertFrequency, value) }
+    fun updateCulture(value: String) {
+        _locale.value = value
+        viewModelScope.launch {
+            localizationService.setCurrentUiCulture(value)
+        }
     }
 
     fun updateSync(value: SyncFrequency) { //This method updates the sync frequency setting using ViewModel lifecycle management (Android Developers, 2024).
         _sync.value = value
-        viewModelScope.launch { configService.put(ConfigurationSchema.syncFrequency, value) }
+        viewModelScope.launch {
+            configService.put(ConfigurationSchema.syncFrequency, value)
+        }
     }
 
-    fun logout() = authService.logout() //This method logs out the user using Firebase Authentication (Google Inc., 2024).
+    fun logout() =
+        authService.logout() //This method logs out the user using Firebase Authentication (Google Inc., 2024).
 }

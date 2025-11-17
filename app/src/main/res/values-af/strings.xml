@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_settings_title">masepoes</string>
+    <string name="home_settings_application_section">masepoes</string>
+    <string name="home_settings_theme_label">masepoes</string>
+    <string name="home_settings_notifications_label">masepoes</string>
+    <string name="home_settings_options_section">masepoes</string>
+    <string name="home_settings_import_database">masepoes</string>
+    <string name="home_settings_export_database">masepoes</string>
+    <string name="home_settings_help_faq">masepoes</string>
+    <string name="home_settings_debug_tools">masepoes</string>
+    <string name="home_settings_logout">masepoes</string>
+</resources>

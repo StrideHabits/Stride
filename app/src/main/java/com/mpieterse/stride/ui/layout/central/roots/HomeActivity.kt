@@ -1,15 +1,14 @@
 package com.mpieterse.stride.ui.layout.central.roots
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
-import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,11 +18,13 @@ import com.mpieterse.stride.ui.layout.central.components.HomeScaffold
 import com.mpieterse.stride.ui.layout.central.viewmodels.HomeSettingsViewModel
 import com.mpieterse.stride.ui.layout.central.viewmodels.NotificationsViewModel
 import com.mpieterse.stride.ui.layout.shared.components.LocalStyledActivityStatusBar
+import com.mpieterse.stride.ui.layout.shared.models.LocalizableActivity
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import com.mpieterse.stride.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class HomeActivity : ComponentActivity() {
+class HomeActivity : LocalizableActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

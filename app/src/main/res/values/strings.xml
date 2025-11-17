@@ -115,7 +115,7 @@
     <string name="home_settings_application_section">Application</string>
     <string name="home_settings_theme_label">Theme</string>
     <string name="home_settings_notifications_label">Notifications</string>
-    <string name="home_settings_sync_label">Sync Online</string>
+    <string name="home_settings_locales_label">Language</string>
     <string name="home_settings_options_section">Options</string>
     <string name="home_settings_import_database">Import database</string>
     <string name="home_settings_export_database">Export database</string>
