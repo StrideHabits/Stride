@@ -1,31 +1,49 @@
 package com.mpieterse.stride.data.repo.concrete
 
+import android.content.Context
 import com.mpieterse.stride.core.net.safeCall
-import com.mpieterse.stride.data.remote.SummitApiService
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
+import com.mpieterse.stride.data.dto.uploads.LocalUploadResponse
+import dagger.hilt.android.qualifiers.ApplicationContext
+import retrofit2.Response
 import java.io.File
 import javax.inject.Inject
 
-/**
- * Repository class implementing the Repository Design Pattern in Kotlin.
- *
- * This class acts as a clean data access layer between the ViewModel and data sources
- * (e.g., local database, remote API, or in-memory cache). It abstracts data operations
- * to ensure separation of concerns, maintainability, and scalability across the app.
- *
- * @see <a href="https://medium.com/@appdevinsights/repository-design-pattern-in-kotlin-1d1aeff1ad40">
- *      App Dev Insights (2024). Repository Design Pattern in Kotlin.</a>
- *      [Accessed 6 Oct. 2025].
- */
+class UploadRepository @Inject constructor(
+    @param:ApplicationContext private val context: Context // removes annotation warning
+) {
 
+    /**
+     * Save an image file locally inside the app's private "images" directory,
+     * then wrap the result in a Retrofit Response so existing call sites still work.
+     */
+    suspend fun upload(sourcePath: String) = safeCall<LocalUploadResponse> {
+        val sourceFile = File(sourcePath)
+        if (!sourceFile.exists()) {
+            // Let safeCall convert this into ApiResult.Err
+            throw IllegalArgumentException("Source file does not exist: $sourcePath")
+        }
 
-class UploadRepository @Inject constructor(private val api: SummitApiService) {
-    suspend fun upload(path: String) = safeCall {
-        val f = File(path)
-        val body = f.asRequestBody("application/octet-stream".toMediaType())
-        val part = MultipartBody.Part.createFormData("file", f.name, body)
-        api.upload(part)
+        val imagesDir = File(context.filesDir, "images").apply {
+            if (!exists()) mkdirs()
+        }
+
+        val destFile = File(
+            imagesDir,
+            "${sourceFile.nameWithoutExtension}_${System.currentTimeMillis()}.${sourceFile.extension}"
+        )
+
+        sourceFile.copyTo(destFile, overwrite = true)
+
+        val body = LocalUploadResponse(localPath = destFile.absolutePath)
+        Response.success(body)
+    }
+
+    /**
+     * Delete a previously-saved local image.
+     */
+    suspend fun delete(localPath: String) = safeCall<Boolean> {
+        val file = File(localPath)
+        val deleted = file.exists() && file.delete()
+        Response.success(deleted)
     }
 }

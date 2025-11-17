@@ -310,46 +310,61 @@ class HabitViewerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchBitmap(url: String): Bitmap? = withContext(Dispatchers.IO) {
-        return@withContext try {
-            (URL(url).openConnection()).getInputStream().use { input ->
-                BitmapFactory.decodeStream(input)
-            }
-        } catch (e: Exception) {
-            // FileNotFoundException (404) is expected when images don't exist on server
-            // Log as warning instead of error to reduce log noise
-            if (e is java.io.FileNotFoundException) {
-                Clogger.d("HabitViewerViewModel", "Image not found at $url (this is normal if image was deleted)")
-            } else {
-                Clogger.e("HabitViewerViewModel", "Failed to load image from $url", e)
-            }
-            null
-        }
-    }
-
-    private suspend fun uploadImage(base64: String, mimeType: String?): String? = withContext(Dispatchers.IO) {
-        val extension = when (mimeType) {
-            "image/png" -> ".png"
-            else -> ".jpg"
-        }
-        val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
-        return@withContext try {
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
-            tempFile.writeBytes(bytes)
-            when (val result = uploadRepo.upload(tempFile.path)) {
-                is ApiResult.Ok -> sanitizeImageUrl(result.data.url ?: result.data.path)
-                is ApiResult.Err -> {
-                    Clogger.e("HabitViewerViewModel", "Image upload failed: ${result.message}")
-                    null
+    private suspend fun fetchBitmap(location: String): Bitmap? =
+        withContext(Dispatchers.IO) {
+            return@withContext try {
+                if (location.startsWith("http", ignoreCase = true)) {
+                    // Remote HTTP/HTTPS image (legacy / old data)
+                    (URL(location).openConnection()).getInputStream().use { input ->
+                        BitmapFactory.decodeStream(input)
+                    }
+                } else {
+                    // Local file path
+                    val file = File(location)
+                    if (file.exists()) {
+                        BitmapFactory.decodeFile(file.absolutePath)
+                    } else {
+                        Clogger.d("HabitViewerViewModel", "Local image not found at $location")
+                        null
+                    }
                 }
+            } catch (e: Exception) {
+                if (location.startsWith("http", ignoreCase = true) && e is java.io.FileNotFoundException) {
+                    Clogger.d("HabitViewerViewModel", "Remote image not found at $location (likely deleted)")
+                } else {
+                    Clogger.e("HabitViewerViewModel", "Failed to load image from $location", e)
+                }
+                null
             }
-        } catch (e: Exception) {
-            Clogger.e("HabitViewerViewModel", "Image upload exception", e)
-            null
-        } finally {
-            tempFile.delete()
         }
-    }
+
+
+    private suspend fun uploadImage(base64: String, mimeType: String?): String? =
+        withContext(Dispatchers.IO) {
+            val extension = when (mimeType) {
+                "image/png" -> ".png"
+                else -> ".jpg"
+            }
+            val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
+            return@withContext try {
+                val bytes = Base64.decode(base64, Base64.DEFAULT)
+                tempFile.writeBytes(bytes)
+                when (val result = uploadRepo.upload(tempFile.path)) {
+                    is ApiResult.Ok -> result.data.localPath   // LOCAL PATH NOW
+                    is ApiResult.Err -> {
+                        Clogger.e("HabitViewerViewModel", "Image save failed: ${result.message}")
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                Clogger.e("HabitViewerViewModel", "Image save exception", e)
+                null
+            } finally {
+                tempFile.delete()
+            }
+        }
+
+
 
     private fun sanitizeImageUrl(url: String?): String? {
         return url?.let {
