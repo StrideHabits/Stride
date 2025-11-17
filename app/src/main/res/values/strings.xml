@@ -1,6 +1,7 @@
 <resources>
     <!-- App Name -->
-    <string name="app_name">StrideHabits</string>
+    <string name="app_name"
+            translatable="false">StrideHabits</string>
     
     <!-- Content Descriptions -->
     <string name="content_description_show_password">Show password text</string>

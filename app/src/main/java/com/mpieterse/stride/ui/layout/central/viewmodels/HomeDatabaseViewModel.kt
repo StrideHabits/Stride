@@ -145,29 +145,31 @@ class HomeDatabaseViewModel @Inject constructor(
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toSet()
 
-    private suspend fun uploadImage(base64: String, mimeType: String?): String? = withContext(Dispatchers.IO) {
-        val extension = when (mimeType) {
-            "image/png" -> ".png"
-            else -> ".jpg"
-        }
-        val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
-        return@withContext try {
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
-            tempFile.writeBytes(bytes)
-            when (val result = uploadRepo.upload(tempFile.path)) {
-                is ApiResult.Ok -> result.data.url ?: result.data.path
-                is ApiResult.Err -> {
-                    Clogger.e("HomeDatabaseViewModel", "Image upload failed: ${result.message}")
-                    null
-                }
+    private suspend fun uploadImage(base64: String, mimeType: String?): String? =
+        withContext(Dispatchers.IO) {
+            val extension = when (mimeType) {
+                "image/png" -> ".png"
+                else -> ".jpg"
             }
-        } catch (e: Exception) {
-            Clogger.e("HomeDatabaseViewModel", "Image upload exception", e)
-            null
-        } finally {
-            tempFile.delete()
+            val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
+            return@withContext try {
+                val bytes = Base64.decode(base64, Base64.DEFAULT)
+                tempFile.writeBytes(bytes)
+                when (val result = uploadRepo.upload(tempFile.path)) {
+                    is ApiResult.Ok -> result.data.localPath   // LOCAL PATH NOW
+                    is ApiResult.Err -> {
+                        Clogger.e("HomeDatabaseViewModel", "Image save failed: ${result.message}")
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                Clogger.e("HomeDatabaseViewModel", "Image save exception", e)
+                null
+            } finally {
+                tempFile.delete()
+            }
         }
-    }
+
 
     // Queue create locally via repo API
     fun createHabit(
