@@ -3,12 +3,15 @@ package com.mpieterse.stride.ui.layout.central.viewmodels
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import com.mpieterse.stride.R
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.local.NotificationsStore
 import com.mpieterse.stride.data.repo.HabitRepository
 import com.mpieterse.stride.ui.layout.central.models.NotificationData
 import com.mpieterse.stride.ui.layout.central.models.NotificationSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +25,8 @@ class NotificationsViewModel @Inject constructor(
     private val notificationsStore: NotificationsStore,
     private val habitRepository: HabitRepository,
     private val notificationScheduler: com.mpieterse.stride.core.services.NotificationSchedulerService,
-    private val eventBus: com.mpieterse.stride.core.services.AppEventBus
+    private val eventBus: com.mpieterse.stride.core.services.AppEventBus,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     data class UiState(
@@ -131,7 +135,7 @@ class NotificationsViewModel @Inject constructor(
             _state.value = _state.value.copy(notifications = updated)
         } catch (e: Exception) {
             Log.e("NotificationsViewModel", "Failed to add notification", e)
-            _state.value = _state.value.copy(error = "Failed to add notification: ${e.message}")
+            _state.value = _state.value.copy(error = appContext.getString(R.string.error_notification_add_failed, e.message ?: appContext.getString(R.string.error_unknown)))
         }
     }
 
@@ -153,7 +157,7 @@ class NotificationsViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("NotificationsViewModel", "Failed to update notification", e)
-            _state.value = _state.value.copy(error = "Failed to update notification: ${e.message}")
+            _state.value = _state.value.copy(error = appContext.getString(R.string.error_notification_update_failed, e.message ?: appContext.getString(R.string.error_unknown)))
         }
     }
 
@@ -167,7 +171,7 @@ class NotificationsViewModel @Inject constructor(
             _state.value = _state.value.copy(notifications = updated)
         } catch (e: Exception) {
             Log.e("NotificationsViewModel", "Failed to delete notification", e)
-            _state.value = _state.value.copy(error = "Failed to delete notification: ${e.message}")
+            _state.value = _state.value.copy(error = appContext.getString(R.string.error_notification_delete_failed, e.message ?: appContext.getString(R.string.error_unknown)))
         }
     }
 
@@ -191,7 +195,7 @@ class NotificationsViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("NotificationsViewModel", "Failed to toggle notification", e)
-            _state.value = _state.value.copy(error = "Failed to toggle notification: ${e.message}")
+            _state.value = _state.value.copy(error = appContext.getString(R.string.error_notification_toggle_failed, e.message ?: appContext.getString(R.string.error_unknown)))
         }
     }
 
@@ -208,7 +212,7 @@ class NotificationsViewModel @Inject constructor(
             _state.value = _state.value.copy(settings = newSettings)
         } catch (e: Exception) {
             Log.e("NotificationsViewModel", "Failed to update settings", e)
-            _state.value = _state.value.copy(error = "Failed to update settings: ${e.message}")
+            _state.value = _state.value.copy(error = appContext.getString(R.string.error_settings_update_failed, e.message ?: appContext.getString(R.string.error_unknown)))
         }
     }
     

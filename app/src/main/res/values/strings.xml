@@ -34,6 +34,9 @@
     <string name="auth_biometric_prompt_cancel">Cancel</string>
     <string name="auth_locked_tap_to_authenticate">Tap to authenticate</string>
     <string name="auth_biometric_unavailable_error">Biometric authentication is not available. Please use an alternative method to unlock.</string>
+    <string name="auth_biometric_failed">Authentication failed. Please try again.</string>
+    <string name="auth_biometric_rate_limit">Too many failed attempts. Please try again later.</string>
+    <string name="auth_biometric_system_error">System error. Please try again.</string>
     <string name="auth_locked_use_email_password">Use Email &amp; Password</string>
     
     <!-- Auth Sign In Screen -->
@@ -59,6 +62,7 @@
     <string name="habit_viewer_image_placeholder">(IMAGE)</string>
     <string name="habit_viewer_streak_days">%1$d Day Streak</string>
     <string name="habit_viewer_edit_dialog_title">Edit Habit</string>
+    <string name="habit_viewer_unknown_habit">Unknown habit</string>
     
     <!-- Upsert Dialog -->
     <string name="upsert_dialog_create_title">Create a Habit</string>
@@ -121,6 +125,7 @@
     <!-- Notifications Screen -->
     <string name="notifications_title">Notifications</string>
     <string name="notifications_habit_reminders">Habit Reminders</string>
+    <string name="notifications_reminders_description">Set reminders to help you stay consistent with your habits</string>
     <string name="notifications_loading">Loading notifications…</string>
     <string name="notifications_empty_title">No notifications yet</string>
     <string name="notifications_empty_message">Add notifications to get reminded about your habits</string>
@@ -187,6 +192,11 @@
     <string name="error_invalid_request">Invalid request. Please check your input and try again.</string>
     <string name="error_server_error">Server error. Please try again later.</string>
     <string name="error_sign_in_again">Authentication failed. Please sign in again.</string>
+    <string name="error_habit_not_found">Habit not found on server. It may have been deleted. Please refresh or create a new habit.</string>
+    <string name="error_habit_invalid_data">Invalid habit data. Please check your input and try again.</string>
+    <string name="error_image_upload_failed">Image upload failed. Please try again later or use a different image.</string>
+    <string name="error_image_upload_network">Network error. Image upload failed. Please try again when online.</string>
+    <string name="error_image_upload_generic">Image upload failed: %1$s. Please try again.</string>
     
     <!-- Navigation Labels -->
     <string name="nav_home">Home</string>

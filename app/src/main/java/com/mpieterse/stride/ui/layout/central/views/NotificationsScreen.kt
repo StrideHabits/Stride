@@ -133,6 +133,16 @@ fun NotificationsScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
+                    
+                    // Seamless spacing message
+                    Text(
+                        text = stringResource(R.string.notifications_reminders_description),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
 
                     if (state.loading) {
                         Box(

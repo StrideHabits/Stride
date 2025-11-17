@@ -92,15 +92,7 @@ fun HomeSettingsScreen(
 
                 // Notifications Switch
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            notificationsViewModel.updateSettings(
-                                notificationSettings.settings.copy(
-                                    globalNotificationsEnabled = !notificationsEnabled
-                                )
-                            )
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {

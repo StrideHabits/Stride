@@ -126,7 +126,7 @@ fun CreateNotificationDialog(
                     isComponentEnabled = availableHabits.isNotEmpty(),
                     textPlaceholder = {
                         Text(
-                            text = if (availableHabits.isEmpty()) "No habits available" else "Select a habit",
+                            text = if (availableHabits.isEmpty()) stringResource(R.string.notification_dialog_no_habits) else stringResource(R.string.notification_dialog_select_habit),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
