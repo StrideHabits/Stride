@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import com.mpieterse.stride.data.local.entities.MutationEntity
 import com.mpieterse.stride.data.local.entities.MutationState
+import com.mpieterse.stride.data.local.entities.TargetType
 
 // data/local/dao/MutationDao.kt
 @Dao
@@ -32,6 +33,17 @@ interface MutationDao {
 
     @Query("DELETE FROM mutations WHERE state='Applied'")
     suspend fun purgeApplied()
+
+    @Query(
+        """
+        SELECT DISTINCT targetId FROM mutations
+        WHERE targetType = :targetType AND state IN (:states)
+        """
+    )
+    suspend fun targetIdsWithStates(
+        targetType: TargetType,
+        states: List<MutationState>
+    ): List<String>
 
     // remap any references to the temp habit id
     @Query("""

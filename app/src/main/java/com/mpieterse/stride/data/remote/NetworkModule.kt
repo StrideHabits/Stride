@@ -12,8 +12,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
@@ -52,25 +54,38 @@ object NetworkModule {
      * The token is cached in memory and updated asynchronously from the flow.
      */
     private val tokenCache = java.util.concurrent.atomic.AtomicReference<String?>()
+    private val tokenCollectorStarted = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val tokenScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Provides @Singleton
     fun authInterceptor(
         store: TokenStore,
         sessionManager: SessionManager
     ): Interceptor {
-        // Initialize cache and start collecting token updates asynchronously
-        runBlocking {
-            tokenCache.set(store.tokenFlow.first())
-        }
-        
-        // Start a coroutine to keep the cache updated
-        CoroutineScope(Dispatchers.IO).launch {
-            store.tokenFlow.collect { token ->
-                tokenCache.set(token)
+        fun ensureTokenCacheInitialized() {
+            if (tokenCache.get() == null) {
+                runBlocking {
+                    val initialToken = store.tokenFlow.first()
+                    tokenCache.compareAndSet(null, initialToken)
+                }
+            }
+            if (tokenCollectorStarted.compareAndSet(false, true)) {
+                tokenScope.launch {
+                    try {
+                        store.tokenFlow.collect { token ->
+                            tokenCache.set(token)
+                        }
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
+                        Clogger.e("NetworkModule", "Token flow collection failed", t)
+                        tokenCollectorStarted.set(false)
+                    }
+                }
             }
         }
         
         return Interceptor { chain ->
+            ensureTokenCacheInitialized()
             val originalRequest = chain.request()
             // Use cached token value (non-blocking)
             val token = tokenCache.get()

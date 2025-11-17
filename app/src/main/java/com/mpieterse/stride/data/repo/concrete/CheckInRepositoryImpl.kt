@@ -26,8 +26,8 @@ import com.mpieterse.stride.core.utils.Clogger
 import com.mpieterse.stride.data.mappers.toEntity
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.workers.PushWorker
-import retrofit2.HttpException
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -139,27 +139,17 @@ class CheckInRepositoryImpl @Inject constructor(
         }
         if (checkins.isEmpty()) return false
 
-        val payload = checkins.mapNotNull { mutation ->
-            // These are guaranteed non-null by the filter above
-            val habitId = mutation.habitId
-            val dayKey = mutation.dayKey
-            val completedAt = mutation.completedAt
-            
-            if (habitId != null && dayKey != null && completedAt != null) {
-                PushItem(
-                    requestId   = mutation.requestId,
-                    id          = mutation.targetId,
-                    habitId     = habitId,
-                    dayKey      = dayKey,
-                    completedAt = completedAt,
-                    deleted     = mutation.deleted,
-                    baseVersion = mutation.baseVersion
-                )
-            } else {
-                // Should not happen due to filter, but handle gracefully
-                Clogger.w("CheckInRepository", "Mutation ${mutation.requestId} missing required fields, skipping")
-                null
-            }
+        val mutationsByTargetId = checkins.associateBy { it.targetId }
+        val payload = checkins.map { mutation ->
+            PushItem(
+                requestId   = mutation.requestId,
+                id          = mutation.targetId,
+                habitId     = mutation.habitId!!,
+                dayKey      = mutation.dayKey!!,
+                completedAt = mutation.completedAt!!,
+                deleted     = mutation.deleted,
+                baseVersion = mutation.baseVersion
+            )
         }
 
         return try {
@@ -179,7 +169,7 @@ class CheckInRepositoryImpl @Inject constructor(
                                 )
                             )
                         }
-                        checkins.find { it.targetId == r.id }?.let { m ->
+                        mutationsByTargetId[r.id]?.let { m ->
                             if (r.status.equals("applied", true)) applied += m.localId else failed += m.localId
                         }
                     }
@@ -198,7 +188,8 @@ class CheckInRepositoryImpl @Inject constructor(
             Clogger.e("CheckInRepository", "HTTP error during push sync (${httpException.code()}): ${httpException.message()}")
             db.mutations().mark(checkins.map { it.localId }, MutationState.Failed, "HTTP ${httpException.code()}: ${httpException.message()}")
             false
-        } catch (t: Throwable) {
+        } catch (t: Exception) {
+            if (t is CancellationException) throw t
             // Network errors or other exceptions - mark mutations as failed for retry
             Clogger.e("CheckInRepository", "Error during push sync, mutations will be retried", t)
             db.mutations().mark(checkins.map { it.localId }, MutationState.Failed, t.message)
@@ -214,28 +205,32 @@ class CheckInRepositoryImpl @Inject constructor(
             
             if (response.isSuccessful) {
                 val remoteCheckIns = response.body() ?: emptyList()
-                
+                val protectedIds = db.mutations().targetIdsWithStates(
+                    TargetType.CheckIn,
+                    listOf(MutationState.Pending, MutationState.Failed)
+                ).toHashSet()
+
+                val checkInsToSave = remoteCheckIns
+                    .filterNot { protectedIds.contains(it.id) }
+                    .map { dto -> dto.toEntity(syncState = SyncState.Synced) }
+
+                val skipped = remoteCheckIns.size - checkInsToSave.size
+
                 db.withTransaction {
-                    // Map remote check-ins to entities and upsert them
-                    val checkInsToSave = remoteCheckIns.map { dto ->
-                        dto.toEntity(syncState = SyncState.Synced)
-                    }
-                    
-                    // Upsert all server check-ins
                     if (checkInsToSave.isNotEmpty()) {
                         db.checkIns().upsertAll(checkInsToSave)
                     }
                 }
-                
+
+                if (skipped > 0) {
+                    Clogger.w("CheckInRepository", "Skipped $skipped remote check-ins due to local pending mutations")
+                }
                 Clogger.d("CheckInRepository", "Successfully pulled ${remoteCheckIns.size} check-ins from server")
                 true
             } else {
                 Clogger.e("CheckInRepository", "Failed to pull check-ins: HTTP ${response.code()} ${response.message()}")
                 false
             }
-        } catch (e: HttpException) {
-            Clogger.e("CheckInRepository", "Failed to pull check-ins: HTTP ${e.code()} ${e.message()}", e)
-            false
         } catch (e: Exception) {
             Clogger.e("CheckInRepository", "Failed to pull check-ins", e)
             false

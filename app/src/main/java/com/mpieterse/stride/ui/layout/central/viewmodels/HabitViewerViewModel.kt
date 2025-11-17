@@ -69,6 +69,7 @@ class HabitViewerViewModel @Inject constructor(
     private var lastImageUrl: String? = null
 
     private var observeJob: Job? = null
+    private var errorClearJob: Job? = null
 
     fun load(habitId: String) {
         _state.update { 
@@ -277,11 +278,7 @@ class HabitViewerViewModel @Inject constructor(
                         loading = false
                     ) 
                 }
-                // Clear error after a delay
-                launch {
-                    delay(5000)
-                    _state.update { it.copy(error = null) }
-                }
+                scheduleErrorAutoClear()
             }
         } catch (e: HttpException) {
             // Handle HTTP errors more gracefully
@@ -399,5 +396,18 @@ class HabitViewerViewModel @Inject constructor(
         }
         
         return streak
+    }
+    override fun onCleared() {
+        super.onCleared()
+        observeJob?.cancel()
+        errorClearJob?.cancel()
+    }
+
+    private fun scheduleErrorAutoClear(delayMillis: Long = 5000L) {
+        errorClearJob?.cancel()
+        errorClearJob = viewModelScope.launch {
+            delay(delayMillis)
+            _state.update { it.copy(error = null) }
+        }
     }
 }
