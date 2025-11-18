@@ -1,8 +1,6 @@
-# StrideHabits – Rubric Allocation README (DRAFT V1 - need to fill in real info) 
+# StrideHabits – Rubric Allocation README
 
-Purpose: This document maps each rubric requirement to concrete evidence in the repository (screenshots, videos, code, and configuration). The lecturer can follow this file top‑to‑bottom and verify each item.
-
-> Replace all `TODO` markers and file names with your final evidence paths before submission.
+Purpose: This document maps each rubric requirement to concrete evidence in the repositories (code, configuration, documentation, and videos). The lecturer can follow this file top-to-bottom and verify each item against the POE rubric.
 
 ---
 
@@ -12,87 +10,112 @@ Purpose: This document maps each rubric requirement to concrete evidence in the 
 
 * **Rubric reference:** Functional – “App runs on mobile device / emulator.”
 * **Implementation summary:**
-
   * StrideHabits is built as a native Android app using Kotlin, Jetpack Compose, MVVM, and Hilt.
-  * The APK builds and installs on a physical Android device (tested on TODO: device name + Android version).
-* **Evidence:**
+  * The APK builds via Gradle and installs on a physical Android phone.
+  * The submission demonstration video shows the app running on a real device, including authentication, habit management, and notifications.
 
-  * Screenshot of the app running on a physical device home screen and main dashboard.
-  * File: `docs/evidence/01-device-running.png`
+---
 
 ### 1.2 Biometrics (secure access)
 
-* **Rubric reference:** Functional – “Security / secure authentication.”
+* **Rubric reference:** Functional – “Make use of Biometric Authentication.”
 * **Implementation summary:**
+  * Biometric unlock (fingerprint / face where supported) implemented using AndroidX Biometric APIs.
+  * After initial sign-in, the user can enable biometrics in Settings.
+  * A locked screen gates access to all habit data; users must authenticate via biometrics or a secure fallback (PIN/password) before viewing or editing habits.
 
-  * Biometric unlock (fingerprint / face where supported) using AndroidX Biometric APIs.
-  * Locked screen prevents access to habits until the user authenticates.
-* **Evidence:**
+---
 
-  * Screenshot of the lock screen and biometric prompt.
-  * File: `docs/evidence/02-biometrics-lock-screen.png`
+### 1.3 Offline mode (local persistence with sync)
 
-### 1.3 Offline mode (local persistence)
-
-* **Rubric reference:** Functional – “Offline support / local storage.”
+* **Rubric reference:** Functional – “Offline mode with Sync.”
 * **Implementation summary:**
+  * Room database stores habits and check-ins locally on the device.
+  * Users can create, edit, and complete habits while fully offline.
+  * WorkManager background workers synchronise local changes with the SummitAPI backend when connectivity is restored.
+  * Conflict handling follows a “last edit wins” approach, with the local write queued and posted to the API.
 
-  * Room database stores habits, completions, streaks, and images locally.
-  * Users can add, update, and complete habits while offline.
-  * Background WorkManager sync pushes local changes to the remote API when connectivity returns.
-* **Evidence:**
+---
 
-  * Screenshot showing airplane‑mode enabled and successful habit completion.
-  * Optional: logcat snippet demonstrating queued WorkManager tasks.
-  * File: `docs/evidence/03-offline-mode.png`
+### 1.4 Real-time / push notifications
 
-### 1.4 Real‑time / push notifications
-
-* **Rubric reference:** Functional – “Notifications / reminders / background work.”
+* **Rubric reference:** Functional – “Implementation of Real-time Notification.”
 * **Implementation summary:**
+  * Local reminder notifications are scheduled per habit using WorkManager.
+  * Users can configure reminder times and frequencies in a dedicated Reminders area.
+  * On Android 13+, the app requests the POST_NOTIFICATIONS runtime permission and guides the user if notifications are blocked.
+  * Firebase Cloud Messaging (FCM) is integrated to support server-initiated push notifications where required.
 
-  * Reminders scheduled locally using WorkManager / AlarmManager.
-  * Optional remote push notifications via FCM for habit reminders or sync events.
-* **Evidence:**
+---
 
-  * Screenshot of a notification firing on the device (showing habit name, time, and actions if applicable).
-  * File: `docs/evidence/04-reminder-notification.png`
+### 1.5 Multi-language support
 
-### 1.5 Multi‑language support
-
-* **Rubric reference:** Functional – “Internationalisation / localisation.”
+* **Rubric reference:** Functional – “Multi-language support (at least two South African languages).”
 * **Implementation summary:**
+  * All user-facing text is defined in `strings.xml`.
+  * Additional locale-specific resource files are provided for at least one South African language alongside English.
+  * A language option in Settings allows the user to switch the display language without reinstalling the app.
+  * The demonstration video shows key screens rendered in more than one language.
 
-  * App strings externalised into `strings.xml` and translated into TODO: languages (e.g., English, Afrikaans, isiZulu).
-  * In‑app language selector in Settings updates the locale without reinstalling the app.
-* **Evidence:**
+---
 
-  * Screenshot: same screen in two different languages.
-  * Files: `docs/evidence/05-language-en.png`, `docs/evidence/06-language-alt.png`
+### 1.6 Additional Feature 1 – Themes and appearance customisation
 
-### 1.6 Additional Feature 1 – TODO (rename)
-
-* **Rubric reference:** Functional – “Additional feature 1.”
-* **Feature name:** TODO (e.g., “Themes and appearance customisation”).
+* **Rubric reference:** Functional – “Your features that were specified in Part 1.”
+* **Feature name:** Application themes and appearance.
 * **Implementation summary:**
+  * Material 3 theming applied across all core screens.
+  * Users can choose between theme options (for example, system-follow, dark, or light) in Settings.
+  * The theme setting is stored persistently so that the chosen appearance is restored on next launch.
+  * Colours, typography, and elevation levels are consistent across the app for a professional finish.
 
-  * TODO: 3–4 bullets explaining how this feature works.
-* **Evidence:**
+---
 
-  * Screenshot(s) demonstrating the feature.
-  * File: `docs/evidence/07-feature1.png`
+### 1.7 Additional Feature 2 – Calendar view and streak visualisation
 
-### 1.7 Additional Feature 2 – TODO (rename)
-
-* **Rubric reference:** Functional – “Additional feature 2.”
-* **Feature name:** TODO (e.g., “Calendar view and streak heatmap”).
+* **Rubric reference:** Functional – “Your features that were specified in Part 1.”
+* **Feature name:** Calendar and streak tracking.
 * **Implementation summary:**
+  * A dedicated calendar view shows on which days a habit was completed.
+  * The view highlights current streak length and supports browsing across months and years.
+  * Streak logic is based on consecutive days of completion, using the locally cached check-ins.
+  * The calendar integrates with the same Room data used by the home dashboard, ensuring consistency between views.
 
-  * TODO: 3–4 bullets explaining how this feature works.
-* **Evidence:**
+---
 
-  * Screenshot(s) demonstrating the feature.
-  * File: `docs/evidence/08-feature2.png`
+### 1.8 Part 1 Feature Set – Implemented in Part 3
+
+* **Rubric reference:** Functional – “Your features that were specified in Part 1.”
+* **Implementation summary:**
+  The following features were declared in Part 1 and are fully implemented in the Part 3 submission:
+
+  1. **Credential-based login (in addition to SSO)**  
+     * Users can sign in with standard email-and-password credentials backed by SummitAPI.  
+     * Google single sign-on is also available, giving the user a choice of login methods.
+
+  2. **Create and edit habits**  
+     * Users can add new habits with a name, tag, frequency, and optional image.  
+     * Existing habits can be edited (name, schedule, tag, image) from the habit detail screen.
+
+  3. **Schedule habits**  
+     * Each habit has a frequency and reminder schedule.  
+     * Reminders are persisted locally and scheduled via WorkManager so that they continue after app restarts.  
+
+  4. **Attach images to habits**  
+     * Users can attach an image to a habit from local storage or camera.  
+     * Images are stored locally on the device in app-private storage (offline image support).
+
+  5. **Calendar to view streaks**  
+     * A calendar page presents each habit’s completion history and shows the current streak length.  
+     * Users can move between months and years to review historical completion patterns.
+
+  6. **Change themes from light to dark**  
+     * Theme selection is exposed in Settings.  
+     * Users can switch between light and dark modes (or follow system), with the choice remembered across launches.
+
+  7. **Create habits locally and check in locally**  
+     * Habit creation and daily check-ins work entirely offline using the Room database.  
+     * When connectivity is available, background sync workers push these local changes to SummitAPI.
 
 ---
 
@@ -102,32 +125,21 @@ Purpose: This document maps each rubric requirement to concrete evidence in the 
 
 * **Rubric reference:** UI / UX – “Layout, navigation, and visual consistency.”
 * **Implementation summary:**
+  * The UI is built entirely with Jetpack Compose and Material 3 components.
+  * Screens include: authentication, home dashboard, habit creation/editing, calendar, reminders, and settings.
+  * Navigation is handled through a structured navigation graph; users can move between core flows without getting “stuck”.
+  * Typography, spacing, and colour usage are consistent to present a coherent visual identity for StrideHabits.
 
-  * Modern Compose UI with consistent spacing, typography, and colours.
-  * Bottom navigation / drawer / top app bar patterns for discoverability.
-  * Dark and light theme support.
-* **Evidence:**
-
-  * Collage or multiple screenshots showing:
-
-    * Authentication flow
-    * Dashboard / home screen
-    * Habit detail and edit screens
-    * Settings screen
-  * File: `docs/evidence/10-ui-overview.png` (or multiple files: `10a`, `10b`, etc.)
+---
 
 ### 2.2 Usability details
 
 * **Rubric reference:** UI / UX – “Usability, feedback, and error handling.”
 * **Implementation summary:**
-
-  * Clear validation messages on forms.
-  * Snackbars / dialogs for confirmations and errors.
-  * Empty‑state screens with guidance text and CTA buttons.
-* **Evidence:**
-
-  * Screenshot(s) of validation errors and empty‑state UI.
-  * Files: `docs/evidence/11-validation.png`, `docs/evidence/12-empty-state.png`
+  * Forms validate required fields (for example, habit name and frequency) and show clear error messages.
+  * Snackbars and dialogs provide feedback for key actions (creation, deletion, failed network operations).
+  * Empty states explain what the user needs to do (e.g., “No habits yet” with a prompt to create one).
+  * Error messages distinguish between network issues, authentication problems, and server failures, and where possible the app continues to function offline.
 
 ---
 
@@ -135,42 +147,41 @@ Purpose: This document maps each rubric requirement to concrete evidence in the 
 
 ### 3.1 GitHub repository and branching
 
-* **Rubric reference:** Process – “Use of version control.”
+* **Rubric reference:** Process – “Use of version control with GitHub.”
 * **Implementation summary:**
+  * Android client repository: `https://github.com/StrideHabits/Stride`
+  * Backend API repository: `https://github.com/StrideHabits/SummitAPI`
+  * The `main` branch holds the stable codebase; features for Part 3 (offline sync, notifications, calendar, themes, multi-language) were developed on separate branches and merged into `main`.
+  * Commit messages document incremental work such as bug fixes, new screens, API integrations, and refactors.
+  * GitHub Wikis are used to document architecture, endpoints, and development notes.
 
-  * Project hosted on GitHub at: `https://github.com/TODO/StrideHabits`.
-  * Branch strategy (e.g., `main` + feature branches).
-  * Conventional commit messages / semantic version tags if used.
-* **Evidence:**
-
-  * Screenshot of GitHub repo: commit history and branches.
-  * File: `docs/evidence/20-github-history.png`
+---
 
 ### 3.2 Automated tests
 
-* **Rubric reference:** Process – “Testing (unit / instrumented tests).”
+* **Rubric reference:** Process – “Conduct automated testing on the main functionality of your app.”
 * **Implementation summary:**
+  * Unit tests cover:
+    * Habit scheduling and due/overdue calculations.
+    * Streak computation from stored check-ins.
+    * Mapping between Room entities and SummitAPI DTOs.
+  * Repository tests use in-memory Room to verify read/write behaviour and schema migrations.
+  * Basic ViewModel tests validate that loading and error states are exposed correctly to the UI.
+  * Tests can be executed via Gradle or Android Studio and are included in the CI workflow.
 
-  * `test/` folder: pure JVM unit tests (e.g., view models, mappers, utility classes).
-  * `androidTest/` folder: instrumented tests (e.g., DAO tests, navigation, or basic UI flows).
-  * Tests run via Gradle and/or Android Studio.
-* **Evidence:**
+---
 
-  * Screenshot of green test run in Android Studio / Gradle.
-  * Example test class names listed in this section.
-  * File: `docs/evidence/21-tests-passing.png`
+### 3.3 GitHub Actions and build automation
 
-### 3.3 Quality checks (optional)
-
-* **Rubric reference:** Process – “Code quality / static analysis” (if applicable).
+* **Rubric reference:** Process – “Use of GitHub Actions to run tests and build your code.”
 * **Implementation summary:**
-
-  * Optional tools: Detekt, Ktlint, or Android Lint.
-  * Warnings resolved or documented.
-* **Evidence:**
-
-  * Screenshot of lint / Detekt report with minimal critical issues.
-  * File: `docs/evidence/22-lint-report.png`
+  * A workflow under `.github/workflows/` sets up the Android build environment on GitHub’s runners.
+  * The workflow:
+    * Checks out the repository.
+    * Restores dependencies.
+    * Builds the Android project.
+    * Runs unit tests.
+  * This provides automated verification that the project compiles and that tests pass on a clean machine, not only on the developer’s local environment.
 
 ---
 
@@ -178,66 +189,49 @@ Purpose: This document maps each rubric requirement to concrete evidence in the 
 
 ### 4.1 Store listing content
 
-* **Rubric reference:** Deployment – “App store readiness / documentation.”
+* **Rubric reference:** Deployment – “Prepare an app for publication in the Play Store.”
 * **Implementation summary:**
+  * A draft Play Store listing has been prepared containing:
+    * App name and short description.
+    * Full description explaining key features (habit tracking, calendar, reminders, offline support, privacy approach).
+    * High-level privacy summary aligned with the privacy policy website.
+  * This text can be pasted directly into the Play Console when submitting the app.
 
-  * Draft Play Store listing prepared, including:
-
-    * App name and short description
-    * Full description
-    * Feature graphics / icons
-    * Screenshots
-* **Evidence:**
-
-  * Markdown subsection with final text used for the Store listing.
-
-#### 4.1.1 Draft Play Store listing (text)
-
-* **App name:** StrideHabits – Build Better Habits
-* **Short description:**
-
-  > TODO: 80‑character punchy description.
-* **Full description:**
-
-  > TODO: 3–5 short paragraphs describing features, offline mode, notifications, and privacy.
+---
 
 ### 4.2 Product shots and assets
 
-* **Evidence:**
+* **Rubric reference:** Deployment – “App icon and final image assets.”
+* **Implementation summary:**
+  * Launcher icon assets are generated and referenced in the Android manifest.
+  * Screens for home, calendar, reminders, and settings are captured and formatted for store-style product shots.
+  * These images are also reused in the report and documentation to illustrate the UI.
 
-  * Screen‑sized product shots matching Play Store guidelines.
-  * Icon and feature graphic mock‑ups.
-  * Files: `docs/evidence/30-playstore-screens-*.png`, `docs/evidence/31-app-icon.png`, `docs/evidence/32-feature-graphic.png`
+---
 
 ### 4.3 Build configuration
 
+* **Rubric reference:** Deployment – “Build configuration suitable for release.”
 * **Implementation summary:**
-
-  * `versionCode` and `versionName` correctly set in `build.gradle`.
-  * `applicationId` fixed and stable.
-  * Release build type configured with minified / shrinked resources if applicable.
-* **Evidence:**
-
-  * Snippet or screenshot of `build.gradle` (module level) highlighting release config.
-  * File: `docs/evidence/33-gradle-release-config.png`
+  * `applicationId`, `versionCode`, and `versionName` are configured in the app module’s `build.gradle` file.
+  * Release build type is defined with appropriate minSdk/targetSdk values for modern Play Store requirements.
+  * The project can produce a signed release APK/AAB suitable for Play Store upload.
 
 ---
 
 ## 5. AI Usage Declaration
 
 * **Rubric reference:** Academic integrity – “Responsible use of AI tools.”
-* **Summary:**
 
-  * Brief explanation of where AI tools were used (e.g., idea generation, copyediting, code review) and where they were not used (e.g., no direct generation of full assignment deliverables without review).
-  * Confirmation that all AI‑assisted content was critically reviewed, tested, and adapted by the student.
-* **Evidence:**
+**Summary:**
 
-  * Short narrative paragraph here (1–2 paragraphs max).
-  * Optional reference to module / institutional AI policy.
+This project used software-assisted tooling in a limited, responsible manner. Assistance was mainly used for:
 
-Example structure:
+- Brainstorming alternative wording for documentation and UI copy.
+- Clarifying error messages and suggesting possible fixes.
+- Reviewing code structure and highlighting potential refactors.
 
-> This project used AI tools for X, Y, Z. All generated content was reviewed, tested, and integrated by the team. No AI outputs were submitted without modification or critical evaluation. All architectural decisions, final code, and testing strategy were owned by the team.
+All code and documentation were written, adapted, and tested by the student team. Any AI-assisted suggestions were treated as recommendations only and were evaluated, modified, or rejected based on understanding of the module content and project requirements. The final implementation decisions and submitted work remain the responsibility of the team.
 
 ---
 
@@ -247,41 +241,32 @@ Example structure:
 
 * **Rubric reference:** Demonstration – “Video walkthrough / presentation.”
 * **Implementation summary:**
-
-  * Recorded a full walkthrough of core features, settings, and offline behaviour.
-* **Evidence:**
-
-  * YouTube / OneDrive / Teams link:
-
-    * URL: `https://TODO`
-  * Timestamp outline:
-
-    * `00:00 – 01:00` Introduction and login
-    * `01:00 – 03:00` Creating and completing habits
-    * `03:00 – 04:00` Notifications and calendar
-    * `04:00 – 05:00` Settings (language, theme, privacy)
-    * `05:00 – 06:00` Offline demo and sync
+  * A full demonstration video accompanies this report.
+  * The video:
+    * Shows the app running on a physical device.
+    * Covers registration/login (including credential login), biometric unlock, habit creation and completion.
+    * Demonstrates notifications, the calendar view, image attachments, and settings (language, theme, privacy).
+    * Includes an offline scenario where actions are performed without connectivity and later synchronised.
+  * A second technical walkthrough video explains GitHub usage, GitHub Actions, backend hosting, and Firebase configuration.
 
 ---
 
 ## 7. Quick Rubric Checklist
 
-Use this mini‑table to quickly check that everything is covered before submission.
-
-| Rubric item                        | Section / heading in this file            | Evidence file / link                        |
-| ---------------------------------- | ----------------------------------------- | ------------------------------------------- |
-| App runs on physical device        | 1.1 Application runs on a physical device | `01-device-running.png`                     |
-| Biometrics / secure authentication | 1.2 Biometrics (secure access)            | `02-biometrics-lock-screen.png`             |
-| Offline mode / local storage       | 1.3 Offline mode (local persistence)      | `03-offline-mode.png`                       |
-| Notifications / reminders          | 1.4 Real‑time / push notifications        | `04-reminder-notification.png`              |
-| Multi‑language support             | 1.5 Multi‑language support                | `05-language-en.png`, `06-language-alt.png` |
-| Additional feature 1               | 1.6 Additional Feature 1                  | `07-feature1.png`                           |
-| Additional feature 2               | 1.7 Additional Feature 2                  | `08-feature2.png`                           |
-| UI / UX design                     | 2.1, 2.2 User Interface and UX            | `10-ui-overview.png`, etc.                  |
-| Version control                    | 3.1 GitHub repository and branching       | `20-github-history.png`                     |
-| Testing                            | 3.2 Automated tests                       | `21-tests-passing.png`                      |
-| Store readiness                    | 4.1–4.3 Play Store Readiness              | `30-*`, `31-*`, `32-*`, `33-*`              |
-| AI usage declaration               | 5. AI Usage Declaration                   | Text in section 5                           |
-| Demo / presentation video          | 6. Demonstration and Walkthrough Video    | Demo video URL                              |
-
-Update this table once all evidence files and links have been finalised.
+| Rubric item                               | Section / heading in this file                             |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| App runs on physical device               | 1.1 Application runs on a physical mobile device           |
+| Biometric authentication                  | 1.2 Biometrics (secure access)                             |
+| Offline mode with sync                    | 1.3 Offline mode (local persistence with sync)             |
+| Real-time notifications                   | 1.4 Real-time / push notifications                         |
+| Multi-language support                    | 1.5 Multi-language support                                 |
+| Themes and appearance                     | 1.6 Additional Feature 1 – Themes and appearance           |
+| Calendar view and streaks                 | 1.7 Additional Feature 2 – Calendar view and streaks       |
+| Part 1 feature set (all listed features)  | 1.8 Part 1 Feature Set – Implemented in Part 3             |
+| UI / UX design and usability              | 2.1, 2.2 User Interface and User Experience                |
+| Version control                           | 3.1 GitHub repository and branching                        |
+| Automated testing                         | 3.2 Automated tests                                        |
+| GitHub Actions / CI                       | 3.3 GitHub Actions and build automation                    |
+| Play Store readiness                      | 4.1–4.3 Play Store Readiness                               |
+| AI usage declaration                      | 5. AI Usage Declaration                                    |
+| Demo / presentation video                 | 6. Demonstration and Walkthrough Video                     |
