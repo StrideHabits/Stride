@@ -113,6 +113,7 @@ object NetworkModule {
 
         val path = originalRequest.url.encodedPath
         val isAuthEndpoint = path.endsWith("/api/users/login") || path.endsWith("/api/users/register")
+        val isSyncEndpoint = path.startsWith("/sync/checkins")
 
         var response = try {
             chain.proceed(requestWithAuth)
@@ -120,6 +121,14 @@ object NetworkModule {
             // Network errors (timeouts, connection issues) should not trigger logout
             // Only re-throw the exception - don't attempt session restoration on network failures
             throw e
+        }
+
+        // Sync endpoints currently return 401/403 from the hosted API - keep session alive and rely on
+        // offline-first behavior until the push succeeds instead of nuking the token.
+        // TODO(#sync-auth-guard): Remove once Summit sync endpoints return 2xx (or correct auth errors) again.
+        if (isSyncEndpoint && (response.code == 401 || response.code == 403)) {
+            Clogger.w("NetworkModule", "Sync endpoint auth error (${response.code}) - keeping session intact for offline queue")
+            return@Interceptor response
         }
 
         // Handle auth errors (401/403) only - 500 errors are server errors, not auth errors
