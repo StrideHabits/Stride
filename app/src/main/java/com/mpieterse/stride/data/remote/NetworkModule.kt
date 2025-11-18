@@ -125,6 +125,7 @@ object NetworkModule {
 
         // Sync endpoints currently return 401/403 from the hosted API - keep session alive and rely on
         // offline-first behavior until the push succeeds instead of nuking the token.
+        // TODO(#sync-auth-guard): Remove once Summit sync endpoints return 2xx (or correct auth errors) again.
         if (isSyncEndpoint && (response.code == 401 || response.code == 403)) {
             Clogger.w("NetworkModule", "Sync endpoint auth error (${response.code}) - keeping session intact for offline queue")
             return@Interceptor response
