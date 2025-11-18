@@ -24,7 +24,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Named
@@ -57,6 +56,33 @@ object NetworkModule {
     private val tokenCollectorStarted = java.util.concurrent.atomic.AtomicBoolean(false)
     private val tokenInitializing = java.util.concurrent.atomic.AtomicBoolean(false)
     private val tokenScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Creates a logging interceptor only in debug builds.
+     * Returns null in release builds since HttpLoggingInterceptor is only available via debugImplementation.
+     */
+    private fun createLoggingInterceptor(): Interceptor? {
+        if (!BuildConfig.DEBUG) return null
+        
+        return try {
+            // Use reflection to access HttpLoggingInterceptor which is only available in debug builds
+            val interceptorClass = Class.forName("okhttp3.logging.HttpLoggingInterceptor")
+            val interceptor = interceptorClass.getDeclaredConstructor().newInstance()
+            val levelEnum = Class.forName("okhttp3.logging.HttpLoggingInterceptor\$Level")
+            val bodyLevel = levelEnum.getField("BODY").get(null)
+            
+            val setLevelMethod = interceptorClass.getMethod("setLevel", levelEnum)
+            setLevelMethod.invoke(interceptor, bodyLevel)
+            
+            val redactHeaderMethod = interceptorClass.getMethod("redactHeader", String::class.java)
+            redactHeaderMethod.invoke(interceptor, "Authorization")
+            
+            interceptor as Interceptor
+        } catch (e: Exception) {
+            // If reflection fails, return null (release build or class not available)
+            null
+        }
+    }
 
     @Provides @Singleton
     fun authInterceptor(
@@ -267,19 +293,19 @@ object NetworkModule {
 
     @Provides @Singleton
     fun okHttp(auth: Interceptor): OkHttpClient {
-        val logger = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-            else HttpLoggingInterceptor.Level.BASIC
-            redactHeader("Authorization")
-        }
-        return OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .addInterceptor(auth)
-            .addInterceptor(logger) // Interceptor is correctly added here
             .callTimeout(java.time.Duration.ofSeconds(30))
             .connectTimeout(java.time.Duration.ofSeconds(10))
             .readTimeout(java.time.Duration.ofSeconds(20))
             .writeTimeout(java.time.Duration.ofSeconds(20))
-            .build()
+        
+        // Only add logging interceptor in debug builds
+        createLoggingInterceptor()?.let { logger ->
+            builder.addInterceptor(logger)
+        }
+        
+        return builder.build()
     }
 
     @Provides @Singleton
@@ -300,18 +326,18 @@ object NetworkModule {
      */
     @Provides @Singleton @Named("reauth")
     fun reauthRetrofit(): Retrofit {
-        val logger = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-            else HttpLoggingInterceptor.Level.BASIC
-            redactHeader("Authorization")
-        }
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logger)
+        val builder = OkHttpClient.Builder()
             .callTimeout(java.time.Duration.ofSeconds(30))
             .connectTimeout(java.time.Duration.ofSeconds(10))
             .readTimeout(java.time.Duration.ofSeconds(20))
             .writeTimeout(java.time.Duration.ofSeconds(20))
-            .build()
+        
+        // Only add logging interceptor in debug builds
+        createLoggingInterceptor()?.let { logger ->
+            builder.addInterceptor(logger)
+        }
+        
+        val client = builder.build()
         
         return Retrofit.Builder()
             .baseUrl(BuildConfig.API_BASE_URL)
