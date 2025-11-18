@@ -51,7 +51,7 @@
     <string name="auth_sign_up_title">Sign Up</string>
     <string name="auth_sign_up_button">Sign Up</string>
     <string name="auth_sign_up_have_account">Have an account? Sign in</string>
-    <string name="auth_sign_up_help_faq">Help + FAQ</string>
+    <string name="auth_sign_up_help_faq">Help &amp; FAQ</string>
     <string name="auth_sign_up_account_section">Account</string>
     <string name="auth_sign_up_security_section">Security</string>
     <string name="auth_sign_up_email_label">Email address</string>

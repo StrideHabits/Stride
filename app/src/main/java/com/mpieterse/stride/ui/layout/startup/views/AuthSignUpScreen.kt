@@ -1,10 +1,10 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,8 +49,10 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
 import com.google.firebase.analytics.logEvent
 import com.mpieterse.stride.R
+import com.mpieterse.stride.core.extensions.android.openBrowserTo
 import com.mpieterse.stride.ui.layout.shared.components.LocalOutlinedTextField
 import com.mpieterse.stride.ui.layout.shared.components.TextFieldType
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 
 @Composable
@@ -70,6 +72,7 @@ fun AuthSignUpScreen(
     val formState by viewModel.signUpForm.formState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val activity = LocalActivity.current
 
 // --- UI
 
@@ -102,7 +105,7 @@ fun AuthSignUpScreen(
             Spacer(
                 Modifier.height(32.dp)
             )
-            
+
             // Error Message
             AnimatedVisibility(
                 visible = errorMessage != null,
@@ -233,7 +236,7 @@ fun AuthSignUpScreen(
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp
                         )
                     } else {
@@ -274,7 +277,9 @@ fun AuthSignUpScreen(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
-                        .clickable { /* ... */ }
+                        .clickable {
+                            activity?.openBrowserTo("https://stridehabits.github.io/SummitPages/")
+                        }
                         .padding(
                             horizontal = 6.dp,
                             vertical = 4.dp

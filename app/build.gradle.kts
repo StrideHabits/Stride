@@ -180,6 +180,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     debugImplementation(libs.logging.interceptor)
+    implementation("androidx.browser:browser:1.9.0")
 
     val room_version = "2.8.3"
 
