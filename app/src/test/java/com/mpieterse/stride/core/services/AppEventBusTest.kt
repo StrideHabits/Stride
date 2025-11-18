@@ -1,5 +1,6 @@
 package com.mpieterse.stride.core.services
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -12,7 +13,7 @@ class AppEventBusTest {
     fun `emit delivers events to collectors`() = runBlocking {
         val bus = AppEventBus()
 
-        val job = launch {
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
             val event = bus.events.first()
             assertTrue(event is AppEventBus.AppEvent.HabitCreated)
         }
