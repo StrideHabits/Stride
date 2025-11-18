@@ -165,29 +165,50 @@ Configure the **SummitAPI** base URL in the appropriate configuration file (see 
 
 ### Core Flows
 
-**App running on device** <img width="390" height="878" alt="Stride app running" src="https://github.com/user-attachments/assets/ea3d3b6c-1b48-420d-ad4f-3e79dbb514b2" />
+**App running on device** 
 
-**Create habit** <img width="481" height="1004" alt="Create habit" src="https://github.com/user-attachments/assets/864b6ca6-44a6-4eed-a5d0-ca52af41c64a" />
+<img width="484" height="1022" alt="image" src="https://github.com/user-attachments/assets/5adbba63-9e8b-4b26-aae4-22e4305a2ff7" />
 
-**Calendar view** <img width="486" height="1015" alt="Calendar view" src="https://github.com/user-attachments/assets/2886f46d-c4a3-48ef-8e92-9d53e58d1470" />
 
-**Edit habit** <img width="483" height="1017" alt="Edit habit" src="https://github.com/user-attachments/assets/9b0987f8-36fd-4205-8cad-7bd9a04ddbfa" />
+**Create habit** 
+
+<img width="469" height="1013" alt="image" src="https://github.com/user-attachments/assets/a7ede389-22c1-4c59-af80-37cb57d3c2db" />
+
+
+**Calendar view** 
+
+<img width="478" height="1021" alt="image" src="https://github.com/user-attachments/assets/ce44aada-b547-4926-9411-58b3c17ca872" />
+
+
+**Edit habit** 
+
+<img width="483" height="1017" alt="Edit habit" src="https://github.com/user-attachments/assets/9b0987f8-36fd-4205-8cad-7bd9a04ddbfa" />
 
 ---
 
 ### Reminders & Settings
 
-**Habit reminders list** <img width="462" height="1014" alt="Habit reminders" src="https://github.com/user-attachments/assets/eaab4530-674d-483b-a5c4-1eaf59cda14b" />
+**Habit reminders list** 
 
-**Add reminder** <img width="473" height="1013" alt="Add reminder" src="https://github.com/user-attachments/assets/763ac4df-3df5-4d29-b955-f550868243f9" />
+<img width="477" height="1017" alt="image" src="https://github.com/user-attachments/assets/7c1c7aba-a56f-46f4-b474-b9a1d4ecfc0c" />
 
-**Settings screen** <img width="464" height="1009" alt="Settings screen" src="https://github.com/user-attachments/assets/26c87a7d-7302-4312-aa2a-13a95a87d388" />
+
+**Add reminder** 
+
+
+<img width="491" height="1016" alt="image" src="https://github.com/user-attachments/assets/82fd46ca-f6bc-461f-a21a-b8508354562c" />
+
+**Settings screen** 
+
+<img width="489" height="1014" alt="image" src="https://github.com/user-attachments/assets/f0293a73-77e3-4358-b187-acd4b9c4bf1a" />
 
 ---
 
 ### Debug / Developer Tools
 
-**Debug screen** <img width="465" height="1014" alt="Debug tools" src="https://github.com/user-attachments/assets/8723bb5d-1f70-4453-9cf5-a4f2ace41182" />
+**Debug screen** 
+
+<img width="465" height="1014" alt="Debug tools" src="https://github.com/user-attachments/assets/8723bb5d-1f70-4453-9cf5-a4f2ace41182" />
 
 ---
 
