@@ -59,7 +59,7 @@
     <string name="auth_sign_up_password_confirm_label">Confirm your password</string>
     
     <!-- Habit Viewer Screen -->
-    <string name="habit_viewer_loading">Loading…</string>
+    <string name="habit_viewer_loading">Loading...</string>
     <string name="habit_viewer_image_placeholder">No image selected</string>
     <plurals name="habit_viewer_streak_days">
         <item quantity="one">%1$d day streak</item>
@@ -110,7 +110,7 @@
     
     <!-- Home Database Screen -->
     <string name="home_database_refresh">Refresh</string>
-    <string name="home_database_loading">Loading…</string>
+    <string name="home_database_loading">Loading...</string>
     <string name="home_database_error">Error: %1$s</string>
     
     <!-- Home Settings Screen -->
@@ -128,7 +128,7 @@
     <string name="notifications_title">Notifications</string>
     <string name="notifications_habit_reminders">Habit Reminders</string>
     <string name="notifications_reminders_description">Set reminders to help you stay consistent with your habits</string>
-    <string name="notifications_loading">Loading notifications…</string>
+    <string name="notifications_loading">Loading notifications...</string>
     <string name="notifications_empty_title">No notifications yet</string>
     <string name="notifications_empty_message">Add notifications to get reminded about your habits</string>
     <string name="notifications_permission_required_title">Notification Permission Required</string>

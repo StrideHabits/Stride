@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="habit_viewer_streak_days">
+        <item quantity="one">%1$d usuku lwethrekhi</item>
+        <item quantity="other">%1$d usuku lwethrekhi</item>
+    </plurals>
     <string name="content_description_show_password">Bonisa umbhalo wephasiwedi</string>
     <string name="content_description_hide_password">Fihla umbhalo wephasiwedi</string>
     <string name="content_description_show_biometric_dialog">Ngena kuma-biometrics</string>
@@ -21,7 +25,7 @@
     <string name="screen_auth_launch_welcome">Siyakwamukela ku-Stride</string>
     <string name="screen_auth_launch_subtitle">Yakha imikhuba engcono; kancane kancane</string>
     <string name="screen_auth_locked_page_heading">Kuvikelekile</string>
-    <string name="screen_auth_locked_page_content">Siyivalele kude imininingwane  yakho ukuyigcina iphephile emehlweni angalungile. Vula uhlelo lokusebenza nge-biometrics yakho ukuze uqhubeke.</string>
+    <string name="screen_auth_locked_page_content">Siyivalele kude imininingwane yakho ukuyigcina iphephile emehlweni angalungile. Vula uhlelo lokusebenza nge-biometrics yakho ukuze uqhubeke.</string>
     <string name="auth_biometric_prompt_title">Ngena ngemvume nge-biometrics</string>
     <string name="auth_biometric_prompt_subtitle">Qinisekisa ukuze uqhubeke</string>
     <string name="auth_biometric_prompt_cancel">Khansela</string>
@@ -45,7 +49,7 @@
     <string name="auth_sign_up_email_label">Ikheli le-imeyili</string>
     <string name="auth_sign_up_password_label">Dala iphasiwedi eqinile</string>
     <string name="auth_sign_up_password_confirm_label">Qinisekisa iphasiwedi yakho</string>
-    <string name="habit_viewer_loading">Lyaloda…</string>
+    <string name="habit_viewer_loading">Lyaloda...</string>
     <string name="habit_viewer_image_placeholder">Asikho isithombe esikhethiwe</string>
     <string name="habit_viewer_edit_dialog_title">Shintsha Umkhuba</string>
     <string name="habit_viewer_unknown_habit">Umkhuba ongaziwa</string>
@@ -85,7 +89,7 @@
     <string name="notification_dialog_add_button">Engeza</string>
     <string name="notification_dialog_cancel_button">Khansela</string>
     <string name="home_database_refresh">Vuselela</string>
-    <string name="home_database_loading">Iyalayisha…</string>
+    <string name="home_database_loading">Iyalayisha...</string>
     <string name="home_database_error">Iphutha: %1$s</string>
     <string name="home_settings_title">Izilungiselelo</string>
     <string name="home_settings_application_section">Isicelo</string>
@@ -99,7 +103,7 @@
     <string name="notifications_title">Izaziso</string>
     <string name="notifications_habit_reminders">Izikhumbuzi Zomkhuba</string>
     <string name="notifications_reminders_description">Setha izikhumbuzi ukuze zikusize uhlale uhambisana nemikhuba yakho</string>
-    <string name="notifications_loading">Ilayisha izaziso…</string>
+    <string name="notifications_loading">Ilayisha izaziso...</string>
     <string name="notifications_empty_title">Azikho izaziso okwamanje</string>
     <string name="notifications_empty_message">Engeza izaziso ukuze ukhunjuzwe mayelana nemikhuba yakho</string>
     <string name="notifications_permission_required_title">Imvume Yesaziso Iyadingeka</string>
