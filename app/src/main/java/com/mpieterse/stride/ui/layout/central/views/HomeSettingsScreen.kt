@@ -151,32 +151,6 @@ fun HomeSettingsScreen(
                         .height(40.dp)
                         .fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.home_settings_import_database), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = {},
-                    colors = buttonColor,
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier
-                        .height(40.dp)
-                        .fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.home_settings_export_database), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = {},
-                    colors = buttonColor,
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier
-                        .height(40.dp)
-                        .fillMaxWidth()
-                ) {
                     Text(stringResource(R.string.home_settings_help_faq), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(600)))
                 }
 

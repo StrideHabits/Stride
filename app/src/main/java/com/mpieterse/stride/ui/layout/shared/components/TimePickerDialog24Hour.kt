@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,7 +63,7 @@ fun TimePickerDialog24Hour(
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 ),
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -79,7 +78,7 @@ fun TimePickerDialog24Hour(
                     style = MaterialTheme.typography.displayMedium.copy(
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9500)
+                        color = MaterialTheme.colorScheme.primary
                     ),
                     textAlign = TextAlign.Center
                 )
@@ -106,7 +105,7 @@ fun TimePickerDialog24Hour(
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     
                     // Minute picker
@@ -127,11 +126,12 @@ fun TimePickerDialog24Hour(
                     onTimeSelected(LocalTime.of(selectedHour, selectedMinute))
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF9500)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(stringResource(R.string.time_picker_ok), color = Color.White)
+                Text(stringResource(R.string.time_picker_ok))
             }
         },
         dismissButton = {
@@ -183,7 +183,7 @@ private fun ScrollableNumberPicker(
             text = label,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             ),
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -193,7 +193,7 @@ private fun ScrollableNumberPicker(
                 .height(144.dp) // 3 items visible
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFF5F5F5))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             LazyColumn(
                 state = listState,
@@ -218,7 +218,7 @@ private fun ScrollableNumberPicker(
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = if (isSelected) 20.sp else 16.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color(0xFFFF9500) else Color.Black
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             ),
                             textAlign = TextAlign.Center
                         )
@@ -232,7 +232,7 @@ private fun ScrollableNumberPicker(
                     .fillMaxWidth()
                     .height(itemHeight)
                     .align(Alignment.Center)
-                    .background(Color(0xFFFF9500).copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
             )
         }
     }

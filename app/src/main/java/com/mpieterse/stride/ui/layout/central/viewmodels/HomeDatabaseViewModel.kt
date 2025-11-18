@@ -2,31 +2,28 @@
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.content.Context
-import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.services.AppEventBus
 import com.mpieterse.stride.core.services.HabitNameOverrideService
 import com.mpieterse.stride.core.utils.Clogger
-import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.data.dto.checkins.CheckInDto
 import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
-import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.utils.ImageUploadHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 
 @HiltViewModel
 class HomeDatabaseViewModel @Inject constructor(
@@ -34,7 +31,7 @@ class HomeDatabaseViewModel @Inject constructor(
     private val checkinsRepo: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
     private val eventBus: AppEventBus,
-    private val uploadRepo: UploadRepository,
+    private val imageUploadHelper: ImageUploadHelper,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -54,6 +51,11 @@ class HomeDatabaseViewModel @Inject constructor(
         val error: String? = null,
         val status: String = "—",
         val logs: List<String> = emptyList()
+    )
+
+    private data class ImageResolutionResult(
+        val url: String?,
+        val uploadFailed: Boolean
     )
 
     private val _state = MutableStateFlow(UiState(loading = true))
@@ -139,33 +141,21 @@ class HomeDatabaseViewModel @Inject constructor(
             .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
             .toSet()
 
-    private suspend fun uploadImage(base64: String, mimeType: String?): String? =
-        withContext(Dispatchers.IO) {
-            val extension = when (mimeType) {
-                "image/png" -> ".png"
-                else -> ".jpg"
-            }
-            val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
-            return@withContext try {
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                tempFile.writeBytes(bytes)
-                when (val result = uploadRepo.upload(tempFile.path)) {
-                    is ApiResult.Ok -> result.data.localPath   // LOCAL PATH NOW
-                    is ApiResult.Err -> {
-                        Clogger.e("HomeDatabaseViewModel", "Image save failed: ${result.message}")
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                Clogger.e("HomeDatabaseViewModel", "Image save exception", e)
-                null
-            } finally {
-                tempFile.delete()
-            }
-        }
 
 
-    // Queue create locally via repo API
+    /**
+     * Creates a habit with optional image upload.
+     * 
+     * @param onDone Callback invoked when habit creation completes.
+     *   - `true`: Habit is at least saved locally (may include image upload failure or server/network errors - check `state.error` for details)
+     *   - `false`: Habit creation completely failed (authentication errors, invalid data, etc.)
+     * 
+     * Note: Image upload failures are non-blocking. If image upload fails, `onDone(true)` is still
+     * called, but `state.error` will contain `IMAGE_UPLOAD_WARNING` to inform the user.
+     * 
+     * Server errors (5xx) and network errors result in local save and `onDone(true)` since the
+     * repository saves locally when remote operations fail, allowing sync when connectivity is restored.
+     */
     fun createHabit(
         name: String,
         frequency: Int = 1,
@@ -177,89 +167,33 @@ class HomeDatabaseViewModel @Inject constructor(
     ) = viewModelScope.launch {
         withLoading {
             try {
-                // Upload image if provided - but don't block creation if it fails
-                var resolvedImageUrl: String? = null
-                var imageUploadFailed = false
-                
-                if (!imageBase64.isNullOrBlank()) {
-                    try {
-                        resolvedImageUrl = uploadImage(imageBase64, imageMimeType)
-                        if (resolvedImageUrl.isNullOrBlank()) {
-                            imageUploadFailed = true
-                            Clogger.w("HomeDatabaseViewModel", "Image upload failed during habit creation, continuing without image")
-                        }
-                    } catch (e: Exception) {
-                        imageUploadFailed = true
-                        Clogger.e("HomeDatabaseViewModel", "Image upload exception during habit creation, continuing without image", e)
-                    }
-                } else if (!imageUrl.isNullOrBlank()) {
-                    resolvedImageUrl = imageUrl.trim()
-                }
-                
-                val finalImageUrl = sanitizeImageUrl(resolvedImageUrl)
-
+                val imageResult = resolveImageForCreate(imageBase64, imageMimeType, imageUrl)
                 habitsRepo.create(
                     HabitCreateDto(
                         name = name.trim(),
                         frequency = frequency.coerceIn(1, 7),
                         tag = tag?.trim().takeUnless { it.isNullOrEmpty() },
-                        imageUrl = finalImageUrl?.takeUnless { it.isEmpty() }
+                        imageUrl = imageResult.url?.takeUnless { it.isEmpty() }
                     )
                 )
-                setStatus("OK • create habit${if (imageUploadFailed) " (no image)" else ""}")
-                log("create ✅ $name${if (imageUploadFailed) " (image upload failed)" else ""}")
-                if (imageUploadFailed) {
-                    _state.value = _state.value.copy(error = "Habit created, but image upload failed. You can add an image later.")
+                setStatus("OK • create habit${if (imageResult.uploadFailed) " (no image)" else ""}")
+                log("create ✅ $name${if (imageResult.uploadFailed) " (image upload failed)" else ""}")
+                if (imageResult.uploadFailed) {
+                    _state.value = _state.value.copy(error = IMAGE_UPLOAD_WARNING)
                 }
                 eventBus.emit(AppEventBus.AppEvent.HabitCreated)
                 refresh()
                 onDone(true)
-            } catch (e: retrofit2.HttpException) {
-                // Handle HTTP errors with specific user-friendly messages
-                val errorMessage = when {
-                    e.code() in 500..599 -> "Server error. Habit saved locally and will sync when available."
-                    e.code() == 401 || e.code() == 403 -> "Authentication error. Please sign in again."
-                    e.code() == 400 -> "Invalid habit data. Please check your input and try again."
-                    e.code() == 404 -> "Server not found. Habit saved locally and will sync when available."
-                    else -> "Failed to create habit: ${e.message() ?: "Unknown error"}"
-                }
-                setStatus("ERR • create habit")
-                _state.value = _state.value.copy(error = errorMessage)
-                log("create ❌ HTTP ${e.code()}: ${e.message()}")
-                // For server errors (500+), the habit might have been saved locally, so still call onDone(true)
-                onDone(e.code() in 500..599)
+            } catch (e: HttpException) {
+                handleCreateHabitHttpError(e, onDone)
             } catch (e: Exception) {
-                // Handle network errors and other exceptions
-                val isNetworkError = e is java.net.SocketTimeoutException ||
-                    e is java.net.ConnectException ||
-                    (e is java.io.IOException && (
-                        e.message?.lowercase()?.contains("timeout") == true ||
-                        e.message?.lowercase()?.contains("network") == true ||
-                        e.message?.lowercase()?.contains("connection") == true
-                    ))
-                
-                val errorMessage = if (isNetworkError) {
-                    "Network error. Habit saved locally and will sync when online."
-                } else {
-                    "Failed to create habit: ${e.message ?: "Unknown error"}"
-                }
-                
-                setStatus("ERR • create habit")
-                _state.value = _state.value.copy(error = errorMessage)
-                log("create ❌ ${e.message}")
-                // For network errors, the habit might have been saved locally, so still call onDone(true)
-                onDone(isNetworkError)
+                // Re-throw CancellationException to respect coroutine cancellation
+                if (e is CancellationException) throw e
+                handleCreateHabitGenericError(e, onDone)
             }
         }
     }
 
-    private fun sanitizeImageUrl(url: String?): String? {
-        return url?.let {
-            if (it.startsWith("http://", ignoreCase = true)) {
-                "https://${it.removePrefix("http://")}"
-            } else it
-        }
-    }
 
     fun checkInHabit(habitId: String, dayIndex: Int) = viewModelScope.launch {
         val days = lastThreeDays()
@@ -271,8 +205,79 @@ class HomeDatabaseViewModel @Inject constructor(
             eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
             refresh()
         } catch (e: Exception) {
+            // Re-throw CancellationException to respect coroutine cancellation
+            if (e is CancellationException) throw e
             _state.value = _state.value.copy(error = "Failed to queue check-in")
             setStatus("ERR • check-in enqueue")
         }
+    }
+
+    /**
+     * Resolves image URL for habit creation.
+     * 
+     * Image upload failures are intentionally non-blocking - habits can be created
+     * without images, and users can add images later. This method never throws
+     * exceptions to ensure habit creation always proceeds.
+     */
+    private suspend fun resolveImageForCreate(
+        imageBase64: String?,
+        imageMimeType: String?,
+        imageUrl: String?
+    ): ImageResolutionResult {
+        if (!imageBase64.isNullOrBlank()) {
+            // Image failures should not prevent habit creation; we log and continue without an image
+            val uploadedUrl = imageUploadHelper.uploadImage(appContext, imageBase64, imageMimeType)
+            if (uploadedUrl.isNullOrBlank()) {
+                Clogger.w("HomeDatabaseViewModel", "Image upload failed during habit creation, continuing without image")
+                return ImageResolutionResult(null, true)
+            } else {
+                return ImageResolutionResult(imageUploadHelper.sanitizeImageUrl(uploadedUrl), false)
+            }
+        }
+        if (!imageUrl.isNullOrBlank()) {
+            return ImageResolutionResult(imageUploadHelper.sanitizeImageUrl(imageUrl.trim()), false)
+        }
+        return ImageResolutionResult(null, false)
+    }
+
+    private fun handleCreateHabitHttpError(e: HttpException, onDone: (Boolean) -> Unit) {
+        val errorMessage = when {
+            e.code() in 500..599 -> "Server error. Habit saved locally and will sync when available."
+            e.code() == 401 || e.code() == 403 -> "Authentication error. Please sign in again."
+            e.code() == 400 -> "Invalid habit data. Please check your input and try again."
+            e.code() == 404 -> "Server not found. Habit saved locally and will sync when available."
+            else -> "Failed to create habit: ${e.message() ?: "Unknown error"}"
+        }
+        setStatus("ERR • create habit")
+        _state.value = _state.value.copy(error = errorMessage)
+        log("create ❌ HTTP ${e.code()}: ${e.message()}")
+        onDone(e.code() in 500..599)
+    }
+
+    private fun handleCreateHabitGenericError(e: Exception, onDone: (Boolean) -> Unit) {
+        val isNetworkError = e.isNetworkError()
+        val errorMessage = if (isNetworkError) {
+            "Network error. Habit saved locally and will sync when online."
+        } else {
+            "Failed to create habit: ${e.message ?: "Unknown error"}"
+        }
+        setStatus("ERR • create habit")
+        _state.value = _state.value.copy(error = errorMessage)
+        log("create ❌ ${e.message}")
+        onDone(isNetworkError)
+    }
+
+    private fun Throwable.isNetworkError(): Boolean {
+        return this is java.net.SocketTimeoutException ||
+            this is java.net.ConnectException ||
+            (this is java.io.IOException && (
+                message?.lowercase()?.contains("timeout") == true ||
+                    message?.lowercase()?.contains("network") == true ||
+                    message?.lowercase()?.contains("connection") == true
+                ))
+    }
+
+    companion object {
+        private const val IMAGE_UPLOAD_WARNING = "Habit created, but image upload failed. You can add an image later."
     }
 }

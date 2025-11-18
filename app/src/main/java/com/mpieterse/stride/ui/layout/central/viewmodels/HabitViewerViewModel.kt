@@ -3,8 +3,10 @@ package com.mpieterse.stride.ui.layout.central.viewmodels
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Base64
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.FutureTarget
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
@@ -18,7 +20,7 @@ import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
-import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.utils.ImageUploadHelper
 import com.mpieterse.stride.R
 import com.mpieterse.stride.ui.layout.central.components.HabitData
 import com.mpieterse.stride.utils.base64ToBitmap
@@ -26,14 +28,22 @@ import retrofit2.HttpException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.net.URL
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -43,7 +53,7 @@ class HabitViewerViewModel @Inject constructor(
     private val checkins: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
     private val eventBus: AppEventBus,
-    private val uploadRepo: UploadRepository,
+    private val imageUploadHelper: ImageUploadHelper,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -69,6 +79,7 @@ class HabitViewerViewModel @Inject constructor(
     private var lastImageUrl: String? = null
 
     private var observeJob: Job? = null
+    private var errorClearJob: Job? = null
 
     fun load(habitId: String) {
         _state.update { 
@@ -104,7 +115,7 @@ class HabitViewerViewModel @Inject constructor(
                 .collect { (habitDto, triple) ->
                     val (habitName, display, pair) = triple
                     val (days, streak) = pair
-                    val sanitizedUrl = habitDto?.imageUrl?.let { sanitizeImageUrl(it) }
+                    val sanitizedUrl = habitDto?.imageUrl?.let { imageUploadHelper.sanitizeImageUrl(it) }
                     // Preserve existing image if URL hasn't changed, otherwise fetch new one
                     val imageBitmap = sanitizedUrl?.takeIf { it.isNotBlank() }?.let { url ->
                         if (url != lastImageUrl || _state.value.habitImage == null) {
@@ -206,7 +217,7 @@ class HabitViewerViewModel @Inject constructor(
                     // Safe to use imageBase64 here - already checked with isNullOrBlank()
                     val imageBase64 = updated.imageBase64
                     if (imageBase64 != null) {
-                        uploadedUrl = uploadImage(imageBase64, updated.imageMimeType)
+                        uploadedUrl = imageUploadHelper.uploadImage(appContext, imageBase64, updated.imageMimeType)
                     }
                     if (uploadedUrl.isNullOrBlank()) {
                         imageUploadFailed = true
@@ -235,8 +246,8 @@ class HabitViewerViewModel @Inject constructor(
             // Only update imageUrl if a new image was uploaded, otherwise preserve existing URL
             val finalImageUrl = when {
                 !updated.imageBase64.isNullOrBlank() && !imageUploadFailed -> uploadedUrl
-                !updated.imageBase64.isNullOrBlank() && imageUploadFailed -> sanitizeImageUrl(current.imageUrl)
-                else -> sanitizeImageUrl(current.imageUrl) // Preserve existing image when no new image is provided
+                !updated.imageBase64.isNullOrBlank() && imageUploadFailed -> imageUploadHelper.sanitizeImageUrl(current.imageUrl)
+                else -> imageUploadHelper.sanitizeImageUrl(current.imageUrl) // Preserve existing image when no new image is provided
             }
             
             // Update via API (which also caches locally) - always include imageUrl, even if null (to preserve existing)
@@ -277,11 +288,7 @@ class HabitViewerViewModel @Inject constructor(
                         loading = false
                     ) 
                 }
-                // Clear error after a delay
-                launch {
-                    delay(5000)
-                    _state.update { it.copy(error = null) }
-                }
+                scheduleErrorAutoClear()
             }
         } catch (e: HttpException) {
             // Handle HTTP errors more gracefully
@@ -312,22 +319,19 @@ class HabitViewerViewModel @Inject constructor(
 
     private suspend fun fetchBitmap(location: String): Bitmap? =
         withContext(Dispatchers.IO) {
-            return@withContext try {
-                if (location.startsWith("http", ignoreCase = true)) {
-                    // Remote HTTP/HTTPS image (legacy / old data)
-                    (URL(location).openConnection()).getInputStream().use { input ->
-                        BitmapFactory.decodeStream(input)
-                    }
-                } else {
-                    // Local file path
-                    val file = File(location)
-                    if (file.exists()) {
-                        BitmapFactory.decodeFile(file.absolutePath)
-                    } else {
-                        Clogger.d("HabitViewerViewModel", "Local image not found at $location")
-                        null
-                    }
-                }
+            var target: FutureTarget<Bitmap>? = null
+            try {
+                target = Glide.with(appContext)
+                    .asBitmap()
+                    .load(location)
+                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                    .submit()
+
+                val loaded = target.get()
+                // Make a defensive copy because Glide may recycle the bitmap after clear()
+                loaded.copy(loaded.config ?: Bitmap.Config.ARGB_8888, false)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (location.startsWith("http", ignoreCase = true) && e is java.io.FileNotFoundException) {
                     Clogger.d("HabitViewerViewModel", "Remote image not found at $location (likely deleted)")
@@ -335,44 +339,12 @@ class HabitViewerViewModel @Inject constructor(
                     Clogger.e("HabitViewerViewModel", "Failed to load image from $location", e)
                 }
                 null
-            }
-        }
-
-
-    private suspend fun uploadImage(base64: String, mimeType: String?): String? =
-        withContext(Dispatchers.IO) {
-            val extension = when (mimeType) {
-                "image/png" -> ".png"
-                else -> ".jpg"
-            }
-            val tempFile = File.createTempFile("habit-", extension, appContext.cacheDir)
-            return@withContext try {
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                tempFile.writeBytes(bytes)
-                when (val result = uploadRepo.upload(tempFile.path)) {
-                    is ApiResult.Ok -> result.data.localPath   // LOCAL PATH NOW
-                    is ApiResult.Err -> {
-                        Clogger.e("HabitViewerViewModel", "Image save failed: ${result.message}")
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                Clogger.e("HabitViewerViewModel", "Image save exception", e)
-                null
             } finally {
-                tempFile.delete()
+                target?.let { Glide.with(appContext).clear(it) }
             }
         }
 
 
-
-    private fun sanitizeImageUrl(url: String?): String? {
-        return url?.let {
-            if (it.startsWith("http://", ignoreCase = true)) {
-                "https://${it.removePrefix("http://")}"
-            } else it
-        }
-    }
 
     // Helpers
 
@@ -414,5 +386,18 @@ class HabitViewerViewModel @Inject constructor(
         }
         
         return streak
+    }
+    override fun onCleared() {
+        super.onCleared()
+        observeJob?.cancel()
+        errorClearJob?.cancel()
+    }
+
+    private fun scheduleErrorAutoClear(delayMillis: Long = 5000L) {
+        errorClearJob?.cancel()
+        errorClearJob = viewModelScope.launch {
+            delay(delayMillis)
+            _state.update { it.copy(error = null) }
+        }
     }
 }

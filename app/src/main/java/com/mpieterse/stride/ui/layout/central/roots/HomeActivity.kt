@@ -37,6 +37,7 @@ class HomeActivity : ComponentActivity() {
 
             StrideRoot(
                 theme = theme,
+                settingsViewModel = settingsViewModel,
                 notificationsViewModel = notificationsViewModel
             )
         }
@@ -46,6 +47,7 @@ class HomeActivity : ComponentActivity() {
 @Composable
 private fun StrideRoot(
     theme: AppAppearance,
+    settingsViewModel: HomeSettingsViewModel,
     notificationsViewModel: NotificationsViewModel
 ) {
     val darkTheme = when (theme) {
@@ -60,7 +62,10 @@ private fun StrideRoot(
         label = "ThemeSwitch"
     ) { dark ->
         AppTheme(darkTheme = dark) {
-            HomeScaffold(notificationsViewModel = notificationsViewModel)
+            HomeScaffold(
+                settingsViewModel = settingsViewModel,
+                notificationsViewModel = notificationsViewModel
+            )
 
             LocalStyledActivityStatusBar(
                 color = if (dark) Color(0xFF0E0E0E) else Color(0xFF161620)

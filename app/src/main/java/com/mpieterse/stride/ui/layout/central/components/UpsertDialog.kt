@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,27 +70,23 @@ fun UpsertDialog(
     val tagRelationships = stringResource(R.string.tag_relationships)
     val tagHobbies = stringResource(R.string.tag_hobbies)
     
-    val baseTagOptions = remember {
-        listOf(
-            tagHealthFitness,
-            tagProductivity,
-            tagLearning,
-            tagMindfulness,
-            tagSocial,
-            tagFinance,
-            tagCreative,
-            tagPersonalCare,
-            tagRelationships,
-            tagHobbies
-        )
-    }
+    val baseTagOptions = listOf(
+        tagHealthFitness,
+        tagProductivity,
+        tagLearning,
+        tagMindfulness,
+        tagSocial,
+        tagFinance,
+        tagCreative,
+        tagPersonalCare,
+        tagRelationships,
+        tagHobbies
+    )
     val currentTag = initialData?.tag
-    val tagOptions = remember(currentTag) {
-        if (currentTag != null && currentTag !in baseTagOptions) {
-            baseTagOptions + currentTag
-        } else {
-            baseTagOptions
-        }
+    val tagOptions = if (currentTag != null && currentTag !in baseTagOptions) {
+        baseTagOptions + currentTag
+    } else {
+        baseTagOptions
     }
     
     var name by remember { mutableStateOf(initialData?.name ?: "") }
@@ -134,6 +132,45 @@ fun UpsertDialog(
         }
     }
 
+    val colorScheme = MaterialTheme.colorScheme
+    val placeholderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = colorScheme.onSurface,
+        unfocusedTextColor = colorScheme.onSurface,
+        disabledTextColor = colorScheme.onSurface.copy(alpha = 0.4f),
+        errorTextColor = colorScheme.error,
+        cursorColor = colorScheme.primary,
+        errorCursorColor = colorScheme.error,
+        selectionColors = TextSelectionColors(
+            handleColor = colorScheme.primary,
+            backgroundColor = colorScheme.primary.copy(alpha = 0.35f)
+        ),
+        focusedBorderColor = colorScheme.primary,
+        unfocusedBorderColor = colorScheme.outline,
+        disabledBorderColor = colorScheme.outline.copy(alpha = 0.4f),
+        errorBorderColor = colorScheme.error,
+        focusedLabelColor = colorScheme.primary,
+        unfocusedLabelColor = colorScheme.onSurfaceVariant,
+        disabledLabelColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        errorLabelColor = colorScheme.error,
+        focusedPlaceholderColor = placeholderColor,
+        unfocusedPlaceholderColor = placeholderColor,
+        disabledPlaceholderColor = placeholderColor.copy(alpha = 0.5f),
+        errorPlaceholderColor = colorScheme.error,
+        focusedLeadingIconColor = colorScheme.primary,
+        unfocusedLeadingIconColor = colorScheme.onSurfaceVariant,
+        disabledLeadingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        errorLeadingIconColor = colorScheme.error,
+        focusedTrailingIconColor = colorScheme.primary,
+        unfocusedTrailingIconColor = colorScheme.onSurfaceVariant,
+        disabledTrailingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        errorTrailingIconColor = colorScheme.error,
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        errorContainerColor = colorScheme.surface
+    )
+
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
@@ -172,15 +209,7 @@ fun UpsertDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = errorText != null && name.isBlank(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
-                    ),
+                    colors = textFieldColors,
                     shape = RoundedCornerShape(8.dp)
                 )
                 
@@ -198,15 +227,7 @@ fun UpsertDialog(
                     placeholder = { Text(stringResource(R.string.upsert_dialog_frequency_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
-                    ),
+                    colors = textFieldColors,
                     shape = RoundedCornerShape(8.dp)
                 )
                 
