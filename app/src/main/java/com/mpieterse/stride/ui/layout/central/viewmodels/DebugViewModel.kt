@@ -1,122 +1,198 @@
+// app/src/main/java/com/mpieterse/stride/ui/layout/central/viewmodels/DebugViewModel.kt
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.mpieterse.stride.core.net.ApiResult
-import com.mpieterse.stride.data.dto.checkins.CheckInDto
-import com.mpieterse.stride.data.dto.habits.HabitDto
+import com.mpieterse.stride.data.dto.checkins.CheckInCreateDto
+import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.settings.SettingsDto
-import com.mpieterse.stride.data.repo.*
+import com.mpieterse.stride.data.repo.CheckInRepository
+import com.mpieterse.stride.data.repo.HabitRepository
+import com.mpieterse.stride.data.repo.concrete.AuthRepository
+import com.mpieterse.stride.data.repo.concrete.SettingsRepository
+import com.mpieterse.stride.data.repo.concrete.UploadRepository
+import com.mpieterse.stride.workers.PullWorker
+import com.mpieterse.stride.workers.PushWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
     private val auth: AuthRepository,
-    private val habits: HabitRepository,
-    private val settings: SettingsRepository,
-    private val uploads: UploadRepository,
-    private val checkins: CheckInRepository
+    private val habitsRepo: HabitRepository,
+    private val settingsRepo: SettingsRepository,
+    private val uploadsRepo: UploadRepository,
+    private val checkinsRepo: CheckInRepository
 ) : ViewModel() {
+
+    data class HabitRow(val id: String, val name: String)
+
+    fun listHabits() = observeHabits()
+    fun listCheckIns() = listCheckInsSummary()
 
     data class UiState(
         val loading: Boolean = false,
+        val status: String = "—",
         val logs: List<String> = emptyList(),
-        val status: String = "—"           // <-- screen reads this
+        val currentEmail: String? = null,
+        val habits: List<HabitRow> = emptyList(),
+        val selectedHabitId: String? = null,
+        val selectedHabitName: String? = null,
+        val selectedHabitLocalDates: List<String> = emptyList()
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
+    private var habitsJob: Job? = null
+    private var checkinsJob: Job? = null
+
     private fun log(msg: String) {
         _state.value = _state.value.copy(logs = _state.value.logs + msg.take(400))
     }
-    private fun setStatus(s: String) {
-        _state.value = _state.value.copy(status = s)
-    }
-    private inline fun withLoading(block: () -> Unit) {
+    private fun setStatus(s: String) { _state.value = _state.value.copy(status = s) }
+    private suspend fun <T> withLoading(block: suspend () -> T): T {
         _state.value = _state.value.copy(loading = true)
-        block()
-        _state.value = _state.value.copy(loading = false)
+        return try { block() } finally { _state.value = _state.value.copy(loading = false) }
     }
 
-    // ---- Actions ----
+    // -------- Auth --------
 
     fun register(name: String, email: String, pass: String) = viewModelScope.launch {
         withLoading {
             when (val r = auth.register(name, email, pass)) {
-                is ApiResult.Ok<*> -> { setStatus("OK • register"); log("register ✅ ${(r.data as? Any) ?: ""}") }
+                is ApiResult.Ok<*> -> { setStatus("OK • register"); log("register ✅"); _state.value = _state.value.copy(currentEmail = email) }
                 is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • register"); log("register ❌ ${r.code} ${r.message}") }
             }
         }
     }
 
-    fun login(email: String, pass: String) = viewModelScope.launch {
+    fun login(email: String, pass: String, ctx: Context? = null) = viewModelScope.launch {
         withLoading {
             when (val r = auth.login(email, pass)) {
-                is ApiResult.Ok<*> -> { setStatus("OK • login"); log("login ✅ token=****") }
-                is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • login"); log("login ❌ ${r.code} ${r.message}") }
-            }
-        }
-    }
-
-    fun listHabits() = viewModelScope.launch {
-        withLoading {
-            when (val r = habits.list()) {
                 is ApiResult.Ok<*> -> {
-                    setStatus("OK • list habits")
-                    val count = (r.data as? List<*>)?.size ?: 0
-                    log("habits ✅ count=$count")
+                    setStatus("OK • login"); log("login ✅ token=****")
+                    _state.value = _state.value.copy(currentEmail = email)
+                    observeHabits()
+                    ctx?.let {
+                        PullWorker.enqueueOnce(it)
+                        PullWorker.schedulePeriodic(it)
+                        log("pull ▶️ initial + periodic")
+                    }
                 }
-                is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • list habits"); log("habits ❌ ${r.code} ${r.message}") }
+                is ApiResult.Err -> { setStatus("ERR ${r.code ?: ""} • login"); log("login ❌ ${r.code} ${r.message}") }
             }
         }
     }
 
-    fun createHabit(name: String) = viewModelScope.launch {
+    // -------- Habits --------
+
+    fun observeHabits() {
+        habitsJob?.cancel()
+        habitsJob = viewModelScope.launch {
+            habitsRepo.observeAll().collectLatest { list ->
+                _state.value = _state.value.copy(habits = list.map { HabitRow(it.id, it.name) })
+                setStatus("OK • habits (local)")
+            }
+        }
+    }
+
+    fun createHabit(name: String, frequency: Int, tag: String?, imageUrl: String?) = viewModelScope.launch {
         withLoading {
-            when (val r = habits.create(name)) {
-                is ApiResult.Ok<*> -> {
-                    setStatus("OK • create habit")
-                    val h = r.data as? HabitDto
-                    log("create ✅ ${h?.name ?: "—"} (${h?.id ?: "?"})")
-                }
-                is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • create habit"); log("create ❌ ${r.code} ${r.message}") }
+            try {
+                habitsRepo.create(
+                    HabitCreateDto(
+                        name = name.trim(),
+                        frequency = frequency.coerceAtLeast(0),
+                        tag = tag?.trim().takeUnless { it.isNullOrEmpty() },
+                        imageUrl = imageUrl?.trim().takeUnless { it.isNullOrEmpty() }
+                    )
+                )
+                setStatus("OK • create habit (queued)")
+                log("create ✅ $name (queued)")
+            } catch (e: Exception) {
+                setStatus("ERR • create habit"); log("create ❌ ${e.message}")
             }
         }
     }
 
-    fun completeToday(habitId: String, isoDate: String) = viewModelScope.launch {
-        val id = habitId.trim()
-        val date = isoDate.trim()
+    fun selectHabit(id: String, name: String) {
+        _state.value = _state.value.copy(selectedHabitId = id, selectedHabitName = name, selectedHabitLocalDates = emptyList())
+        observeSelectedHabitCheckins()
+    }
+
+    // -------- Check-ins --------
+
+    fun completeForDate(habitId: String, dayKey: String) = viewModelScope.launch {
+        val id = habitId.trim(); val date = dayKey.trim()
+        if (id.isEmpty() || date.isEmpty()) { log("complete ⚠️ missing habitId or date"); return@launch }
         withLoading {
-            when (val r = checkins.create(id, date)) {
-                is ApiResult.Ok<*> -> { setStatus("OK • complete"); val ci = r.data as CheckInDto; log("complete ✅ ${ci.habitId} @ ${ci.dayKey}") }
-                is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • complete"); log("complete ❌ id='$id' len=${id.length}  ${r.code} ${r.message}") }
+            try {
+                checkinsRepo.create(
+                    CheckInCreateDto(
+                        habitId = id,
+                        dayKey = date,
+                        completedAt = "${date}T00:00:00Z"
+                    )
+                )
+                setStatus("OK • complete (queued)")
+                log("complete ✅ habit=$id @ $date")
+                if (_state.value.selectedHabitId == id) observeSelectedHabitCheckins()
+            } catch (e: Exception) {
+                setStatus("ERR • complete"); log("complete ❌ ${e.message}")
             }
         }
     }
 
+    fun quickComplete(dayOffset: Long) = viewModelScope.launch {
+        val id = _state.value.selectedHabitId ?: return@launch
+        val date = LocalDate.now().minusDays(dayOffset).toString()
+        completeForDate(id, date)
+    }
 
-    fun listCheckIns() = viewModelScope.launch {
-        withLoading {
-            when (val r = checkins.list()) {
-                is ApiResult.Ok<*> -> {
-                    setStatus("OK • list check-ins")
-                    val count = (r.data as? List<*>)?.size ?: 0
-                    log("checkins ✅ count=$count")
-                }
-                is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • list check-ins"); log("checkins ❌ ${r.code} ${r.message}") }
+    private fun observeSelectedHabitCheckins() {
+        checkinsJob?.cancel()
+        val id = _state.value.selectedHabitId ?: return
+        checkinsJob = viewModelScope.launch {
+            checkinsRepo.observeForHabit(id).collectLatest { list ->
+                _state.value = _state.value.copy(
+                    selectedHabitLocalDates = list.map { it.dayKey }.sorted()
+                )
             }
         }
     }
+
+    fun listCheckInsSummary() = viewModelScope.launch {
+        val rows = _state.value.habits
+        var total = 0
+        val perHabit = mutableListOf<Pair<String, Int>>()
+        for (h in rows) {
+            val local = try { checkinsRepo.observeForHabit(h.id).first() } catch (_: Exception) { emptyList() }
+            val cnt = local.size
+            total += cnt
+            perHabit += h.name to cnt
+        }
+        setStatus("OK • list check-ins (local)")
+        log("checkins ✅ total=$total  ${perHabit.joinToString { "${it.first}:${it.second}" }}")
+    }
+    // ---------------- Settings ----------------
 
     fun getSettings() = viewModelScope.launch {
         withLoading {
-            when (val r = settings.get()) {
+            when (val r = settingsRepo.get()) {
                 is ApiResult.Ok<*> -> { setStatus("OK • get settings"); log("settings ✅ ${r.data}") }
                 is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • get settings"); log("settings ❌ ${r.code} ${r.message}") }
             }
@@ -125,19 +201,86 @@ class DebugViewModel @Inject constructor(
 
     fun updateSettings(hour: Int?, theme: String?) = viewModelScope.launch {
         withLoading {
-            when (val r = settings.update(SettingsDto(hour, theme))) {
+            when (val r = settingsRepo.update(SettingsDto(hour, theme))) {
                 is ApiResult.Ok<*> -> { setStatus("OK • update settings"); log("settings update ✅") }
                 is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • update settings"); log("settings update ❌ ${r.code} ${r.message}") }
             }
         }
     }
 
+    // ---------------- Upload ----------------
+
     fun upload(path: String) = viewModelScope.launch {
         withLoading {
-            when (val r = uploads.upload(path)) {
+            when (val r = uploadsRepo.upload(path)) {
                 is ApiResult.Ok<*> -> { setStatus("OK • upload"); log("upload ✅ ${r.data}") }
                 is ApiResult.Err   -> { setStatus("ERR ${r.code ?: ""} • upload"); log("upload ❌ ${r.code} ${r.message}") }
             }
         }
+    }
+
+    // ---------------- SYNC (debug buttons) ----------------
+
+    fun pushNow(ctx: Context) = viewModelScope.launch {
+        val wm = WorkManager.getInstance(ctx)
+        val req = OneTimeWorkRequestBuilder<PushWorker>()
+            .addTag("debug-push-now")
+            .build()
+
+        setStatus("PUSH • enqueued")
+        log("push ▶️ enqueued ${req.id}")
+        wm.enqueueUniqueWork("debug-push-now", ExistingWorkPolicy.REPLACE, req)
+
+        wm.getWorkInfoByIdFlow(req.id).collectLatest { info ->
+            when (info?.state) {
+                WorkInfo.State.ENQUEUED  -> setStatus("PUSH • enqueued")
+                WorkInfo.State.RUNNING   -> setStatus("PUSH • running")
+                WorkInfo.State.SUCCEEDED -> {
+                    setStatus("PUSH • success")
+                    log("push ✅ ${req.id}")
+                }
+                WorkInfo.State.FAILED -> {
+                    setStatus("PUSH • failed")
+                    val err = info.outputData.getString("error")
+                    if (!err.isNullOrBlank()) {
+                        log("push ❌ $err")
+                    } else {
+                        // fallback: dump all keys if worker didn't populate "error"
+                        log("push ❌ Data ${info.outputData.keyValueMap}")
+                    }
+                }
+                WorkInfo.State.CANCELLED -> {
+                    setStatus("PUSH • cancelled")
+                    log("push ⛔ cancelled")
+                }
+                WorkInfo.State.BLOCKED   -> setStatus("PUSH • blocked")
+                null -> {}
+            }
+        }
+    }
+
+
+    fun pullNow(ctx: Context) = viewModelScope.launch {
+        val wm = WorkManager.getInstance(ctx)
+        val req = OneTimeWorkRequestBuilder<PullWorker>().addTag("debug-pull-now").build()
+        setStatus("PULL • enqueued"); log("pull ▶️ enqueued ${req.id}")
+        wm.enqueueUniqueWork("debug-pull-now", ExistingWorkPolicy.REPLACE, req)
+        wm.getWorkInfoByIdFlow(req.id).collectLatest { info ->
+            when (info?.state) {
+                WorkInfo.State.ENQUEUED  -> setStatus("PULL • enqueued")
+                WorkInfo.State.RUNNING   -> setStatus("PULL • running")
+                WorkInfo.State.SUCCEEDED -> { setStatus("PULL • success"); log("pull ✅ ${req.id}") }
+                WorkInfo.State.FAILED    -> { setStatus("PULL • failed"); log("pull ❌ ${info.outputData}") }
+                WorkInfo.State.CANCELLED -> { setStatus("PULL • cancelled"); log("pull ⛔ cancelled") }
+                WorkInfo.State.BLOCKED   -> setStatus("PULL • blocked")
+                null -> {}
+            }
+        }
+    }
+
+    fun ensurePullScheduled(ctx: Context) {
+        PullWorker.schedulePeriodic(ctx)
+        setStatus("PULL • periodic scheduled")
+        log("pull ⏰ periodic scheduled")
     }
 }

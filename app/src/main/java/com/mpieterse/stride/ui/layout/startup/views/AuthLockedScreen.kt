@@ -1,21 +1,28 @@
 package com.mpieterse.stride.ui.layout.startup.views
 
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,8 +38,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.firebase.Firebase
@@ -44,6 +54,7 @@ import com.mpieterse.stride.core.models.results.BiometricError
 import com.mpieterse.stride.core.models.results.Final
 import com.mpieterse.stride.core.services.BiometricService
 import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AuthLockedScreen(
@@ -58,99 +69,186 @@ fun AuthLockedScreen(
         }
     }
 
-
     val context = LocalContext.current
     val activity = context as FragmentActivity
     val biometricService = BiometricService(context)
     var biometricResult by remember {
         mutableStateOf<Final<Unit, BiometricError>?>(null)
     }
-
-    when (val result = biometricResult) {
-        is Final.Success -> onSuccess()
-        else -> {
-            // ...
+    
+    // Check if Firebase auth is still active - if not, redirect to login
+    LaunchedEffect(Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            // Auth session is no longer active, redirect to login
+            model.unlockWithAlternativeMethod()
+            return@LaunchedEffect
         }
+        
+        // If biometrics are not available, automatically bypass and continue with the flow
+        if (!biometricService.isAvailable()) {
+            // Biometrics not available - bypass authentication and proceed
+            onSuccess()
+            return@LaunchedEffect
+        }
+    }
+
+    // Handle success case separately to avoid side effects in computed value
+    LaunchedEffect(biometricResult) {
+        if (biometricResult is Final.Success) {
+            onSuccess()
+        }
+    }
+    
+    // Derive error message directly from biometricResult to avoid stale state
+    val errorMessage = when (val result = biometricResult) {
+        is Final.Success -> null
+        is Final.Failure -> when (result.problem) {
+            is BiometricError.Dismissed -> null // User cancelled, don't show error
+            is BiometricError.Failed -> context.getString(R.string.auth_biometric_failed)
+            is BiometricError.NoSupport -> context.getString(R.string.auth_biometric_unavailable_error)
+            is BiometricError.RateLimit -> context.getString(R.string.auth_biometric_rate_limit)
+            is BiometricError.Exception -> context.getString(R.string.auth_biometric_system_error)
+        }
+        null -> null // No result yet
+    }
+    
+    // Check if biometrics are unavailable (either from service check or from error)
+    val biometricsUnavailable = when {
+        !biometricService.isAvailable() -> true
+        biometricResult is Final.Failure -> {
+            val failure = biometricResult as Final.Failure
+            failure.problem is BiometricError.NoSupport
+        }
+        else -> false
     }
 
 // --- UI
 
     Surface(
-        color = Color(0xFF_161620),
-        modifier = modifier
+        color = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize()
     ) {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(
-                        topStart = 40.dp,
-                        topEnd = 40.dp
-                    )
-                )
-                .padding(32.dp)
-                .systemBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .fillMaxSize()
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
             Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.60F)
+                    .padding(32.dp)
             ) {
+                // Welcome Message / Heading
                 Text(
                     text = stringResource(R.string.screen_auth_locked_page_heading),
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.displaySmall,
-                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    textAlign = TextAlign.Center
                 )
-
-                Spacer(Modifier.height(12.dp))
-
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Subtitle / Content
                 Text(
                     text = stringResource(R.string.screen_auth_locked_page_content),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    ),
+                    textAlign = TextAlign.Center
                 )
-            }
-
-            Column(
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.40F)
-            ) {
-                IconButton(
-                    onClick = {
-                        when (biometricService.isAvailable()) {
-                            true -> {
+                
+                Spacer(modifier = Modifier.height(64.dp))
+                
+                // Error Message
+                AnimatedVisibility(
+                    visible = errorMessage != null,
+                    enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
+                ) {
+                    errorMessage?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                
+                // Biometric Icon (lower, under the text)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .clickable(enabled = biometricService.isAvailable()) {
+                            // Reset result when retrying to clear previous error
+                            biometricResult = null
+                            
+                            if (biometricService.isAvailable()) {
                                 val promptBuilder = BiometricPrompt.PromptInfo.Builder()
-                                    .setTitle("Login with biometrics")
-                                    .setSubtitle("Authenticate to continue")
-                                    .setNegativeButtonText("Cancel")
+                                    .setTitle(context.getString(R.string.auth_biometric_prompt_title))
+                                    .setSubtitle(context.getString(R.string.auth_biometric_prompt_subtitle))
+                                    .setNegativeButtonText(context.getString(R.string.auth_biometric_prompt_cancel))
 
                                 biometricService.authenticate(activity, promptBuilder) { result ->
                                     biometricResult = result
                                 }
                             }
-
-                            else -> {
-                                onSuccess()
-                            }
                         }
-                    },
-                    modifier = Modifier
-                        .requiredSize(56.dp)
-                        .align(Alignment.CenterHorizontally)
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.xic_uic_outline_qrcode_scan),
-                        modifier = Modifier.requiredSize(56.dp),
+                        painter = painterResource(R.drawable.fingerprint_24px),
+                        modifier = Modifier.size(120.dp),
                         contentDescription = stringResource(R.string.content_description_show_biometric_dialog),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = if (biometricService.isAvailable()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        }
                     )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Helper text
+                Text(
+                    text = stringResource(R.string.auth_locked_tap_to_authenticate),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    textAlign = TextAlign.Center
+                )
+                
+                // Fallback unlock button when biometrics are unavailable
+                AnimatedVisibility(
+                    visible = biometricsUnavailable,
+                    enter = fadeIn(animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = TransitionConfig.FAST_DURATION))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 32.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TextButton(
+                            onClick = {
+                                model.unlockWithAlternativeMethod()
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.auth_locked_use_email_password),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
                 }
             }
         }

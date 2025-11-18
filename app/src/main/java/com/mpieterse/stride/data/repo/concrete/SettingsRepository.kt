@@ -1,11 +1,8 @@
-package com.mpieterse.stride.data.repo
+package com.mpieterse.stride.data.repo.concrete
 
-import com.mpieterse.stride.core.net.*
+import com.mpieterse.stride.core.net.safeCall
+import com.mpieterse.stride.data.dto.settings.SettingsDto
 import com.mpieterse.stride.data.remote.SummitApiService
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
 import javax.inject.Inject
 
 /**
@@ -21,11 +18,9 @@ import javax.inject.Inject
  */
 
 
-class UploadRepository @Inject constructor(private val api: SummitApiService) {
-    suspend fun upload(path: String) = safeCall {
-        val f = File(path)
-        val body = f.asRequestBody("application/octet-stream".toMediaType())
-        val part = MultipartBody.Part.createFormData("file", f.name, body)
-        api.upload(part)
-    }
+class SettingsRepository @Inject constructor(private val api: SummitApiService) {
+    suspend fun get() =
+        safeCall { api.getSettings() } //This method retrieves user settings from the API using the Repository pattern (App Dev Insights, 2024).
+    suspend fun update(s: SettingsDto) =
+        safeCall { api.updateSettings(s) } //This method updates user settings through the API using the Repository pattern (App Dev Insights, 2024).
 }

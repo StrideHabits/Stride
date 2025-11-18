@@ -57,6 +57,13 @@ fun LocalOutlinedTextField(
         else -> true
     }
 
+    val colorScheme = MaterialTheme.colorScheme
+    val placeholderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    val selectionColors = TextSelectionColors(
+        handleColor = colorScheme.primary,
+        backgroundColor = colorScheme.primary.copy(alpha = 0.35f)
+    )
+
     // Component
     OutlinedTextField(
         label = { Text(text = label) },
@@ -91,18 +98,37 @@ fun LocalOutlinedTextField(
         ),
         shape = MaterialTheme.shapes.large,
         colors = OutlinedTextFieldDefaults.colors(
-            disabledContainerColor = Color(0x10_161620),
-            focusedLabelColor = Color(0xFF_161620),
-            unfocusedLabelColor = Color(0xFF_161620),
-            focusedBorderColor = Color(0xFF_161620),
-            unfocusedBorderColor = Color(0xFF_161620),
-            cursorColor = Color(0x80_161620),
-            unfocusedTrailingIconColor = Color(0xFF_161620),
-            focusedTrailingIconColor = Color(0xFF_161620),
-            selectionColors = TextSelectionColors(
-                handleColor = Color(0x80_161620),
-                backgroundColor = Color(0x20_161620)
-            )
+            focusedTextColor = colorScheme.onSurface,
+            unfocusedTextColor = colorScheme.onSurface,
+            disabledTextColor = colorScheme.onSurface.copy(alpha = 0.4f),
+            errorTextColor = colorScheme.error,
+            cursorColor = colorScheme.primary,
+            errorCursorColor = colorScheme.error,
+            selectionColors = selectionColors,
+            focusedBorderColor = colorScheme.primary,
+            unfocusedBorderColor = colorScheme.outline,
+            disabledBorderColor = colorScheme.outline.copy(alpha = 0.4f),
+            errorBorderColor = colorScheme.error,
+            focusedLeadingIconColor = colorScheme.primary,
+            unfocusedLeadingIconColor = colorScheme.onSurfaceVariant,
+            disabledLeadingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            errorLeadingIconColor = colorScheme.error,
+            focusedTrailingIconColor = colorScheme.primary,
+            unfocusedTrailingIconColor = colorScheme.onSurfaceVariant,
+            disabledTrailingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            errorTrailingIconColor = colorScheme.error,
+            focusedLabelColor = colorScheme.primary,
+            unfocusedLabelColor = colorScheme.onSurfaceVariant,
+            disabledLabelColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            errorLabelColor = colorScheme.error,
+            focusedPlaceholderColor = placeholderColor,
+            unfocusedPlaceholderColor = placeholderColor,
+            disabledPlaceholderColor = placeholderColor.copy(alpha = 0.5f),
+            errorPlaceholderColor = colorScheme.error,
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            disabledContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            errorContainerColor = colorScheme.surface
         ),
     )
 }

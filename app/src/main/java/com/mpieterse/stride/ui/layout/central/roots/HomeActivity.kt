@@ -6,7 +6,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -35,6 +37,7 @@ class HomeActivity : ComponentActivity() {
 
             StrideRoot(
                 theme = theme,
+                settingsViewModel = settingsViewModel,
                 notificationsViewModel = notificationsViewModel
             )
         }
@@ -44,6 +47,7 @@ class HomeActivity : ComponentActivity() {
 @Composable
 private fun StrideRoot(
     theme: AppAppearance,
+    settingsViewModel: HomeSettingsViewModel,
     notificationsViewModel: NotificationsViewModel
 ) {
     val darkTheme = when (theme) {
@@ -52,9 +56,16 @@ private fun StrideRoot(
         AppAppearance.SYSTEM -> isSystemInDarkTheme()
     }
 
-    Crossfade(targetState = darkTheme, label = "ThemeSwitch") { dark ->
+    Crossfade(
+        targetState = darkTheme,
+        animationSpec = tween(durationMillis = TransitionConfig.NORMAL_DURATION),
+        label = "ThemeSwitch"
+    ) { dark ->
         AppTheme(darkTheme = dark) {
-            HomeScaffold(notificationsViewModel = notificationsViewModel)
+            HomeScaffold(
+                settingsViewModel = settingsViewModel,
+                notificationsViewModel = notificationsViewModel
+            )
 
             LocalStyledActivityStatusBar(
                 color = if (dark) Color(0xFF0E0E0E) else Color(0xFF161620)

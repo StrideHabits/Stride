@@ -9,33 +9,57 @@ import com.mpieterse.stride.ui.layout.startup.viewmodels.AuthViewModel
 import com.mpieterse.stride.ui.layout.startup.views.AuthLaunchScreen
 import com.mpieterse.stride.ui.layout.startup.views.AuthSignInScreen
 import com.mpieterse.stride.ui.layout.startup.views.AuthSignUpScreen
+import com.mpieterse.stride.ui.layout.shared.transitions.TransitionConfig
 
 @Composable
 fun AuthNavGraph(
     onGoToHomeActivity: () -> Unit,
-    modifier: Modifier  = Modifier,
+    modifier: Modifier = Modifier,
     authViewModel: AuthViewModel
 ) {
     val controller = rememberNavController()
-    NavHost(navController = controller, startDestination = AuthScreen.Launch.route) {
-        composable(route = AuthScreen.Launch.route) {
+
+    NavHost(
+        navController = controller,
+        startDestination = AuthScreen.Launch.route,
+        modifier = modifier
+    ) {
+        composable(
+            route = AuthScreen.Launch.route,
+            enterTransition = { TransitionConfig.horizontalFadeTransition() },
+            exitTransition = { TransitionConfig.horizontalFadeExit() },
+            popEnterTransition = { TransitionConfig.horizontalFadeTransition() },
+            popExitTransition = { TransitionConfig.horizontalFadeExit() }
+        ) {
             AuthLaunchScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
                 onNavigateToSignUp = { controller.navigate(AuthScreen.SignUp.route) }
             )
         }
-        composable(route = AuthScreen.SignIn.route) {
+        composable(
+            route = AuthScreen.SignIn.route,
+            enterTransition = { TransitionConfig.forwardSlideTransition() },
+            exitTransition = { TransitionConfig.forwardSlideExit() },
+            popEnterTransition = { TransitionConfig.backwardSlideTransition() },
+            popExitTransition = { TransitionConfig.backwardSlideExit() }
+        ) {
             AuthSignInScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onSignIn = { authViewModel.signIn() },
                 onGoogleSignIn = { authViewModel.googleSignIn() },
                 viewModel = authViewModel
             )
         }
-        composable(route = AuthScreen.SignUp.route) {
+        composable(
+            route = AuthScreen.SignUp.route,
+            enterTransition = { TransitionConfig.forwardSlideTransition() },
+            exitTransition = { TransitionConfig.forwardSlideExit() },
+            popEnterTransition = { TransitionConfig.backwardSlideTransition() },
+            popExitTransition = { TransitionConfig.backwardSlideExit() }
+        ) {
             AuthSignUpScreen(
-                modifier = modifier,
+                modifier = Modifier,
                 onSignUp = { authViewModel.signUp() },
                 onNavigateToSignIn = { controller.navigate(AuthScreen.SignIn.route) },
                 viewModel = authViewModel

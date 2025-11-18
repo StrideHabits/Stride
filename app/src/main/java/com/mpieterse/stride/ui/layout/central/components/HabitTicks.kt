@@ -1,5 +1,6 @@
 package com.mpieterse.stride.ui.layout.central.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.requiredSize
@@ -23,15 +24,20 @@ fun HabitTicks(
         verticalAlignment = Alignment.CenterVertically
     ) {
         states.forEachIndexed { index, selected ->
-            RadioButton(
-                selected = selected,
-                onClick = { onClick(index) },
-                modifier = Modifier.requiredSize(24.dp),
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = MaterialTheme.colorScheme.primary,
-                    unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            Box(
+                modifier = Modifier.width(32.dp), // Match DateHeader column width
+                contentAlignment = Alignment.Center
+            ) {
+                RadioButton(
+                    selected = selected,
+                    onClick = { onClick(index) },
+                    modifier = Modifier.requiredSize(24.dp), // Keep RadioButton size smaller
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = MaterialTheme.colorScheme.primary,
+                        unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 )
-            )
+            }
 
             if (index != states.lastIndex) Spacer(
                 modifier = Modifier.width(8.dp)

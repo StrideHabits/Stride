@@ -1,9 +1,9 @@
-package com.mpieterse.stride.data.repo
+package com.mpieterse.stride.data.repo.concrete
 
 import com.mpieterse.stride.core.net.ApiResult
 import com.mpieterse.stride.core.net.safeCall
-import com.mpieterse.stride.core.net.*
-import com.mpieterse.stride.data.dto.auth.*
+import com.mpieterse.stride.data.dto.auth.LoginRequest
+import com.mpieterse.stride.data.dto.auth.RegisterRequest
 import com.mpieterse.stride.data.local.TokenStore
 import com.mpieterse.stride.data.remote.SummitApiService
 import javax.inject.Inject

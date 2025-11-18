@@ -1,8 +1,6 @@
 package com.mpieterse.stride.core.services
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -12,7 +10,6 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.mpieterse.stride.BuildConfig
 import com.mpieterse.stride.core.utils.Clogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
@@ -89,7 +86,8 @@ class GoogleAuthenticationClient
                     setAutoSelectEnabled(false)
                     setFilterByAuthorizedAccounts(false)
                     setServerClientId(
-                        BuildConfig.GOOGLE_SERVER_CLIENT_ID
+                        // BuildConfig.GOOGLE_SERVER_CLIENT_ID
+                        "1611342569-ja7h61p72gjvl8rjpl3frqamnc5hgoia.apps.googleusercontent.com"
                     )
                 }.build()
             )

@@ -1,30 +1,60 @@
-// HabitViewerViewModel.kt
+// app/src/main/java/com/mpieterse/stride/ui/layout/central/viewmodels/HabitViewerViewModel.kt
 package com.mpieterse.stride.ui.layout.central.viewmodels
 
+import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
+import android.util.Base64
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.FutureTarget
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mpieterse.stride.core.net.ApiResult
+import com.mpieterse.stride.core.services.AppEventBus
+import com.mpieterse.stride.core.services.HabitNameOverrideService
+import com.mpieterse.stride.core.utils.Clogger
+import com.mpieterse.stride.core.utils.checkInId
+import com.mpieterse.stride.data.dto.checkins.CheckInCreateDto
 import com.mpieterse.stride.data.dto.checkins.CheckInDto
+import com.mpieterse.stride.data.dto.habits.HabitCreateDto
 import com.mpieterse.stride.data.dto.habits.HabitDto
 import com.mpieterse.stride.data.repo.CheckInRepository
 import com.mpieterse.stride.data.repo.HabitRepository
-import com.mpieterse.stride.core.services.HabitNameOverrideService
-import com.mpieterse.stride.core.services.AppEventBus
+import com.mpieterse.stride.utils.ImageUploadHelper
+import com.mpieterse.stride.R
+import com.mpieterse.stride.ui.layout.central.components.HabitData
+import com.mpieterse.stride.utils.base64ToBitmap
+import retrofit2.HttpException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.*
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class HabitViewerViewModel @Inject constructor(
     private val habits: HabitRepository,
     private val checkins: CheckInRepository,
     private val nameOverrideService: HabitNameOverrideService,
-    private val eventBus: AppEventBus
+    private val eventBus: AppEventBus,
+    private val imageUploadHelper: ImageUploadHelper,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     data class UiState(
@@ -33,170 +63,341 @@ class HabitViewerViewModel @Inject constructor(
         val habitId: String = "",
         val habitName: String = "",
         val displayName: String = "",
+        val frequency: Int = 0,
+        val tag: String? = null,
         val habitImage: Bitmap? = null,
         val streakDays: Int = 0,
         val completedDates: List<Int> = emptyList(),
-        val localNameOverride: String? = null
+        val selectedYear: Int = LocalDate.now().year,
+        val selectedMonth: Int = LocalDate.now().monthValue
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
-    fun load(habitId: String) = viewModelScope.launch { //This method loads habit data and check-ins using ViewModel lifecycle management (Android Developers, 2024).
-        _state.value = _state.value.copy(loading = true, error = null)
+    private var lastHabit: HabitDto? = null
+    private var lastImageUrl: String? = null
 
-        val habitName = when (val hr = habits.list()) {
-            is ApiResult.Ok<*> -> (hr.data as List<*>)
-                .filterIsInstance<HabitDto>()
-                .firstOrNull { it.id == habitId }?.name ?: "(Unknown habit)"
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = "Habit load failed: ${hr.code ?: ""} ${hr.message ?: ""}"
-                )
-                return@launch
-            }
+    private var observeJob: Job? = null
+    private var errorClearJob: Job? = null
+
+    fun load(habitId: String) {
+        _state.update { 
+            it.copy(
+                loading = true, 
+                error = null, 
+                habitId = habitId,
+                selectedYear = LocalDate.now().year,
+                selectedMonth = LocalDate.now().monthValue
+            ) 
         }
 
-        val mine: List<CheckInDto> = when (val cr = checkins.list()) {
-            is ApiResult.Ok<*> -> (cr.data as List<*>)
-                .filterIsInstance<CheckInDto>()
-                .filter { it.habitId == habitId }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    habitName = habitName,
-                    error = "Check-ins load failed: ${cr.code ?: ""} ${cr.message ?: ""}"
-                )
-                return@launch
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            combine(
+                habits.observeById(habitId)
+                    .distinctUntilChanged(),
+                checkins.observeForHabit(habitId)
+                    .map { list -> list } // DTOs already
+                    .onStart { emit(emptyList()) }
+                    .catch { emit(emptyList()) },
+                _state.map { Pair(it.selectedYear, it.selectedMonth) }
+                    .distinctUntilChanged()
+            ) { habitDto, localCheckins, selectedMonthYear ->
+                val habitName = habitDto?.name ?: appContext.getString(R.string.habit_viewer_unknown_habit)
+                val display = nameOverrideService.getDisplayName(habitId, habitName)
+                val (selectedYear, selectedMonth) = selectedMonthYear
+                val completedThisMonth = monthDays(localCheckins, selectedYear, selectedMonth)
+                val streak = computeStreakDays(localCheckins)
+                Pair(habitDto, Triple(habitName, display, Pair(completedThisMonth, streak)))
             }
-        }
+                .onStart { _state.update { it.copy(loading = true) } }
+                .collect { (habitDto, triple) ->
+                    val (habitName, display, pair) = triple
+                    val (days, streak) = pair
+                    val sanitizedUrl = habitDto?.imageUrl?.let { imageUploadHelper.sanitizeImageUrl(it) }
+                    // Preserve existing image if URL hasn't changed, otherwise fetch new one
+                    val imageBitmap = sanitizedUrl?.takeIf { it.isNotBlank() }?.let { url ->
+                        if (url != lastImageUrl || _state.value.habitImage == null) {
+                            fetchBitmap(url)?.also { lastImageUrl = url }
+                        } else {
+                            // Preserve existing image if URL hasn't changed
+                            _state.value.habitImage
+                        }
+                    } ?: if (sanitizedUrl == null && _state.value.habitImage != null) {
+                        // If URL is null but we have an existing image, preserve it (might have been deleted on server)
+                        _state.value.habitImage
+                    } else {
+                        null
+                    }
 
+                    lastHabit = habitDto
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            habitName = habitName,
+                            displayName = display,
+                            frequency = habitDto?.frequency ?: 0,
+                            tag = habitDto?.tag,
+                            habitImage = imageBitmap,
+                            completedDates = days,
+                            streakDays = streak
+                        )
+                    }
+                }
+        }
+    }
+
+    fun navigateMonth(forward: Boolean) {
+        val current = LocalDate.of(_state.value.selectedYear, _state.value.selectedMonth, 1)
+        val newDate = if (forward) current.plusMonths(1) else current.minusMonths(1)
+        _state.update {
+            it.copy(selectedYear = newDate.year, selectedMonth = newDate.monthValue)
+        }
+    }
+
+    fun navigateYear(forward: Boolean) {
+        val current = LocalDate.of(_state.value.selectedYear, _state.value.selectedMonth, 1)
+        val newDate = if (forward) current.plusYears(1) else current.minusYears(1)
+        _state.update {
+            it.copy(selectedYear = newDate.year, selectedMonth = newDate.monthValue)
+        }
+    }
+
+    fun goToToday() {
         val today = LocalDate.now()
-        val monthStart = today.withDayOfMonth(1)
-        val completedThisMonth = mine.mapNotNull { checkin ->
+        _state.update {
+            it.copy(selectedYear = today.year, selectedMonth = today.monthValue)
+        }
+    }
+
+    fun completeToday(habitId: String) = toggleCheckIn(habitId, LocalDate.now().toString())
+
+    fun toggleCheckIn(habitId: String, isoDate: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(loading = true, error = null) }
             try {
-                java.time.LocalDate.parse(checkin.dayKey)
-            } catch (e: Exception) { null }
-        }.filter { it.year == monthStart.year && it.month == monthStart.month }
+                // Get current check-ins for this habit (only active ones from observeForHabit)
+                val activeCheckIns = checkins.observeForHabit(habitId).firstOrNull().orEmpty()
+                val existing = activeCheckIns.firstOrNull { it.dayKey == isoDate }
+                // Toggle: if exists and is active, turn off; if doesn't exist, turn on
+                // The toggle() method handles marking deleted=false when on, deleted=true when off
+                // This preserves check-ins unless user explicitly unchecks them
+                val shouldBeOn = existing == null
+                checkins.toggle(habitId, isoDate, on = shouldBeOn)
+                eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
+                _state.update { it.copy(loading = false) }
+            } catch (e: Exception) {
+                Clogger.e("HabitViewerViewModel", "Failed to toggle check-in", e)
+                _state.update { it.copy(loading = false, error = appContext.getString(R.string.error_write_failed)) }
+            }
+        }
+    }
+
+    fun updateLocalName(newName: String) {
+        val id = _state.value.habitId
+        if (id.isEmpty()) return
+        nameOverrideService.updateHabitName(id, newName)
+        _state.update { it.copy(displayName = newName) }
+        viewModelScope.launch { eventBus.emit(AppEventBus.AppEvent.HabitNameChanged) }
+    }
+
+    fun updateHabitDetails(updated: HabitData) = viewModelScope.launch {
+        val current = lastHabit ?: return@launch
+        try {
+            _state.update { it.copy(loading = true, error = null) }
+            
+            // Upload image if provided - but don't block update if it fails
+            var uploadedUrl: String? = null
+            var imageUploadFailed = false
+            var imageUploadError: String? = null
+            
+            if (!updated.imageBase64.isNullOrBlank()) {
+                try {
+                    // Safe to use imageBase64 here - already checked with isNullOrBlank()
+                    val imageBase64 = updated.imageBase64
+                    if (imageBase64 != null) {
+                        uploadedUrl = imageUploadHelper.uploadImage(appContext, imageBase64, updated.imageMimeType)
+                    }
+                    if (uploadedUrl.isNullOrBlank()) {
+                        imageUploadFailed = true
+                        imageUploadError = appContext.getString(R.string.error_image_upload_failed)
+                        Clogger.w("HabitViewerViewModel", "Image upload failed, continuing with existing image or no image")
+                    }
+                } catch (e: Exception) {
+                    imageUploadFailed = true
+                    val isNetworkError = e is java.net.SocketTimeoutException ||
+                        e is java.net.ConnectException ||
+                        (e is java.io.IOException && (
+                            e.message?.lowercase()?.contains("timeout") == true ||
+                            e.message?.lowercase()?.contains("network") == true ||
+                            e.message?.lowercase()?.contains("connection") == true
+                        ))
+                    imageUploadError = if (isNetworkError) {
+                        appContext.getString(R.string.error_image_upload_network)
+                    } else {
+                        appContext.getString(R.string.error_image_upload_generic, e.message ?: appContext.getString(R.string.error_unknown))
+                    }
+                    Clogger.e("HabitViewerViewModel", "Image upload exception, continuing with existing image or no image", e)
+                }
+            }
+            
+            // If image upload failed or no new image provided, use existing image URL
+            // Only update imageUrl if a new image was uploaded, otherwise preserve existing URL
+            val finalImageUrl = when {
+                !updated.imageBase64.isNullOrBlank() && !imageUploadFailed -> uploadedUrl
+                !updated.imageBase64.isNullOrBlank() && imageUploadFailed -> imageUploadHelper.sanitizeImageUrl(current.imageUrl)
+                else -> imageUploadHelper.sanitizeImageUrl(current.imageUrl) // Preserve existing image when no new image is provided
+            }
+            
+            // Update via API (which also caches locally) - always include imageUrl, even if null (to preserve existing)
+            val updatedDto = habits.update(
+                id = current.id,
+                input = HabitCreateDto(
+                    name = updated.name.trim(),
+                    frequency = updated.frequency.coerceIn(1, 7),
+                    tag = updated.tag?.trim().takeUnless { it.isNullOrEmpty() },
+                    imageUrl = finalImageUrl // Include even if null - API should handle this
+                )
+            )
+            
+            // Update local state
+            lastHabit = updatedDto
+            lastImageUrl = finalImageUrl
+            val updatedBitmap = when {
+                !updated.imageBase64.isNullOrBlank() && !imageUploadFailed -> base64ToBitmap(updated.imageBase64)
+                !finalImageUrl.isNullOrBlank() -> fetchBitmap(finalImageUrl)
+                else -> null
+            } ?: _state.value.habitImage
+            _state.update { 
+                it.copy(
+                    habitImage = updatedBitmap,
+                    loading = false,
+                    displayName = updatedDto.name,
+                    error = if (imageUploadFailed && imageUploadError != null) imageUploadError else null
+                ) 
+            }
+            eventBus.emit(AppEventBus.AppEvent.HabitUpdated)
+            Clogger.d("HabitViewerViewModel", "Successfully updated habit ${current.id} on server${if (imageUploadFailed) " (image upload failed)" else ""}")
+            
+            // Show image upload error if it occurred (update state with specific error message)
+            if (imageUploadFailed && imageUploadError != null) {
+                _state.update { 
+                    it.copy(
+                        error = imageUploadError,
+                        loading = false
+                    ) 
+                }
+                scheduleErrorAutoClear()
+            }
+        } catch (e: HttpException) {
+            // Handle HTTP errors more gracefully
+            val errorMessage = when (e.code()) {
+                404 -> appContext.getString(R.string.error_habit_not_found)
+                400 -> appContext.getString(R.string.error_habit_invalid_data)
+                401, 403 -> appContext.getString(R.string.error_sign_in_again)
+                500 -> appContext.getString(R.string.error_server_error)
+                else -> appContext.getString(R.string.error_habit_update_failed, e.message() ?: appContext.getString(R.string.error_unknown))
+            }
+            Clogger.e("HabitViewerViewModel", "Failed to update habit: HTTP ${e.code()}", e)
+            _state.update { 
+                it.copy(
+                    loading = false,
+                    error = errorMessage
+                ) 
+            }
+        } catch (e: Exception) {
+            Clogger.e("HabitViewerViewModel", "Failed to update habit", e)
+            _state.update { 
+                it.copy(
+                    loading = false,
+                    error = appContext.getString(R.string.error_habit_update_failed, e.message ?: appContext.getString(R.string.error_unknown))
+                ) 
+            }
+        }
+    }
+
+    private suspend fun fetchBitmap(location: String): Bitmap? =
+        withContext(Dispatchers.IO) {
+            var target: FutureTarget<Bitmap>? = null
+            try {
+                target = Glide.with(appContext)
+                    .asBitmap()
+                    .load(location)
+                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                    .submit()
+
+                val loaded = target.get()
+                // Make a defensive copy because Glide may recycle the bitmap after clear()
+                loaded.copy(loaded.config ?: Bitmap.Config.ARGB_8888, false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (location.startsWith("http", ignoreCase = true) && e is java.io.FileNotFoundException) {
+                    Clogger.d("HabitViewerViewModel", "Remote image not found at $location (likely deleted)")
+                } else {
+                    Clogger.e("HabitViewerViewModel", "Failed to load image from $location", e)
+                }
+                null
+            } finally {
+                target?.let { Glide.with(appContext).clear(it) }
+            }
+        }
+
+
+
+    // Helpers
+
+    private fun monthDays(list: List<CheckInDto>, year: Int, month: Int): List<Int> {
+        val monthStart = LocalDate.of(year, month, 1)
+        return list.asSequence()
+            .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
+            .filter { it.year == monthStart.year && it.month == monthStart.month }
             .map { it.dayOfMonth }
             .distinct()
             .sorted()
+            .toList()
+    }
+
+    private fun computeStreakDays(list: List<CheckInDto>): Int {
+        // The DAO query already filters out deleted check-ins (WHERE deleted=0)
+        // So we don't need to filter here - all items in list are active
+        val days = list.asSequence()
+            .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
+            .toHashSet()
         
+        if (days.isEmpty()) return 0
         
-
-        val streak = computeStreakDays(mine.mapNotNull { checkin ->
-            try {
-                java.time.LocalDate.parse(checkin.dayKey)
-            } catch (e: Exception) { null }
-        }.distinct())
-
-        _state.value = _state.value.copy(
-            loading = false,
-            habitId = habitId,
-            habitName = habitName,
-            displayName = nameOverrideService.getDisplayName(habitId, habitName),
-            streakDays = streak,
-            completedDates = completedThisMonth
-        )
-    }
-
-    fun completeToday(habitId: String) = viewModelScope.launch { //This method creates a check-in for today using ViewModel lifecycle management (Android Developers, 2024).
-        _state.value = _state.value.copy(loading = true, error = null)
-        val today = LocalDate.now().toString()
-        when (val r = checkins.create(habitId, today)) {
-            is ApiResult.Ok<*> -> {
-                // Re-load to refresh streak and calendar
-                // This check-in is now saved to the API and will be visible in the home screen
-                load(habitId)
-                // Emit event to notify home screen
-                eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
-            }
-            is ApiResult.Err -> {
-                _state.value = _state.value.copy(
-                    loading = false,
-                    error = "Complete failed: ${r.code ?: ""} ${r.message ?: ""}"
-                )
-            }
-        }
-    }
-
-    fun toggleCheckIn(habitId: String, isoDate: String) = viewModelScope.launch { //This method toggles check-ins for specific dates using ViewModel lifecycle management (Android Developers, 2024).
-        Log.d("HabitViewerViewModel", "toggleCheckIn called: habitId=$habitId isoDate=$isoDate")
-        _state.value = _state.value.copy(loading = true, error = null)
+        // Get today's date in the system timezone
+        val today = LocalDate.now(ZoneId.systemDefault())
         
-        try {
-            // Create new check-in directly - let the API handle duplicates
-            when (val r = checkins.create(habitId, isoDate)) {
-                is ApiResult.Ok<*> -> {
-                    // Successfully created check-in, refresh data and emit event
-                    load(habitId)
-                    eventBus.emit(AppEventBus.AppEvent.CheckInCompleted)
-                }
-                is ApiResult.Err -> {
-                    val errorMessage = when {
-                        r.code == 409 -> "Check-in already exists for this date"
-                        r.code == 401 -> "Authentication required - please log in"
-                        r.code == 403 -> "Access denied"
-                        r.code == 404 -> "Habit not found"
-                        else -> "Failed to create check-in: ${r.message ?: "Unknown error"}"
-                    }
-                    _state.value = _state.value.copy(
-                        loading = false,
-                        error = errorMessage
-                    )
-                    // Clear error after a short delay for user-friendly messages
-                    if (r.code == 409) {
-                        kotlinx.coroutines.delay(2000)
-                        _state.value = _state.value.copy(error = null)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            _state.value = _state.value.copy(
-                loading = false,
-                error = "Network error: ${e.message ?: "Please check your connection"}"
-            )
-        }
-    }
-
-    fun updateLocalName(newName: String, habitId: String) { //This method updates habit display names using the name override service (Android Developers, 2024).
-        // Store in shared service so home screen can access it
-        nameOverrideService.updateHabitName(habitId, newName)
-        // Update local state to trigger UI refresh
-        _state.value = _state.value.copy(
-            localNameOverride = newName,
-            displayName = newName
-        )
-        // Emit event to notify home screen
-        viewModelScope.launch {
-            eventBus.emit(AppEventBus.AppEvent.HabitNameChanged)
-        }
-    }
-
-    fun getDisplayName(): String {
-        // Use the service to get the display name, which will be reactive to changes
-        return nameOverrideService.getDisplayName(_state.value.habitId, _state.value.habitName)
-    }
-
-    // Count consecutive days ending today.
-    private fun computeStreakDays(dates: List<LocalDate>): Int {
-        if (dates.isEmpty()) return 0
-        val set = dates.toHashSet()
-        var d = LocalDate.now()
+        // Count consecutive days backwards from today
+        // If today is checked, include it. If not, start from yesterday.
+        var currentDate = if (days.contains(today)) today else today.minusDays(1)
         var streak = 0
-        while (set.contains(d)) {
+        
+        // Count consecutive days backwards until we find a gap
+        // This ensures streaks are persistent and only break when user explicitly unchecks
+        while (days.contains(currentDate)) {
             streak++
-            d = d.minusDays(1)
+            currentDate = currentDate.minusDays(1)
+            // Prevent infinite loop (safety check - shouldn't happen in practice)
+            if (streak > 10000) break
         }
+        
         return streak
     }
+    override fun onCleared() {
+        super.onCleared()
+        observeJob?.cancel()
+        errorClearJob?.cancel()
+    }
 
-    private fun String.toLocalDateOrNull(): LocalDate? {
-        return try {
-            Instant.parse(this).atZone(ZoneId.systemDefault()).toLocalDate()
-        } catch (_: Exception) {
-            try { LocalDate.parse(this) } catch (_: Exception) { null }
+    private fun scheduleErrorAutoClear(delayMillis: Long = 5000L) {
+        errorClearJob?.cancel()
+        errorClearJob = viewModelScope.launch {
+            delay(delayMillis)
+            _state.update { it.copy(error = null) }
         }
     }
 }

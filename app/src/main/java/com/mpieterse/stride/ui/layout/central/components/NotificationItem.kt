@@ -1,5 +1,6 @@
 package com.mpieterse.stride.ui.layout.central.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,10 +41,16 @@ fun NotificationItem(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -61,13 +69,13 @@ fun NotificationItem(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
                         ),
-                        color = if (notification.isEnabled) Color.Black else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
                     Text(
-                        text = notification.time.format(DateTimeFormatter.ofPattern("h:mm a")),
+                        text = notification.time.format(DateTimeFormatter.ofPattern("HH:mm")),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (notification.isEnabled) Color(0xFFFF9500) else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -84,9 +92,9 @@ fun NotificationItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Days:",
+                    text = stringResource(R.string.notification_item_days_label),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 notification.daysOfWeek.forEach { day ->
@@ -103,7 +111,7 @@ fun NotificationItem(
                     Text(
                         text = notification.message,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (notification.isEnabled) Color.Black.copy(alpha = 0.8f) else Color.Gray,
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
                     )
             }
@@ -121,15 +129,15 @@ fun NotificationItem(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.xic_uic_outline_volume_up),
-                        contentDescription = "Sound",
+                        contentDescription = stringResource(R.string.notification_item_sound),
                         tint = if (notification.soundEnabled && notification.isEnabled) 
-                            Color(0xFFFF9500) else Color.Gray,
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "Sound",
+                        text = stringResource(R.string.notification_item_sound),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (notification.isEnabled) Color.Black else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -140,15 +148,15 @@ fun NotificationItem(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.xic_uic_outline_volume_down),
-                        contentDescription = "Vibration",
+                        contentDescription = stringResource(R.string.notification_item_vibration),
                         tint = if (notification.vibrationEnabled && notification.isEnabled) 
-                            Color(0xFFFF9500) else Color.Gray,
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "Vibration",
+                        text = stringResource(R.string.notification_item_vibration),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (notification.isEnabled) Color.Black else Color.Gray
+                        color = if (notification.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -164,8 +172,8 @@ fun NotificationItem(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_edit),
-                            contentDescription = "Edit",
-                            tint = Color(0xFFFF9500),
+                            contentDescription = stringResource(R.string.content_description_edit_notification),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -176,7 +184,7 @@ fun NotificationItem(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.xic_uic_outline_trash_alt),
-                            contentDescription = "Delete",
+                            contentDescription = stringResource(R.string.content_description_delete_notification),
                             tint = Color.Red,
                             modifier = Modifier.size(16.dp)
                         )
@@ -198,7 +206,7 @@ private fun DayChip(
         style = MaterialTheme.typography.bodySmall.copy(
             fontWeight = FontWeight.Medium
         ),
-        color = if (isEnabled) Color(0xFFFF9500) else Color.Gray,
+        color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
     )
 }

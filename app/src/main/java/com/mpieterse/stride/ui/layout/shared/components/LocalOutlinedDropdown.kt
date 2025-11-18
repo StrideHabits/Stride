@@ -43,6 +43,13 @@ fun <T> LocalOutlinedDropdown(
 
     val displayText = value?.let { itemLabel(it) } ?: ""
 
+    val colorScheme = MaterialTheme.colorScheme
+    val placeholderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    val selectionColors = TextSelectionColors(
+        handleColor = colorScheme.primary,
+        backgroundColor = colorScheme.primary.copy(alpha = 0.35f)
+    )
+
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = {
@@ -71,18 +78,29 @@ fun <T> LocalOutlinedDropdown(
             },
             shape = MaterialTheme.shapes.large,
             colors = OutlinedTextFieldDefaults.colors(
-                disabledContainerColor = Color(0x10_161620),
-                focusedLabelColor = Color(0xFF_161620),
-                unfocusedLabelColor = Color(0xFF_161620),
-                focusedBorderColor = Color(0xFF_161620),
-                unfocusedBorderColor = Color(0xFF_161620),
-                cursorColor = Color(0x80_161620),
-                unfocusedTrailingIconColor = Color(0xFF_161620),
-                focusedTrailingIconColor = Color(0xFF_161620),
-                selectionColors = TextSelectionColors(
-                    handleColor = Color(0x80_161620),
-                    backgroundColor = Color(0x20_161620)
-                )
+                focusedTextColor = colorScheme.onSurface,
+                unfocusedTextColor = colorScheme.onSurface,
+                disabledTextColor = colorScheme.onSurface.copy(alpha = 0.4f),
+                cursorColor = colorScheme.primary,
+                focusedBorderColor = colorScheme.primary,
+                unfocusedBorderColor = colorScheme.outline,
+                disabledBorderColor = colorScheme.outline.copy(alpha = 0.4f),
+                focusedLabelColor = colorScheme.primary,
+                unfocusedLabelColor = colorScheme.onSurfaceVariant,
+                disabledLabelColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                focusedPlaceholderColor = placeholderColor,
+                unfocusedPlaceholderColor = placeholderColor,
+                disabledPlaceholderColor = placeholderColor.copy(alpha = 0.5f),
+                focusedLeadingIconColor = colorScheme.primary,
+                unfocusedLeadingIconColor = colorScheme.onSurfaceVariant,
+                disabledLeadingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                focusedTrailingIconColor = colorScheme.primary,
+                unfocusedTrailingIconColor = colorScheme.onSurfaceVariant,
+                disabledTrailingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                selectionColors = selectionColors
             ),
         )
 

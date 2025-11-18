@@ -13,13 +13,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.mpieterse.stride.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mpieterse.stride.ui.layout.central.components.HabitItem
 import com.mpieterse.stride.ui.layout.central.components.UpsertDialog
@@ -41,7 +42,7 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
 
     Box(modifier = modifier.fillMaxSize()) {
         Surface(
-            color = Color(0xFF161620),
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxSize()
         ) {
             Column(
@@ -67,7 +68,7 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
                         leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) }
                     )
                     TextButton(onClick = { viewModel.refresh() }) {
-                        Text("Refresh")
+                        Text(stringResource(R.string.home_database_refresh))
                     }
                 }
 
@@ -86,12 +87,12 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                            Text("Loading…", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.home_database_loading), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     state.error != null -> {
                         Text(
-                            text = "Error: ${state.error}",
+                            text = stringResource(R.string.home_database_error, state.error ?: ""),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(12.dp)
@@ -124,8 +125,8 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         // FAB (stays on top)
         FloatingActionButton(
             onClick = { showCreate = true },
-            containerColor = Color(0xFFFF9500),
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
@@ -133,21 +134,29 @@ fun HomeDatabaseScreen( //This composable displays the main habit tracking scree
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Create Habit"
+                contentDescription = stringResource(R.string.content_description_create_habit)
             )
         }
     }
 
     // Dialog (root level = guaranteed visible)
     UpsertDialog(
-        title = "Create a Habit",
+        title = stringResource(R.string.upsert_dialog_create_title),
         isVisible = showCreate,
         onDismiss = { showCreate = false },
         onConfirm = { data ->
-            viewModel.createHabit(data.name) { ok ->
+            viewModel.createHabit(
+                name = data.name,
+                frequency = data.frequency,
+                tag = data.tag,
+                imageBase64 = data.imageBase64,
+                imageMimeType = data.imageMimeType,
+                imageUrl = null
+            ) { ok ->
                 if (ok) showCreate = false
             }
-        }
+        },
+        isLoading = state.loading
     )
 }
 
@@ -158,16 +167,26 @@ private fun DateHeader(
 ) {
     Row(modifier = modifier.padding(horizontal = 12.dp)) {
         days.forEachIndexed { index, day ->
-            Text(
-                text = day,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight(600),
-                    lineHeight = 16.sp
-                ),
-                modifier = Modifier.requiredWidth(24.dp)
-            )
+            val parts = day.split("\n")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.width(32.dp) // Changed from requiredWidth to width for proper alignment
+            ) {
+                Text(
+                    text = parts.getOrNull(0) ?: "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                )
+                Text(
+                    text = parts.getOrNull(1) ?: "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    )
+                )
+            }
             if (index != days.lastIndex) Spacer(modifier = Modifier.width(8.dp))
         }
     }
